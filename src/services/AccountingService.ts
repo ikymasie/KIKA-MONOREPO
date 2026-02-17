@@ -19,14 +19,16 @@ export interface ManualEntryRequest {
 }
 
 export class AccountingService {
-    private accountRepo: Repository<Account>;
-    private journalRepo: Repository<JournalEntry>;
-    private transactionRepo: Repository<Transaction>;
+    private get accountRepo(): Repository<Account> {
+        return AppDataSource.getRepository(Account);
+    }
 
-    constructor() {
-        this.accountRepo = AppDataSource.getRepository(Account);
-        this.journalRepo = AppDataSource.getRepository(JournalEntry);
-        this.transactionRepo = AppDataSource.getRepository(Transaction);
+    private get journalRepo(): Repository<JournalEntry> {
+        return AppDataSource.getRepository(JournalEntry);
+    }
+
+    private get transactionRepo(): Repository<Transaction> {
+        return AppDataSource.getRepository(Transaction);
     }
 
     /**

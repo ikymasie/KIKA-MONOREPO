@@ -22,15 +22,9 @@ export default function MinisterSettings() {
                     </h2>
 
                     <div className="space-y-6">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">First Name</label>
-                                <div className="p-4 bg-gray-50 rounded-2xl font-bold text-gray-700">{user?.firstName || 'Minister'}</div>
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Last Name</label>
-                                <div className="p-4 bg-gray-50 rounded-2xl font-bold text-gray-700">{user?.lastName || 'Delegate'}</div>
-                            </div>
+                        <div>
+                            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Full Name</label>
+                            <div className="p-4 bg-gray-50 rounded-2xl font-bold text-gray-700">{user?.name || 'Minister Delegate'}</div>
                         </div>
 
                         <div>

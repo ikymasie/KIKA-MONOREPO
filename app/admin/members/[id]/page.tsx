@@ -378,7 +378,7 @@ export default function MemberDetailPage() {
                                 <div className="card overflow-hidden">
                                     <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
                                         <h2 className="text-xl font-bold">Beneficiaries</h2>
-                                        <button onClick={() => setShowBenModal(true)} className="btn btn-secondary btn-sm">Manage</button>
+                                        <button onClick={() => setShowBeneficiaryModal(true)} className="btn btn-secondary btn-sm">Manage</button>
                                     </div>
                                     <div className="p-6">
                                         {member.beneficiaries.length > 0 ? (

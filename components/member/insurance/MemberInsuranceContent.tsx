@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useBranding } from '@/components/providers/BrandingProvider';
 
 export default function MemberInsuranceContent() {
-    const [data, setData] = useState<{ policies: any[], availableProducts: any[] }>({ policies: [], availableProducts: [] });
+    const [data, setData] = useState<{ policies: any[], availableProducts: any[], claims: any[] }>({ policies: [], availableProducts: [], claims: [] });
     const [loading, setLoading] = useState(true);
     const [showClaimModal, setShowClaimModal] = useState(false);
     const [selectedPolicy, setSelectedPolicy] = useState<any>(null);
@@ -215,9 +215,9 @@ export default function MemberInsuranceContent() {
                                         </td>
                                         <td className="px-8 py-6">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${claim.status === 'paid' ? 'bg-success-50 text-success-700 border-success-100' :
-                                                    claim.status === 'rejected' || claim.status === 'final_rejection' ? 'bg-red-50 text-red-700 border-red-100' :
-                                                        claim.status === 'under_appeal' ? 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse' :
-                                                            'bg-gray-50 text-gray-600 border-gray-100'
+                                                claim.status === 'rejected' || claim.status === 'final_rejection' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                    claim.status === 'under_appeal' ? 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse' :
+                                                        'bg-gray-50 text-gray-600 border-gray-100'
                                                 }`}>
                                                 {claim.status.replace('_', ' ')}
                                             </span>

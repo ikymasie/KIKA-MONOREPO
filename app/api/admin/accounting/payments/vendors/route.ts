@@ -3,11 +3,17 @@ import { AppDataSource } from '@/src/config/database';
 import { getUserFromRequest } from '@/lib/auth-server';
 import { AccountingService } from '@/src/services/AccountingService';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
     try {
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        if (!user.tenantId) {
+            return NextResponse.json({ error: 'Tenant ID not found' }, { status: 400 });
         }
 
         const body = await request.json();

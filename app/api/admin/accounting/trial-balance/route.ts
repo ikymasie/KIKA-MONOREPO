@@ -3,6 +3,8 @@ import { AppDataSource } from '@/src/config/database';
 import { getUserFromRequest } from '@/lib/auth-server';
 import { AccountingService } from '@/src/services/AccountingService';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
         const user = await getUserFromRequest(request);
