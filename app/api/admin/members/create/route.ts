@@ -32,7 +32,8 @@ export const POST = asyncHandler(async (request: NextRequest) => {
         employer,
         joinDate,
         physicalAddress,
-        postalAddress
+        postalAddress,
+        monthlyNetSalary
     } = body;
 
     // Validate required fields
@@ -59,6 +60,17 @@ export const POST = asyncHandler(async (request: NextRequest) => {
 
         if (existingMember) {
             throw new BadRequestError('Member with this Member Number or National ID already exists in your organization');
+        }
+
+        // Check if National ID exists in OTHER tenants (Warning only)
+        const otherTenantMember = await memberRepo.findOne({
+            where: { nationalId },
+            relations: ['tenant']
+        });
+
+        let warning = null;
+        if (otherTenantMember && otherTenantMember.tenantId !== user.tenantId) {
+            warning = `Applicant is already an active member of ${otherTenantMember.tenant.name}. Written consent from the Director for Co-operative Development is required for dual membership.`;
         }
 
         // Check if email or phone is already used in User table globally
@@ -106,7 +118,8 @@ export const POST = asyncHandler(async (request: NextRequest) => {
             tenantId: user.tenantId,
             userId: newUser.id,
             status: MemberStatus.ACTIVE,
-            shareCapital: 0
+            shareCapital: 0,
+            monthlyNetSalary: monthlyNetSalary ? Number(monthlyNetSalary) : 0
         });
 
         await transactionalEntityManager.save(newMember);
@@ -123,6 +136,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
         return NextResponse.json({
             success: true,
             message: 'Member and user account created successfully',
+            warning,
             data: { id: newMember.id }
         });
     });

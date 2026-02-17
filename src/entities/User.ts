@@ -10,6 +10,9 @@ import {
 } from 'typeorm';
 
 export enum UserRole {
+    // Higher-level Regulatory Auth
+    SUPER_REGULATOR = 'super_regulator',
+
     // Department of Co-operative Development (DCD) - Ministry of Trade and Industry
     // Handles registration, bye-laws, and cooperative compliance
     DCD_DIRECTOR = 'dcd_director',
@@ -132,6 +135,7 @@ export class User {
 
     isRegulator(): boolean {
         return [
+            UserRole.SUPER_REGULATOR,
             // DCD roles
             UserRole.DCD_DIRECTOR,
             UserRole.DCD_FIELD_OFFICER,

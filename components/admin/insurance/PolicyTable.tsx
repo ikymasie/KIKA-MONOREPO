@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { SkeletonTable } from '@/components/common/SkeletonLoader';
 
 export default function PolicyTable() {
     const [policies, setPolicies] = useState<any[]>([]);
@@ -75,11 +76,11 @@ export default function PolicyTable() {
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                         {loading ? (
-                            Array(5).fill(0).map((_, i) => (
-                                <tr key={i} className="animate-pulse">
-                                    <td colSpan={7} className="px-6 py-4"><div className="h-4 bg-gray-100 rounded w-full"></div></td>
-                                </tr>
-                            ))
+                            <tr>
+                                <td colSpan={7} className="px-6 py-4">
+                                    <SkeletonTable rows={5} columns={7} />
+                                </td>
+                            </tr>
                         ) : filteredPolicies.length === 0 ? (
                             <tr>
                                 <td colSpan={7} className="px-6 py-12 text-center text-gray-500 font-medium">No policies found.</td>

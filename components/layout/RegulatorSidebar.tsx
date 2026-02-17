@@ -25,6 +25,9 @@ const navItems: NavItem[] = [
     { name: '  → KYC Verification', href: '/regulator/compliance/kyc', icon: '✓' },
     { name: '  → Bye-laws Review', href: '/regulator/compliance/byelaws', icon: '📄' },
     { name: '  → Scores', href: '/regulator/compliance/scores', icon: '📊' },
+    { name: '  → Automation Rules', href: '/regulator/compliance/rules', icon: '🤖' },
+    { name: '  → Thresholds', href: '/regulator/compliance/thresholds', icon: '⚙️' },
+    { name: '  → Audit Schedule', href: '/regulator/compliance/audits', icon: '📅' },
     { name: 'Broadcasts', href: '/regulator/broadcasts', icon: '📢' },
     { name: 'Analysis & Reports', href: '/regulator/reporting', icon: '📈' },
     { name: 'Field Operations', href: '/regulator/field-officer', icon: '🕵️' },
@@ -32,9 +35,17 @@ const navItems: NavItem[] = [
     { name: '  → Investigations', href: '/regulator/field-officer/investigations', icon: '🔍' },
     { name: '  → Reports', href: '/regulator/field-officer/reports', icon: '📝' },
     { name: 'Regulatory Alerts', href: '/regulator/alerts', icon: '⚠️' },
+    { name: 'Insurance Disputes', href: '/regulator/insurance/disputes', icon: '⚖️' },
     { name: 'Settings', href: '/regulator/settings', icon: '⚙️' },
     { name: '  → Users', href: '/regulator/settings/users', icon: '👥' },
     { name: '  → Workflows', href: '/regulator/settings/workflows', icon: '🔄' },
+];
+
+const superRegulatorItems: NavItem[] = [
+    { name: 'Platform Management', href: '/regulator/settings/system', icon: '🌐' },
+    { name: '  → System Settings', href: '/regulator/settings/system', icon: '⚙️' },
+    { name: '  → Tenant Explorer', href: '/regulator/saccos', icon: '🏢' },
+    { name: '  → Platform Logs', href: '/regulator/logs', icon: '📜' },
 ];
 
 export default function RegulatorSidebar() {
@@ -72,6 +83,34 @@ export default function RegulatorSidebar() {
                             </li>
                         );
                     })}
+
+                    {user?.role === 'super_regulator' && (
+                        <>
+                            <div className="px-4 py-2 mt-4 mb-2">
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Platform Admin</p>
+                            </div>
+                            {superRegulatorItems.map((item) => {
+                                const isActive = pathname === item.href;
+                                return (
+                                    <li key={item.href}>
+                                        <Link
+                                            href={item.href}
+                                            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${isActive
+                                                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30 translate-x-1'
+                                                : 'text-gray-600 hover:bg-white/50 hover:text-indigo-600 hover:translate-x-1'
+                                                }`}
+                                        >
+                                            <span className={`text-xl transition-transform group-hover:scale-110 ${isActive ? 'scale-110' : ''}`}>{item.icon}</span>
+                                            <span className="font-medium">{item.name}</span>
+                                            {isActive && (
+                                                <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                                            )}
+                                        </Link>
+                                    </li>
+                                );
+                            })}
+                        </>
+                    )}
                 </ul>
             </nav>
 

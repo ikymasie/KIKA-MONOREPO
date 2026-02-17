@@ -24,6 +24,16 @@ export default function ProtectedRoute({
                 router.push(redirectTo);
             } else if (allowedRoles && !allowedRoles.includes(user.role)) {
                 router.push('/');
+            } else if (user.role !== 'SACCOS_ADMIN' && user.role !== 'SUPER_ADMIN') {
+                // Check for maintenance mode for non-admin users
+                fetch('/api/auth/maintenance-status')
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.isMaintenanceMode) {
+                            router.push('/maintenance');
+                        }
+                    })
+                    .catch(err => console.error('Maintenance check failed', err));
             }
         }
     }, [user, loading, allowedRoles, router, redirectTo]);

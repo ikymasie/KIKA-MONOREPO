@@ -46,6 +46,14 @@ import { Certificate } from '../entities/Certificate';
 import { ApplicationMember } from '../entities/ApplicationMember';
 import { ApplicationDocument } from '../entities/ApplicationDocument';
 import { ApplicationStatusHistory } from '../entities/ApplicationStatusHistory';
+import { AgmResolution } from '../entities/AgmResolution';
+import { BoardMinute } from '../entities/BoardMinute';
+import { Bylaw } from '../entities/Bylaw';
+import { MemberCommunication } from '../entities/MemberCommunication';
+import { ComplianceRule } from '../entities/ComplianceRule';
+import { ComplianceAudit } from '../entities/ComplianceAudit';
+import { ApplicationCommunication } from '../entities/ApplicationCommunication';
+
 
 
 const options: DataSourceOptions = {
@@ -104,6 +112,13 @@ const options: DataSourceOptions = {
         ApplicationMember,
         ApplicationDocument,
         ApplicationStatusHistory,
+        AgmResolution,
+        BoardMinute,
+        Bylaw,
+        MemberCommunication,
+        ApplicationCommunication,
+        ComplianceRule,
+        ComplianceAudit,
     ],
 
     migrations: ['src/migrations/**/*.ts'],

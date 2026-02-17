@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, Users } from 'lucide-react';
+import { SkeletonTable } from '@/components/common/SkeletonLoader';
 
 interface MemberManagementProps {
     applicationId: string;
@@ -58,7 +59,20 @@ export default function MemberManagement({ applicationId, onUpdate }: MemberMana
         }
     };
 
-    if (loading) return <div>Loading members...</div>;
+    if (loading) {
+        return (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                <div className="card">
+                    <div className="h-6 w-48 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-shimmer rounded mb-6" />
+                    <SkeletonTable rows={3} columns={2} />
+                </div>
+                <div className="card">
+                    <div className="h-6 w-48 bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-shimmer rounded mb-6" />
+                    <SkeletonTable rows={5} columns={3} />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">

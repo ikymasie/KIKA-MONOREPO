@@ -31,6 +31,7 @@ export enum EmploymentStatus {
 
 @Entity('members')
 @Index(['tenantId', 'memberNumber'], { unique: true })
+@Index(['tenantId', 'nationalId'], { unique: true })
 export class Member {
     @PrimaryGeneratedColumn('uuid')
     id!: string;
@@ -61,7 +62,7 @@ export class Member {
     @Column({ nullable: true })
     middleName?: string;
 
-    @Column({ unique: true })
+    @Column()
     nationalId!: string;
 
     @Column({ nullable: true })
@@ -101,6 +102,9 @@ export class Member {
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
     shareCapital!: number;
+
+    @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
+    monthlyNetSalary!: number;
 
     @Column({ type: 'date' })
     joinDate!: Date;

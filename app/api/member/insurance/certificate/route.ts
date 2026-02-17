@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
             policyName: policy.product?.name,
             coverageAmount: policy.coverageAmount,
             startDate: policy.startDate,
-            expiryDate: policy.expiryDate,
+            expiryDate: policy.endDate,
             status: policy.status,
             issuedAt: new Date().toISOString()
         });

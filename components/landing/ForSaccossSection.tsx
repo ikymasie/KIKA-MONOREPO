@@ -120,12 +120,17 @@ export default function ForSaccossSection() {
                         <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
                             Join leading SACCOS organizations across Botswana using KIKA Platform
                         </p>
-                        <button className="px-8 py-4 bg-white text-primary-600 rounded-full font-bold text-lg hover:shadow-2xl transition-all hover:scale-105">
-                            Request a Demo
-                        </button>
+                        <Link
+                            href="/auth/signup"
+                            className="inline-block px-10 py-5 bg-white text-primary-600 rounded-full font-extrabold text-xl hover:shadow-2xl transition-all hover:scale-105"
+                        >
+                            Get Started Now
+                        </Link>
                     </div>
                 </div>
             </div>
         </section>
     );
 }
+
+import Link from 'next/link';

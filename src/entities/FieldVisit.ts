@@ -55,6 +55,15 @@ export class FieldVisit {
     @OneToOne(() => require('./FieldReport').FieldReport, (report: any) => report.visit)
     report?: any; // Use any or Import type for the type hint
 
+    @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
+    latitude?: number;
+
+    @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
+    longitude?: number;
+
+    @Column({ type: 'timestamp', nullable: true })
+    geoLoggedAt?: Date;
+
     @CreateDateColumn()
     createdAt!: Date;
 

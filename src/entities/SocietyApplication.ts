@@ -15,6 +15,7 @@ export enum ApplicationType {
     BURIAL_SOCIETY = 'burial_society',
     RELIGIOUS_SOCIETY = 'religious_society',
     SACCOS = 'saccos',
+    COOPERATIVE = 'cooperative',
 }
 
 export enum ApplicationStatus {

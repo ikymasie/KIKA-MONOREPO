@@ -30,13 +30,17 @@ export const POST = asyncHandler(async (request: NextRequest) => {
         throw new BadRequestError('Missing required fields');
     }
 
+    if (!user.tenantId) throw new BadRequestError('User tenant ID not found');
+
     const policyRepo = AppDataSource.getRepository(InsurancePolicy);
     const policy = await policyRepo.findOne({
-        where: { id: policyId, tenantId: user.tenantId },
+        where: { id: policyId },
         relations: ['member']
     });
 
-    if (!policy) throw new NotFoundError('Policy not found');
+    if (!policy || policy.member.tenantId !== user.tenantId) {
+        throw new NotFoundError('Policy not found');
+    }
 
     const claimRepo = AppDataSource.getRepository(InsuranceClaim);
 

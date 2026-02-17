@@ -37,7 +37,7 @@ export default function MemberInsuranceContent() {
         const body = Object.fromEntries(formData.entries());
 
         try {
-            const res = await fetch('/api/member/insurance', {
+            const res = await fetch('/api/member/insurance/claims/submit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -105,12 +105,32 @@ export default function MemberInsuranceContent() {
                                         <p className="text-xl font-bold text-primary-600">P {Number(policy.monthlyPremium).toLocaleString()}/mo</p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={() => { setSelectedPolicy(policy); setShowClaimModal(true); }}
-                                    className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-gray-800 transition-all shadow-lg active:scale-95"
-                                >
-                                    File a Claim
-                                </button>
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => { setSelectedPolicy(policy); setShowClaimModal(true); }}
+                                        className="flex-[2] py-4 bg-gray-900 text-white rounded-2xl font-bold hover:bg-gray-800 transition-all shadow-lg active:scale-95"
+                                    >
+                                        File a Claim
+                                    </button>
+                                    <button
+                                        onClick={async () => {
+                                            const res = await fetch(`/api/member/insurance/certificate?policyId=${policy.id}`);
+                                            if (res.ok) {
+                                                const data = await res.json();
+                                                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                                                const url = window.URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = `Certificate_${policy.policyNumber}.json`;
+                                                a.click();
+                                            }
+                                        }}
+                                        className="flex-1 py-4 bg-primary-50 text-primary-600 rounded-2xl font-bold hover:bg-primary-100 transition-all border border-primary-100"
+                                        title="Download Certificate"
+                                    >
+                                        ⬇️
+                                    </button>
+                                </div>
                             </div>
                         ))
                     )}
@@ -152,6 +172,85 @@ export default function MemberInsuranceContent() {
                             </div>
                         ))
                     )}
+                </div>
+            </section>
+
+            {/* Claim History & Tracking */}
+            <section className="space-y-6">
+                <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                    <span className="w-10 h-10 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-500 text-xl shadow-inner">📊</span>
+                    Claim Tracking
+                </h2>
+
+                <div className="glass-panel overflow-hidden bg-white border border-gray-100 shadow-xl shadow-gray-200/50">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-gray-100 bg-gray-50/50">
+                                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Claim #</th>
+                                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Type</th>
+                                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Amount</th>
+                                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest">Status</th>
+                                <th className="px-8 py-5 text-xs font-black text-gray-400 uppercase tracking-widest text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {data.claims?.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="px-8 py-12 text-center text-gray-400 font-bold">No claims filed yet.</td>
+                                </tr>
+                            ) : (
+                                data.claims?.map((claim: any) => (
+                                    <tr key={claim.id} className="hover:bg-gray-50/50 transition-colors">
+                                        <td className="px-8 py-6">
+                                            <p className="font-mono text-xs font-bold text-primary-600 tracking-tight">{claim.claimNumber}</p>
+                                            <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase">{claim.policy.product.name}</p>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">
+                                                {claim.claimType}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <p className="text-sm font-black text-gray-900">P {Number(claim.claimAmount).toLocaleString()}</p>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${claim.status === 'paid' ? 'bg-success-50 text-success-700 border-success-100' :
+                                                    claim.status === 'rejected' || claim.status === 'final_rejection' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                        claim.status === 'under_appeal' ? 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse' :
+                                                            'bg-gray-50 text-gray-600 border-gray-100'
+                                                }`}>
+                                                {claim.status.replace('_', ' ')}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            {(claim.status === 'rejected') && (
+                                                <button
+                                                    onClick={() => {
+                                                        const reason = prompt("Describe why you are appealing this decision:");
+                                                        if (reason) {
+                                                            fetch(`/api/member/insurance/claims/${claim.id}/dispute`, {
+                                                                method: 'POST',
+                                                                headers: { 'Content-Type': 'application/json' },
+                                                                body: JSON.stringify({ disputeReason: reason })
+                                                            }).then(res => {
+                                                                if (res.ok) {
+                                                                    alert("Appeal lodged successfully. Our senior managers will review within 48 hours.");
+                                                                    fetchData();
+                                                                }
+                                                            });
+                                                        }
+                                                    }}
+                                                    className="px-4 py-2 bg-red-600 text-white text-[10px] font-black rounded-lg hover:bg-red-700 transition-all uppercase tracking-widest"
+                                                >
+                                                    Lodge Dispute
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
                 </div>
             </section>
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import RegulatorSidebar from '@/components/layout/RegulatorSidebar';
 import Link from 'next/link';
+import VisitCalendar from '@/components/regulator/VisitCalendar';
 
 interface Visit {
     id: string;
@@ -22,6 +23,7 @@ export default function FieldVisitsPage() {
     const [visits, setVisits] = useState<Visit[]>([]);
     const [saccosList, setSaccosList] = useState<Saccos[]>([]);
     const [showScheduleForm, setShowScheduleForm] = useState(false);
+    const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
     const [loading, setLoading] = useState(true);
     const [formData, setFormData] = useState({
         tenantId: '',
@@ -98,12 +100,28 @@ export default function FieldVisitsPage() {
                         <h1 className="text-2xl font-bold text-gray-900">Field Visits</h1>
                         <p className="text-gray-600">Track and manage on-site inspections.</p>
                     </div>
-                    <button
-                        onClick={() => setShowScheduleForm(true)}
-                        className="btn btn-primary"
-                    >
-                        Schedule Visit
-                    </button>
+                    <div className="flex gap-4 items-center">
+                        <div className="flex bg-gray-100 p-1 rounded-lg">
+                            <button
+                                onClick={() => setViewMode('list')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                List
+                            </button>
+                            <button
+                                onClick={() => setViewMode('calendar')}
+                                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${viewMode === 'calendar' ? 'bg-white shadow-sm text-primary-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                Calendar
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => setShowScheduleForm(true)}
+                            className="btn btn-primary"
+                        >
+                            Schedule Visit
+                        </button>
+                    </div>
                 </div>
 
                 {showScheduleForm && (
@@ -160,49 +178,53 @@ export default function FieldVisitsPage() {
                     </div>
                 )}
 
-                <div className="card overflow-hidden">
-                    <table className="w-full text-left">
-                        <thead className="bg-gray-50 border-b">
-                            <tr>
-                                <th className="px-6 py-4 font-semibold text-gray-700">SACCO</th>
-                                <th className="px-6 py-4 font-semibold text-gray-700">Date & Time</th>
-                                <th className="px-6 py-4 font-semibold text-gray-700">Purpose</th>
-                                <th className="px-6 py-4 font-semibold text-gray-700">Status</th>
-                                <th className="px-6 py-4 font-semibold text-gray-700 text-right">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                            {visits.length === 0 ? (
+                {viewMode === 'calendar' ? (
+                    <VisitCalendar />
+                ) : (
+                    <div className="card overflow-hidden">
+                        <table className="w-full text-left">
+                            <thead className="bg-gray-50 border-b">
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">No field visits scheduled.</td>
+                                    <th className="px-6 py-4 font-semibold text-gray-700">SACCO</th>
+                                    <th className="px-6 py-4 font-semibold text-gray-700">Date & Time</th>
+                                    <th className="px-6 py-4 font-semibold text-gray-700">Purpose</th>
+                                    <th className="px-6 py-4 font-semibold text-gray-700">Status</th>
+                                    <th className="px-6 py-4 font-semibold text-gray-700 text-right">Action</th>
                                 </tr>
-                            ) : (
-                                visits.map((visit) => (
-                                    <tr key={visit.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 font-medium">{visit.tenant.name}</td>
-                                        <td className="px-6 py-4">{new Date(visit.scheduledDate).toLocaleString()}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-600">{visit.purpose}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${getStatusColor(visit.status)}`}>
-                                                {visit.status.replace('_', ' ')}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            {visit.status === 'scheduled' && (
-                                                <Link href={`/regulator/field-officer/visits/${visit.id}/report`} className="text-primary-600 hover:text-primary-800 font-semibold">
-                                                    Start Inspection →
-                                                </Link>
-                                            )}
-                                            {visit.status === 'completed' && (
-                                                <span className="text-gray-400 italic">Report Submitted</span>
-                                            )}
-                                        </td>
+                            </thead>
+                            <tbody className="divide-y">
+                                {visits.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-6 py-12 text-center text-gray-500">No field visits scheduled.</td>
                                     </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                                ) : (
+                                    visits.map((visit) => (
+                                        <tr key={visit.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-6 py-4 font-medium">{visit.tenant.name}</td>
+                                            <td className="px-6 py-4">{new Date(visit.scheduledDate).toLocaleString()}</td>
+                                            <td className="px-6 py-4 text-sm text-gray-600">{visit.purpose}</td>
+                                            <td className="px-6 py-4">
+                                                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${getStatusColor(visit.status)}`}>
+                                                    {visit.status.replace('_', ' ')}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                {visit.status === 'scheduled' && (
+                                                    <Link href={`/regulator/field-officer/visits/${visit.id}/report`} className="text-primary-600 hover:text-primary-800 font-semibold">
+                                                        Start Inspection →
+                                                    </Link>
+                                                )}
+                                                {visit.status === 'completed' && (
+                                                    <span className="text-gray-400 italic">Report Submitted</span>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </DashboardLayout>
     );

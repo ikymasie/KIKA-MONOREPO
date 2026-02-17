@@ -49,6 +49,12 @@ export class Tenant {
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
     maxBorrowingLimit!: number;
 
+    @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+    regulatorDeductionCap?: number;
+
+    @Column({ type: 'decimal', precision: 5, scale: 2, default: 40.00 })
+    maxDeductionPercentage!: number;
+
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 10 })
     liquidityRatioTarget!: number;
 
@@ -87,7 +93,10 @@ export class Tenant {
     complianceRating?: string;
 
     @Column({ type: 'timestamp', nullable: true })
-    lastComplianceReviewDate?: Date;;
+    lastComplianceReviewDate?: Date;
+
+    @Column({ type: 'boolean', default: false })
+    isMaintenanceMode!: boolean;
 
     @CreateDateColumn()
     createdAt!: Date;

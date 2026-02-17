@@ -16,6 +16,9 @@ export class RegulatorSettings {
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 20.00 })
     saccosApplicationFee!: number;
 
+    @Column({ type: 'decimal', precision: 10, scale: 2, default: 20.00 })
+    cooperativeApplicationFee!: number;
+
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 500.00 })
     religiousSocietyApplicationFee!: number;
 
@@ -45,6 +48,19 @@ export class RegulatorSettings {
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 20.00 })
     certifiedCopyFee!: number;
+
+    // Compliance Thresholds
+    @Column({ type: 'decimal', precision: 5, scale: 2, default: 90.00 })
+    excellentThreshold!: number;
+
+    @Column({ type: 'decimal', precision: 5, scale: 2, default: 75.00 })
+    goodThreshold!: number;
+
+    @Column({ type: 'decimal', precision: 5, scale: 2, default: 60.00 })
+    fairThreshold!: number;
+
+    @Column({ type: 'decimal', precision: 5, scale: 2, default: 40.00 })
+    poorThreshold!: number;
 
     // Workflow Configuration: Maps application stages to responsible user roles
     @Column({ type: 'json', nullable: true })

@@ -6,6 +6,26 @@ export interface Permission {
 }
 
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+    [UserRole.SUPER_REGULATOR]: [
+        { resource: 'tenants', actions: ['create', 'read', 'update', 'delete'] },
+        { resource: 'users', actions: ['create', 'read', 'update', 'delete'] },
+        { resource: 'applications', actions: ['read', 'approve'] },
+        { resource: 'certificates', actions: ['create', 'read'] },
+        { resource: 'bylaws', actions: ['read', 'approve'] },
+        { resource: 'cooperative_compliance', actions: ['read', 'update'] },
+        { resource: 'reports', actions: ['read'] },
+        { resource: 'audit_logs', actions: ['read'] },
+        { resource: 'system_settings', actions: ['create', 'read', 'update', 'delete'] },
+        { resource: 'platform_analytics', actions: ['read'] },
+        { resource: 'deductions', actions: ['read', 'update', 'approve'] },
+        { resource: 'reconciliations', actions: ['create', 'read', 'update'] },
+        { resource: 'financial_stability', actions: ['read', 'update'] },
+        { resource: 'liquidity_reports', actions: ['read'] },
+        { resource: 'capital_adequacy', actions: ['read', 'update'] },
+        { resource: 'accounts', actions: ['read'] },
+        { resource: 'transactions', actions: ['read'] },
+    ],
+
     // Department of Co-operative Development (DCD) - Ministry of Trade and Industry
     // Focus: Registration, bye-laws, cooperative principles, democratic member control
     [UserRole.DCD_DIRECTOR]: [
@@ -199,6 +219,9 @@ export function hasPermission(
 }
 
 export function canAccessTenant(role: UserRole, userTenantId: string | null, targetTenantId: string): boolean {
+    // Super Regulator and other administrative regulatory roles have global access
+    if (role === UserRole.SUPER_REGULATOR) return true;
+
     // DCD, BoB, and government officers can access all tenants
     if ([
         // DCD roles
@@ -228,6 +251,7 @@ export function canAccessTenant(role: UserRole, userTenantId: string | null, tar
 
 export function requiresMFA(role: UserRole): boolean {
     return [
+        UserRole.SUPER_REGULATOR,
         // DCD roles
         UserRole.DCD_DIRECTOR,
         UserRole.DCD_FIELD_OFFICER,

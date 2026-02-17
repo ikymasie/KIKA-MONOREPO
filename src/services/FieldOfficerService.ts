@@ -155,5 +155,54 @@ export class FieldOfficerService {
             relations: ['tenant', 'officer'],
             order: { createdAt: 'DESC' },
         });
+    /**
+     * Log GPS coordinates for a field visit
+     */
+    static async logGeolocation(visitId: string, latitude: number, longitude: number): Promise<FieldVisit> {
+        if (!AppDataSource.isInitialized) {
+            await AppDataSource.initialize();
+        }
+
+        const visitRepo = AppDataSource.getRepository(FieldVisit);
+        await visitRepo.update(visitId, {
+            latitude,
+            longitude,
+            geoLoggedAt: new Date(),
+        });
+
+        return (await visitRepo.findOne({ where: { id: visitId } }))!;
+    }
+
+    /**
+     * Get visits for calendar integration
+     */
+    static async getCalendarVisits(filters: {
+        officerId?: string;
+        tenantId?: string;
+        startDate: Date;
+        endDate: Date;
+    }): Promise<FieldVisit[]> {
+        if (!AppDataSource.isInitialized) {
+            await AppDataSource.initialize();
+        }
+
+        const visitRepo = AppDataSource.getRepository(FieldVisit);
+        const query = visitRepo.createQueryBuilder('visit')
+            .leftJoinAndSelect('visit.tenant', 'tenant')
+            .leftJoinAndSelect('visit.officer', 'officer')
+            .where('visit.scheduledDate BETWEEN :startDate AND :endDate', {
+                startDate: filters.startDate,
+                endDate: filters.endDate,
+            });
+
+        if (filters.officerId) {
+            query.andWhere('visit.officerId = :officerId', { officerId: filters.officerId });
+        }
+
+        if (filters.tenantId) {
+            query.andWhere('visit.tenantId = :tenantId', { tenantId: filters.tenantId });
+        }
+
+        return await query.getMany();
     }
 }

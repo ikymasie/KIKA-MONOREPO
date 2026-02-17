@@ -56,7 +56,7 @@ export default function LandingNav({ onLoginClick }: LandingNavProps) {
                 </button>
 
                 {/* Desktop Navigation */}
-                <div className="hidden md:flex items-center gap-8">
+                <div className="hidden md:flex items-center gap-6">
                     {navLinks.map((link) => (
                         <button
                             key={link.id}
@@ -67,12 +67,20 @@ export default function LandingNav({ onLoginClick }: LandingNavProps) {
                             {link.label}
                         </button>
                     ))}
-                    <button
-                        onClick={onLoginClick}
-                        className="btn btn-primary px-6 py-2 rounded-full shadow-lg shadow-primary-600/20 hover:shadow-primary-600/40 transition-all hover:scale-105"
-                    >
-                        Login
-                    </button>
+                    <div className="flex items-center gap-3 ml-2">
+                        <button
+                            onClick={onLoginClick}
+                            className={`font-bold text-sm px-4 py-2 rounded-full transition-all ${isScrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10'}`}
+                        >
+                            Login
+                        </button>
+                        <Link
+                            href="/auth/signup"
+                            className="btn btn-primary px-6 py-2 rounded-full shadow-lg shadow-primary-600/20 hover:shadow-primary-600/40 transition-all hover:scale-105"
+                        >
+                            Register
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Mobile Menu Button */}
@@ -98,18 +106,28 @@ export default function LandingNav({ onLoginClick }: LandingNavProps) {
                                 {link.label}
                             </button>
                         ))}
-                        <button
-                            onClick={() => {
-                                setIsMobileMenuOpen(false);
-                                onLoginClick();
-                            }}
-                            className="btn btn-primary w-full py-3 rounded-xl mt-2"
-                        >
-                            Login
-                        </button>
+                        <div className="grid grid-cols-2 gap-3 mt-4">
+                            <button
+                                onClick={() => {
+                                    setIsMobileMenuOpen(false);
+                                    onLoginClick();
+                                }}
+                                className="w-full py-3 rounded-xl border-2 border-gray-100 font-bold text-gray-700 hover:bg-gray-50"
+                            >
+                                Login
+                            </button>
+                            <Link
+                                href="/auth/signup"
+                                className="btn btn-primary w-full py-3 rounded-xl flex items-center justify-center"
+                            >
+                                Register
+                            </Link>
+                        </div>
                     </div>
                 </div>
             )}
         </nav>
     );
 }
+
+import Link from 'next/link';

@@ -18,6 +18,13 @@ export default function ApplicationReview({ params }: { params: { id: string } }
     const [assignmentRole, setAssignmentRole] = useState<'intelligence' | 'legal' | null>(null);
     const [officers, setOfficers] = useState<any[]>([]);
     const [assignedOfficerId, setAssignedOfficerId] = useState('');
+    const [assignmentNotes, setAssignmentNotes] = useState('');
+
+    // Communication Log state
+    const [communications, setCommunications] = useState<any[]>([]);
+    const [commType, setCommType] = useState('call');
+    const [commContent, setCommContent] = useState('');
+    const [sendingComm, setSendingComm] = useState(false);
 
     useEffect(() => {
         async function fetchData() {
@@ -31,6 +38,10 @@ export default function ApplicationReview({ params }: { params: { id: string } }
                 if (appRes.ok) setApplication(await appRes.json());
                 if (docsRes.ok) setDocuments(await docsRes.json());
                 if (usersRes.ok) setOfficers(await usersRes.json());
+
+                // Fetch communications
+                const commRes = await fetch(`/api/registration/applications/${params.id}/communications`);
+                if (commRes.ok) setCommunications(await commRes.json());
             } catch (e) {
                 console.error(e);
             } finally {
@@ -54,7 +65,8 @@ export default function ApplicationReview({ params }: { params: { id: string } }
                 body: JSON.stringify({
                     applicationId: params.id,
                     officerId: assignedOfficerId,
-                    role: assignmentRole
+                    role: assignmentRole,
+                    notes: assignmentNotes
                 })
             });
 
@@ -104,6 +116,34 @@ export default function ApplicationReview({ params }: { params: { id: string } }
             console.error(e);
         } finally {
             setVerifying(false);
+        }
+    };
+
+    const handleLogCommunication = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!commContent) return;
+        setSendingComm(true);
+        try {
+            const res = await fetch(`/api/registration/applications/${params.id}/communications`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: commType,
+                    direction: 'outbound',
+                    content: commContent,
+                    subject: `Communication regarding ${application.proposedName}`
+                })
+            });
+
+            if (res.ok) {
+                const newComm = await res.json();
+                setCommunications([newComm, ...communications]);
+                setCommContent('');
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSendingComm(false);
         }
     };
 
@@ -246,6 +286,16 @@ export default function ApplicationReview({ params }: { params: { id: string } }
                                     </div>
                                 </div>
 
+                                <div className="mt-6 space-y-4">
+                                    <label className="block text-sm font-bold text-gray-700 uppercase tracking-wider">Assignment Rationale (Internal Notes)</label>
+                                    <textarea
+                                        className="w-full h-24 p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                                        placeholder="Explain why this officer was chosen or any special instructions..."
+                                        value={assignmentNotes}
+                                        onChange={(e) => setAssignmentNotes(e.target.value)}
+                                    />
+                                </div>
+
                                 <button
                                     onClick={handleAssign}
                                     disabled={!assignmentRole || !assignedOfficerId || verifying}
@@ -279,6 +329,68 @@ export default function ApplicationReview({ params }: { params: { id: string } }
                                 <div><span className="text-gray-500 block font-bold text-[10px] uppercase">Email</span> <span className="font-medium">{application.primaryContactEmail}</span></div>
                                 <div><span className="text-gray-500 block font-bold text-[10px] uppercase">Phone</span> <span className="font-medium">{application.primaryContactPhone}</span></div>
                                 <div><span className="text-gray-500 block font-bold text-[10px] uppercase">Physical Address</span> <span className="font-medium text-gray-600">{application.physicalAddress}</span></div>
+                            </div>
+                        </section>
+
+                        {/* Communication Log */}
+                        <section className="card p-6 border-t-4 border-amber-500">
+                            <h2 className="text-xl font-bold mb-4">Direct Communication Log</h2>
+
+                            <form onSubmit={handleLogCommunication} className="mb-6 space-y-3">
+                                <div className="flex gap-2">
+                                    <select
+                                        className="p-2 text-sm rounded-lg border border-gray-200 outline-none"
+                                        value={commType}
+                                        onChange={(e) => setCommType(e.target.value)}
+                                    >
+                                        <option value="call">Phone Call</option>
+                                        <option value="email">Email</option>
+                                        <option value="sms">SMS</option>
+                                        <option value="in_person">In Person</option>
+                                        <option value="whatsapp">WhatsApp</option>
+                                    </select>
+                                    <button
+                                        type="submit"
+                                        disabled={sendingComm || !commContent}
+                                        className="btn btn-primary px-4 py-2 text-xs rounded-lg disabled:opacity-50"
+                                    >
+                                        {sendingComm ? 'Logging...' : 'Log Communication'}
+                                    </button>
+                                </div>
+                                <textarea
+                                    className="w-full p-3 text-sm rounded-xl border border-gray-200 focus:ring-2 focus:ring-amber-500 outline-none h-20"
+                                    placeholder="Summarize the conversation with the applicant..."
+                                    value={commContent}
+                                    onChange={(e) => setCommContent(e.target.value)}
+                                />
+                            </form>
+
+                            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                                {communications.length === 0 ? (
+                                    <p className="text-center text-gray-500 text-sm italic py-4">No communication recorded yet.</p>
+                                ) : (
+                                    communications.map((comm: any) => (
+                                        <div key={comm.id} className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${comm.type === 'email' ? 'bg-blue-100 text-blue-700' :
+                                                    comm.type === 'call' ? 'bg-green-100 text-green-700' :
+                                                        'bg-amber-100 text-amber-700'
+                                                    }`}>
+                                                    {comm.type}
+                                                </span>
+                                                <span className="text-[10px] text-gray-400">
+                                                    {new Date(comm.createdAt).toLocaleString()}
+                                                </span>
+                                            </div>
+                                            <p className="text-sm text-gray-700 line-clamp-3 hover:line-clamp-none transition-all cursor-default">
+                                                {comm.content}
+                                            </p>
+                                            <div className="mt-2 text-[10px] text-gray-500">
+                                                Recorded by: {comm.recordedBy?.firstName} {comm.recordedBy?.lastName}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </section>
                     </div>

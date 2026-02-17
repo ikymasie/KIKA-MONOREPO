@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { applicationId, officerId, role } = body;
+        const { applicationId, officerId, role, notes } = body;
 
         if (!applicationId || !officerId || !role) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -23,7 +23,9 @@ export async function POST(request: NextRequest) {
         const application = await SocietyApplicationService.assignToWorkflow(
             applicationId,
             officerId,
-            role
+            role,
+            user.id,
+            notes
         );
 
         return NextResponse.json(application);

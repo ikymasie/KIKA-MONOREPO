@@ -13,13 +13,19 @@ interface NavItem {
 
 const navItems: NavItem[] = [
     { name: 'Dashboard', href: '/admin/dashboard', icon: '📊' },
+    { name: 'Analytics', href: '/admin/analytics', icon: '📈' },
     { name: 'Members', href: '/admin/members', icon: '👥' },
     { name: 'Loans', href: '/admin/loans', icon: '💰' },
     { name: 'Savings', href: '/admin/savings', icon: '💵' },
     { name: 'Insurance', href: '/admin/insurance', icon: '🛡️' },
+    { name: '  → Claims Workspace', href: '/admin/insurance/claims', icon: '📋' },
     { name: 'Merchandise', href: '/admin/merchandise', icon: '🛒' },
+    { name: 'Governance', href: '/admin/governance', icon: '⚖️' },
+    { name: 'Bye-laws', href: '/admin/bylaws', icon: '📜' },
+    { name: 'Communications', href: '/admin/communications', icon: '📢' },
     { name: 'Deductions', href: '/admin/deductions', icon: '📋' },
-    { name: 'Reports', href: '/admin/reports', icon: '📈' },
+    { name: 'Accounting', href: '/admin/accounting', icon: '🏦' },
+    { name: 'Reports', href: '/admin/reports', icon: '📊' },
     { name: 'Team Management', href: '/admin/team', icon: '👤' },
     { name: 'Settings', href: '/admin/settings', icon: '⚙️' },
 ];

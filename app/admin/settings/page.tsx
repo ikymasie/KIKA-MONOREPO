@@ -27,6 +27,7 @@ interface TenantSettings {
         makerCheckerEnabled: boolean;
         approvalHierarchy: string[];
     };
+    isMaintenanceMode: boolean;
 }
 
 export default function SettingsPage() {

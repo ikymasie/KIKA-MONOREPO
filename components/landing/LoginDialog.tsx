@@ -94,11 +94,23 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
                     </div>
 
                     {/* Footer Note */}
-                    <div className="px-8 pb-6 text-center text-sm font-medium text-gray-500 bg-white/40 backdrop-blur-lg">
-                        Contact your SACCOS administrator for account access
+                    <div className="px-8 pb-8 pt-2 text-center bg-white/40 backdrop-blur-lg">
+                        <div className="h-px bg-gray-100 mb-6 mx-auto w-1/2"></div>
+                        <p className="text-gray-500 font-medium mb-3">
+                            Looking to register a new Society or SACCO?
+                        </p>
+                        <Link
+                            href="/auth/signup"
+                            onClick={onClose}
+                            className="inline-flex items-center gap-2 text-primary-600 font-extrabold hover:text-primary-700 transition-colors"
+                        >
+                            Apply for Registration →
+                        </Link>
                     </div>
                 </div>
             </div>
         </>
     );
 }
+
+import Link from 'next/link';

@@ -6,6 +6,10 @@ import { KYC } from '@/src/entities/KYC';
 import { Member } from '@/src/entities/Member';
 import { ByelawReview, ByelawReviewStatus } from '@/src/entities/ByelawReview';
 import { Tenant } from '@/src/entities/Tenant';
+import { RegulatorSettings } from '@/src/entities/RegulatorSettings';
+import { ComplianceRule, ComplianceMetric, ComparisonOperator } from '@/src/entities/ComplianceRule';
+import { ComplianceAudit, AuditStatus } from '@/src/entities/ComplianceAudit';
+import { AlertType, AlertSeverity } from '@/src/entities/RegulatoryAlert';
 
 export class ComplianceService {
     /**
@@ -35,7 +39,17 @@ export class ComplianceService {
         const issueScore = await this.calculateIssueScore(tenantId);
         const alertScore = await this.calculateAlertScore(tenantId);
 
-        // Calculate weighted overall score
+        // Fetch thresholds from settings or use defaults
+        const settingsRepo = AppDataSource.getRepository(RegulatorSettings);
+        const settings = await settingsRepo.findOne({ order: { updatedAt: 'DESC' } });
+
+        const thresholds = {
+            excellent: settings?.excellentThreshold || 90,
+            good: settings?.goodThreshold || 75,
+            fair: settings?.fairThreshold || 60,
+            poor: settings?.poorThreshold || 40,
+        };
+
         const overallScore =
             kycScore * 0.25 +
             reportingScore * 0.25 +
@@ -43,7 +57,11 @@ export class ComplianceService {
             issueScore * 0.2 +
             alertScore * 0.1;
 
-        const rating = ComplianceScore.getRatingFromScore(overallScore);
+        let rating = ComplianceRating.CRITICAL;
+        if (overallScore >= thresholds.excellent) rating = ComplianceRating.EXCELLENT;
+        else if (overallScore >= thresholds.good) rating = ComplianceRating.GOOD;
+        else if (overallScore >= thresholds.fair) rating = ComplianceRating.FAIR;
+        else if (overallScore >= thresholds.poor) rating = ComplianceRating.POOR;
 
         // Create new compliance score record
         const complianceScore = complianceScoreRepo.create({
@@ -285,5 +303,134 @@ export class ComplianceService {
             pendingKYCCount,
             bylawReview,
         };
+    }
+
+    /**
+     * Rule Engine: Evaluate all active rules for a tenant
+     */
+    static async evaluateRules(tenantId: string): Promise<void> {
+        if (!AppDataSource.isInitialized) {
+            await AppDataSource.initialize();
+        }
+
+        const ruleRepo = AppDataSource.getRepository(ComplianceRule);
+        const alertRepo = AppDataSource.getRepository(RegulatoryAlert);
+        const activeRules = await ruleRepo.find({ where: { isActive: true } });
+
+        if (activeRules.length === 0) return;
+
+        // Fetch current metrics
+        const kycScore = await this.calculateKYCScore(tenantId);
+        const reportingScore = await this.calculateReportingScore(tenantId);
+        const bylawScore = await this.calculateBylawScore(tenantId);
+        const issueScore = await this.calculateIssueScore(tenantId);
+        const alertScore = await this.calculateAlertScore(tenantId);
+        const overallScore = kycScore * 0.25 + reportingScore * 0.25 + bylawScore * 0.2 + issueScore * 0.2 + alertScore * 0.1;
+
+        for (const rule of activeRules) {
+            let metricValue = 0;
+            switch (rule.metric) {
+                case ComplianceMetric.KYC_RATE: metricValue = kycScore; break;
+                case ComplianceMetric.FINANCIAL_TIMELINESS: metricValue = reportingScore; break;
+                case ComplianceMetric.BYLAW_ADHERENCE: metricValue = bylawScore; break;
+                case ComplianceMetric.OPEN_ISSUES: metricValue = issueScore; break;
+                case ComplianceMetric.COMPLIANCE_SCORE: metricValue = overallScore; break;
+            }
+
+            let triggered = false;
+            switch (rule.operator) {
+                case ComparisonOperator.LESS_THAN: triggered = metricValue < rule.threshold; break;
+                case ComparisonOperator.GREATER_THAN: triggered = metricValue > rule.threshold; break;
+                case ComparisonOperator.EQUALS: triggered = metricValue === rule.threshold; break;
+                case ComparisonOperator.LESS_THAN_OR_EQUAL: triggered = metricValue <= rule.threshold; break;
+                case ComparisonOperator.GREATER_THAN_OR_EQUAL: triggered = metricValue >= rule.threshold; break;
+            }
+
+            if (triggered) {
+                // Check if a similar unresolved alert already exists
+                const existingAlert = await alertRepo.findOne({
+                    where: {
+                        tenantId,
+                        type: AlertType.COMPLIANCE_ISSUE,
+                        title: `Automated Alert: ${rule.name}`,
+                        isResolved: false
+                    }
+                });
+
+                if (!existingAlert) {
+                    const alert = alertRepo.create({
+                        tenantId,
+                        type: AlertType.COMPLIANCE_ISSUE,
+                        severity: rule.severity,
+                        title: `Automated Alert: ${rule.name}`,
+                        description: `Rule "${rule.name}" triggered. Metric ${rule.metric} is ${metricValue}, which is ${rule.operator} ${rule.threshold}.`,
+                        metadata: { ruleId: rule.id, metric: rule.metric, value: metricValue }
+                    });
+                    await alertRepo.save(alert);
+                }
+            }
+        }
+    }
+
+    /**
+     * Audit Scheduler: Schedule a new audit
+     */
+    static async scheduleAudit(tenantId: string, auditorId: string, scheduledDate: Date): Promise<ComplianceAudit> {
+        if (!AppDataSource.isInitialized) {
+            await AppDataSource.initialize();
+        }
+
+        const auditRepo = AppDataSource.getRepository(ComplianceAudit);
+        const audit = auditRepo.create({
+            tenantId,
+            auditorId,
+            scheduledDate,
+            status: AuditStatus.PENDING
+        });
+
+        return await auditRepo.save(audit);
+    }
+
+    /**
+     * Audit Scheduler: Complete an audit
+     */
+    static async completeAudit(auditId: string, findings: string): Promise<ComplianceAudit> {
+        if (!AppDataSource.isInitialized) {
+            await AppDataSource.initialize();
+        }
+
+        const auditRepo = AppDataSource.getRepository(ComplianceAudit);
+        const audit = await auditRepo.findOne({ where: { id: auditId }, relations: ['tenant'] });
+
+        if (!audit) throw new Error('Audit not found');
+
+        // Capture current score
+        const latestMetrics = await this.getComplianceMetrics(audit.tenantId);
+
+        audit.status = AuditStatus.COMPLETED;
+        audit.completedDate = new Date();
+        audit.findings = findings;
+        audit.complianceScoreAtTime = latestMetrics.latestScore?.overallScore || 0;
+
+        return await auditRepo.save(audit);
+    }
+
+    /**
+     * Rule Management
+     */
+    static async saveRule(ruleData: Partial<ComplianceRule>): Promise<ComplianceRule> {
+        if (!AppDataSource.isInitialized) {
+            await AppDataSource.initialize();
+        }
+        const ruleRepo = AppDataSource.getRepository(ComplianceRule);
+        const rule = ruleRepo.create(ruleData);
+        return await ruleRepo.save(rule);
+    }
+
+    static async getRules(): Promise<ComplianceRule[]> {
+        if (!AppDataSource.isInitialized) {
+            await AppDataSource.initialize();
+        }
+        return await AppDataSource.getRepository(ComplianceRule).find();
     }
 }

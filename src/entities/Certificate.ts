@@ -35,8 +35,8 @@ export class Certificate {
     @Column({ type: 'enum', enum: CertificateType })
     certificateType!: CertificateType;
 
-    @Column({ type: 'date' })
-    issuedDate!: Date;
+    @Column({ type: 'date', nullable: true })
+    issuedDate?: Date;
 
     @Column({ type: 'date', nullable: true })
     expiryDate?: Date;

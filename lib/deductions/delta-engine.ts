@@ -21,6 +21,8 @@ export interface DeductionBreakdown {
     merchandise: number;
     total: number;
     changeReason: ChangeReason;
+    isOverLimit: boolean;
+    limitNotes?: string;
 }
 
 export class DeltaDeductionEngine {
@@ -111,6 +113,8 @@ export class DeltaDeductionEngine {
                     currentAmount: breakdown.total,
                     previousAmount,
                     changeReason: breakdown.changeReason,
+                    isOverLimit: breakdown.isOverLimit,
+                    limitNotes: breakdown.limitNotes,
                     breakdown: {
                         savings: breakdown.savings,
                         loanRepayment: breakdown.loanRepayment,
@@ -192,7 +196,84 @@ export class DeltaDeductionEngine {
             merchandise,
             total: currentTotal,
             changeReason,
+            ...(await this.checkDeductionLimit(member, currentTotal)),
         };
+    }
+
+    private async checkDeductionLimit(member: Member, tenantTotal: number): Promise<{ isOverLimit: boolean; limitNotes?: string }> {
+        const db = await getDb();
+        const memberRepo = db.getRepository(Member);
+        const itemRepo = db.getRepository(DeductionItem);
+        const requestRepo = db.getRepository(DeductionRequest);
+        const tenantRepo = db.getRepository(require('@/src/entities/Tenant').Tenant);
+
+        const tenant = await tenantRepo.findOne({ where: { id: this.tenantId } });
+        const maxPct = Number(tenant?.maxDeductionPercentage || 40);
+        const salary = Number(member.monthlyNetSalary || 0);
+
+        if (salary === 0) {
+            return {
+                isOverLimit: tenantTotal > 0,
+                limitNotes: 'Member net salary is not recorded (P0.00). Any deduction is flagged as over limit.'
+            };
+        }
+
+        const maxDeduction = salary * (maxPct / 100);
+
+        // Find this person in other tenants
+        const otherMembers = await memberRepo.find({
+            where: { nationalId: member.nationalId },
+        });
+
+        let otherSaccosTotal = 0;
+        const otherTenantNotes: string[] = [];
+
+        for (const otherMember of otherMembers) {
+            if (otherMember.tenantId === this.tenantId) continue;
+
+            // Get the latest deduction for this month in the other tenant
+            const otherRequest = await requestRepo.findOne({
+                where: {
+                    tenantId: otherMember.tenantId,
+                    month: this.month,
+                    year: this.year,
+                },
+                order: { createdAt: 'DESC' }
+            });
+
+            if (otherRequest) {
+                const otherItem = await itemRepo.findOne({
+                    where: { requestId: otherRequest.id, memberId: otherMember.id }
+                });
+
+                if (otherItem) {
+                    const amount = Number(otherItem.currentAmount);
+                    otherSaccosTotal += amount;
+                    if (amount > 0) {
+                        const otherTenant = await tenantRepo.findOne({ where: { id: otherMember.tenantId } });
+                        otherTenantNotes.push(`P${amount.toFixed(2)} at ${otherTenant?.name || 'Other SACCOS'}`);
+                    }
+                }
+            }
+        }
+
+        const grandTotal = tenantTotal + otherSaccosTotal;
+        const isOverLimit = grandTotal > maxDeduction;
+
+        let limitNotes = `Limit: P${maxDeduction.toFixed(2)} (${maxPct}% of P${salary.toFixed(2)}). `;
+        if (otherSaccosTotal > 0) {
+            limitNotes += `Combined Total: P${grandTotal.toFixed(2)} (${otherTenantNotes.join(', ')}). `;
+        } else {
+            limitNotes += `Total: P${grandTotal.toFixed(2)}. `;
+        }
+
+        if (isOverLimit) {
+            limitNotes += 'EXCEEDED.';
+        } else {
+            limitNotes += 'Within limit.';
+        }
+
+        return { isOverLimit, limitNotes };
     }
 
     private async determineChangeReason(

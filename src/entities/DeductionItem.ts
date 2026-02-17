@@ -62,6 +62,12 @@ export class DeductionItem {
         merchandise?: number;
     };
 
+    @Column({ default: false })
+    isOverLimit!: boolean;
+
+    @Column({ type: 'text', nullable: true })
+    limitNotes?: string;
+
     @CreateDateColumn()
     createdAt!: Date;
 }

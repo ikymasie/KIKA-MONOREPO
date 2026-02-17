@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import RegulatorSidebar from '@/components/layout/RegulatorSidebar';
+import GPSTracker from '@/components/regulator/GPSTracker';
 
 interface Visit {
     id: string;
@@ -41,6 +42,8 @@ export default function SubmitReportPage({ params }: { params: { id: string } })
         generalFindings: '',
         recommendations: '',
     });
+
+    const [attachments, setAttachments] = useState<File[]>([]);
 
     useEffect(() => {
         async function fetchVisit() {
@@ -118,6 +121,7 @@ export default function SubmitReportPage({ params }: { params: { id: string } })
                     },
                     generalFindings: findings.generalFindings,
                     recommendations: findings.recommendations,
+                    attachments: attachments.map(f => f.name), // In real app, upload files first
                 }),
             });
 
@@ -289,6 +293,9 @@ export default function SubmitReportPage({ params }: { params: { id: string } })
                             <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
                                 <span className="text-2xl">✍️</span> Final Findings & Recommendations
                             </h2>
+
+                            <GPSTracker visitId={visit.id} />
+
                             <div className="form-group">
                                 <label className="label">General Visit Findings</label>
                                 <textarea
@@ -307,6 +314,40 @@ export default function SubmitReportPage({ params }: { params: { id: string } })
                                     onChange={(e) => setFindings({ ...findings, recommendations: e.target.value })}
                                 />
                             </div>
+
+                            <div className="form-group">
+                                <label className="label">Document Scanning & Attachments</label>
+                                <div className="mt-2 flex flex-wrap gap-4">
+                                    {attachments.map((file: File, idx: number) => (
+                                        <div key={idx} className="relative group w-24 h-24 rounded-lg overflow-hidden border border-gray-200">
+                                            <img src={URL.createObjectURL(file)} alt="attachment" className="w-full h-full object-cover" />
+                                            <button
+                                                onClick={() => setAttachments(attachments.filter((_: File, i: number) => i !== idx))}
+                                                className="absolute top-1 right-1 bg-danger-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            >
+                                                ×
+                                            </button>
+                                        </div>
+                                    ))}
+                                    <label className="w-24 h-24 rounded-xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-all text-gray-400 hover:text-primary-600">
+                                        <span className="text-2xl">📸</span>
+                                        <span className="text-[10px] font-bold uppercase mt-1">Scan/Upload</span>
+                                        <input
+                                            type="file"
+                                            multiple
+                                            accept="image/*,application/pdf"
+                                            className="hidden"
+                                            onChange={(e) => {
+                                                if (e.target.files) {
+                                                    setAttachments([...attachments, ...Array.from(e.target.files)]);
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                </div>
+                                <p className="text-[10px] text-gray-400 mt-2">Use your device camera to scan documents or upload field photos.</p>
+                            </div>
+
                             <div className="flex justify-between pt-4">
                                 <button onClick={() => setStep(2)} className="btn btn-secondary">← Back to Verifications</button>
                                 <button onClick={handleSubmitReport} className="btn bg-primary-600 text-white hover:bg-primary-700 px-12 font-bold shadow-lg shadow-primary-500/30 transition-all hover:-translate-y-1">Submit Official Report</button>

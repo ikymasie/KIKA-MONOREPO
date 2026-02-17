@@ -129,20 +129,20 @@ export default function SaccosAdminDashboardContent() {
                         <div className="text-sm text-gray-600">Process applications</div>
                     </button>
                     <button
-                        onClick={() => router.push('/admin/deductions')}
-                        className="card p-4 hover:shadow-lg transition-shadow text-left"
+                        onClick={() => router.push('/admin/communications')}
+                        className="card p-4 hover:shadow-lg transition-shadow text-left border-l-4 border-l-orange-500 bg-orange-50/30"
                     >
-                        <div className="text-2xl mb-2">📊</div>
-                        <div className="font-semibold">Deductions</div>
-                        <div className="text-sm text-gray-600">Generate CSV</div>
+                        <div className="text-2xl mb-2">📢</div>
+                        <div className="font-semibold text-orange-900">Broadcast</div>
+                        <div className="text-sm text-orange-700/70">Bulk SMS/Email</div>
                     </button>
                     <button
-                        onClick={() => router.push('/admin/reports')}
-                        className="card p-4 hover:shadow-lg transition-shadow text-left"
+                        onClick={() => router.push('/admin/governance')}
+                        className="card p-4 hover:shadow-lg transition-shadow text-left border-l-4 border-l-primary-500 bg-primary-50/30"
                     >
-                        <div className="text-2xl mb-2">📈</div>
-                        <div className="font-semibold">Reports</div>
-                        <div className="text-sm text-gray-600">Financial statements</div>
+                        <div className="text-2xl mb-2">⚖️</div>
+                        <div className="font-semibold text-primary-900">Governance</div>
+                        <div className="text-sm text-primary-700/70">AGM & Board</div>
                     </button>
                 </div>
             </div>

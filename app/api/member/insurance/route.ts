@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
         const db = await getDb();
         const policyRepo = db.getRepository(InsurancePolicy);
         const productRepo = db.getRepository(InsuranceProduct);
+        const claimRepo = db.getRepository(InsuranceClaim);
 
         // Get member's active policies
         const policies = await policyRepo.find({
@@ -30,9 +31,17 @@ export async function GET(request: NextRequest) {
             where: { tenantId: user.tenantId, status: 'active' as any }
         });
 
+        // Get member's claims
+        const claims = await claimRepo.find({
+            where: { policy: { memberId: user.id } },
+            relations: ['policy', 'policy.product'],
+            order: { createdAt: 'DESC' }
+        });
+
         return NextResponse.json({
             policies,
-            availableProducts
+            availableProducts,
+            claims
         });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

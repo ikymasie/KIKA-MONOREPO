@@ -4,6 +4,8 @@ import { RegulatorSettings } from '../entities/RegulatorSettings';
 import { User } from '../entities/User';
 import { SecurityScreening, ScreeningStatus, RiskLevel } from '../entities/SecurityScreening';
 import { RiskFlag, RiskFlagType } from '../entities/RiskFlag';
+import { ApplicationWorkflowLog } from '../entities/ApplicationWorkflowLog';
+import { ApplicationCommunication, CommunicationType, CommunicationDirection } from '../entities/ApplicationCommunication';
 
 export class SocietyApplicationService {
     private static applicationRepo = AppDataSource.getRepository(SocietyApplication);
@@ -39,6 +41,9 @@ export class SocietyApplicationService {
                 break;
             case ApplicationType.BURIAL_SOCIETY:
                 feeAmount = settings.burialSocietyApplicationFee;
+                break;
+            case ApplicationType.COOPERATIVE:
+                feeAmount = settings.cooperativeApplicationFee;
                 break;
             default:
                 feeAmount = settings.generalSocietyApplicationFee;
@@ -84,6 +89,9 @@ export class SocietyApplicationService {
                 break;
             case ApplicationType.BURIAL_SOCIETY:
                 feeAmount = settings.burialSocietyApplicationFee;
+                break;
+            case ApplicationType.COOPERATIVE:
+                feeAmount = settings.cooperativeApplicationFee;
                 break;
             default:
                 feeAmount = settings.generalSocietyApplicationFee;
@@ -189,10 +197,17 @@ export class SocietyApplicationService {
     static async assignToWorkflow(
         applicationId: string,
         officerId: string,
-        targetRole: 'intelligence' | 'legal'
+        targetRole: 'intelligence' | 'legal',
+        performerId?: string,
+        notes?: string
     ): Promise<SocietyApplication> {
-        const application = await this.applicationRepo.findOneBy({ id: applicationId });
+        const application = await this.applicationRepo.findOne({
+            where: { id: applicationId },
+            relations: ['applicant']
+        });
         if (!application) throw new Error('Application not found');
+
+        const fromStatus = application.status;
 
         if (targetRole === 'intelligence') {
             application.status = ApplicationStatus.SECURITY_VETTING;
@@ -202,7 +217,73 @@ export class SocietyApplicationService {
             application.legalOfficerId = officerId;
         }
 
-        return await this.applicationRepo.save(application);
+        const savedApplication = await this.applicationRepo.save(application);
+
+        // Log the workflow change
+        if (performerId) {
+            const logRepo = AppDataSource.getRepository(ApplicationWorkflowLog);
+            const log = logRepo.create({
+                applicationId,
+                fromStatus,
+                toStatus: application.status,
+                performedBy: performerId,
+                notes: notes || `Assigned to ${targetRole} review`
+            });
+            await logRepo.save(log);
+        }
+
+        return savedApplication;
+    }
+
+    /**
+     * Bulk assign applications to next workflow stage
+     */
+    static async bulkAssignToWorkflow(
+        applicationIds: string[],
+        officerId: string,
+        targetRole: 'intelligence' | 'legal',
+        performerId: string,
+        notes?: string
+    ): Promise<SocietyApplication[]> {
+        const results: SocietyApplication[] = [];
+        for (const id of applicationIds) {
+            const app = await this.assignToWorkflow(id, officerId, targetRole, performerId, notes);
+            results.push(app);
+        }
+        return results;
+    }
+
+    /**
+     * Log communication with applicant
+     */
+    static async logCommunication(
+        applicationId: string,
+        data: {
+            type: CommunicationType,
+            direction: CommunicationDirection,
+            subject?: string,
+            content: string,
+            recordedById: string
+        }
+    ): Promise<ApplicationCommunication> {
+        const commRepo = AppDataSource.getRepository(ApplicationCommunication);
+        const comm = commRepo.create({
+            applicationId,
+            ...data
+        });
+        return await commRepo.save(comm);
+    }
+
+    /**
+     * Get communication logs for an application
+     */
+    static async getCommunications(applicationId: string): Promise<ApplicationCommunication[]> {
+        const commRepo = AppDataSource.getRepository(ApplicationCommunication);
+        return await commRepo.find({
+            where: { applicationId },
+            relations: ['recordedBy'],
+            order: { createdAt: 'DESC' }
+        });
     }
 
     /**
@@ -330,6 +411,16 @@ export class SocietyApplicationService {
         return await this.applicationRepo.findOne({
             where: { id },
             relations: ['applicant', 'registryClerk', 'intelligenceLiaison', 'legalOfficer']
+        });
+    }
+
+    /**
+     * Get all applications for a specific applicant
+     */
+    static async getApplicantApplications(userId: string): Promise<SocietyApplication[]> {
+        return await this.applicationRepo.find({
+            where: { applicantUserId: userId },
+            order: { createdAt: 'DESC' }
         });
     }
 

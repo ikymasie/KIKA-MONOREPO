@@ -92,12 +92,12 @@ export default function SearchHero({ onLoginClick }: SearchHeroProps) {
 
                 {/* CTA Buttons */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-800">
-                    <button
-                        onClick={onLoginClick}
+                    <Link
+                        href="/auth/signup"
                         className="px-8 py-4 bg-white text-primary-600 rounded-full font-bold text-lg hover:shadow-2xl hover:shadow-white/20 transition-all hover:scale-105"
                     >
                         Get Started
-                    </button>
+                    </Link>
                     <button
                         onClick={() => {
                             const element = document.getElementById('about');
@@ -119,3 +119,5 @@ export default function SearchHero({ onLoginClick }: SearchHeroProps) {
         </section>
     );
 }
+
+import Link from 'next/link';

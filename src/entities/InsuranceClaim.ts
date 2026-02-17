@@ -12,11 +12,19 @@ import { Tenant } from './Tenant';
 
 
 export enum ClaimStatus {
+    DRAFT = 'draft',
     SUBMITTED = 'submitted',
-    UNDER_REVIEW = 'under_review',
+    IN_REVIEW = 'in_review',
+    PENDING_APPROVAL = 'pending_approval',
+    QUERIED = 'queried',
     APPROVED = 'approved',
-    REJECTED = 'rejected',
     PAID = 'paid',
+    REJECTED = 'rejected',
+    UNDER_APPEAL = 'under_appeal',
+    APPEAL_DECLINED = 'appeal_declined',
+    COMMITTEE_REVIEW = 'committee_review',
+    REGULATOR_REVIEW = 'regulator_review',
+    FINAL_REJECTION = 'final_rejection',
 }
 
 export enum ClaimType {
@@ -66,14 +74,46 @@ export class InsuranceClaim {
     @Column({ type: 'enum', enum: ClaimStatus, default: ClaimStatus.SUBMITTED })
     status!: ClaimStatus;
 
+    // Workflow Tracking
     @Column({ type: 'uuid', nullable: true })
-    reviewedBy?: string;
+    verifiedBy?: string;
 
     @Column({ type: 'timestamp', nullable: true })
-    reviewedAt?: Date;
+    verifiedAt?: Date;
+
+    @Column({ type: 'uuid', nullable: true })
+    adjudicatedBy?: string;
+
+    @Column({ type: 'timestamp', nullable: true })
+    adjudicatedAt?: Date;
+
+    @Column({ type: 'uuid', nullable: true })
+    disbursedBy?: string;
+
+    @Column({ type: 'timestamp', nullable: true })
+    disbursedAt?: Date;
+
+    // Dispute Resolution
+    @Column({ type: 'text', nullable: true })
+    disputeReason?: string;
+
+    @Column({ type: 'json', nullable: true })
+    disputeEvidenceUrls?: string[];
 
     @Column({ type: 'text', nullable: true })
-    reviewNotes?: string;
+    committeeReviewNotes?: string;
+
+    @Column({ type: 'text', nullable: true })
+    regulatorRuling?: string;
+
+    @Column({ type: 'boolean', default: false })
+    isExGratia!: boolean;
+
+    @Column({ type: 'text', nullable: true })
+    queryReason?: string;
+
+    @Column({ type: 'text', nullable: true })
+    rejectionReason?: string;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
     approvedAmount?: number;

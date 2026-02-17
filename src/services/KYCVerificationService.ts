@@ -174,4 +174,38 @@ export class KYCVerificationService {
             verificationRate: totalKYCs > 0 ? (fullyVerified / totalKYCs) * 100 : 0,
         };
     }
+
+    /**
+     * Bulk verify multiple KYC records
+     */
+    static async batchVerify(
+        kycIds: string[],
+        verifiedBy: string,
+        verified: boolean = true,
+        notes?: string
+    ): Promise<void> {
+        if (!AppDataSource.isInitialized) {
+            await AppDataSource.initialize();
+        }
+
+        const kycRepo = AppDataSource.getRepository(KYC);
+
+        const kycs = await kycRepo.findByIds(kycIds);
+
+        for (const kyc of kycs) {
+            kyc.identityVerified = verified;
+            kyc.residenceVerified = verified;
+            kyc.incomeVerified = verified;
+            kyc.verifiedBy = verifiedBy;
+            kyc.verifiedAt = new Date();
+
+            if (notes) {
+                kyc.notes = kyc.notes
+                    ? `${kyc.notes}\n\n[${new Date().toISOString()}] Batch Verify: ${notes}`
+                    : `[${new Date().toISOString()}] Batch Verify: ${notes}`;
+            }
+        }
+
+        await kycRepo.save(kycs);
+    }
 }

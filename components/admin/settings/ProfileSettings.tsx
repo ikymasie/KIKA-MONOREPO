@@ -143,7 +143,47 @@ export default function ProfileSettings({ settings, onChange }: ProfileSettingsP
                     />
                 </div>
             </div>
-            <div className="space-y-2">
+
+            {/* Maintenance Mode Section */}
+            <div className="mt-8 border-t border-gray-100 pt-8">
+                <div className="flex items-center justify-between p-6 bg-orange-50 rounded-2xl border border-orange-100">
+                    <div className="flex items-center gap-4">
+                        <div className="p-3 bg-orange-100 rounded-xl text-2xl text-orange-600">🚧</div>
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-900">Tenant Maintenance Mode</h3>
+                            <p className="text-sm text-gray-500">When enabled, only administrators can access the portal. All other users will be redirected to a maintenance page.</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center">
+                        <button
+                            onClick={async () => {
+                                const newStatus = !settings?.isMaintenanceMode;
+                                if (confirm(`Are you sure you want to ${newStatus ? 'ENABLE' : 'DISABLE'} maintenance mode?`)) {
+                                    try {
+                                        const res = await fetch('/api/admin/settings/maintenance', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ enabled: newStatus }),
+                                        });
+                                        if (res.ok) {
+                                            onChange({ target: { name: 'isMaintenanceMode', value: newStatus } });
+                                        }
+                                    } catch (err) {
+                                        console.error(err);
+                                    }
+                                }
+                            }}
+                            className={`relative inline-flex h-8 w-14 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-600 focus:ring-offset-2 ${settings?.isMaintenanceMode ? 'bg-orange-500' : 'bg-gray-200'}`}
+                        >
+                            <span
+                                className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings?.isMaintenanceMode ? 'translate-x-6' : 'translate-x-0'}`}
+                            />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-2 pt-4">
                 <label className="block text-sm font-semibold text-gray-700">Physical Address</label>
                 <textarea
                     name="address"

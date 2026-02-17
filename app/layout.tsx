@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import { BrandingProvider } from '@/components/providers/BrandingProvider';
+import RouteProgressBar from '@/components/common/RouteProgressBar';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,6 +20,7 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={inter.className}>
+                <RouteProgressBar />
                 <AuthProvider>
                     <BrandingProvider>{children}</BrandingProvider>
                 </AuthProvider>

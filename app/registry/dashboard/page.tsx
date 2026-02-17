@@ -90,6 +90,14 @@ export default function RegistryDashboard() {
                                 </div>
                                 <div className="ml-auto text-warning-600 font-bold">→</div>
                             </Link>
+                            <Link href="/registry/bulk-assignment" className="flex items-center p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors group border-2 border-dashed border-primary-200">
+                                <div className="p-3 bg-primary-500 text-white rounded-lg mr-4 group-hover:scale-110 transition-transform shadow-lg shadow-primary-500/20">⚡</div>
+                                <div>
+                                    <div className="font-semibold text-primary-700">Bulk Assignment Tool</div>
+                                    <div className="text-sm text-gray-500">Assign multiple applications at once</div>
+                                </div>
+                                <div className="ml-auto text-primary-600 font-bold font-mono tracking-tighter text-md uppercase px-2 bg-primary-50 rounded">New</div>
+                            </Link>
                         </div>
                     </div>
 

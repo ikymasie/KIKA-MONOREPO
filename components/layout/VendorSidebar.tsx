@@ -14,6 +14,9 @@ interface NavItem {
 const navItems: NavItem[] = [
     { name: 'Dashboard', href: '/vendor/dashboard', icon: '📊' },
     { name: 'My Orders', href: '/vendor/orders', icon: '📦' },
+    { name: 'Products', href: '/vendor/products', icon: '🏷️' },
+    { name: 'Invoices', href: '/vendor/invoices', icon: '📄' },
+    { name: 'Payments', href: '/vendor/payments', icon: '💰' },
     { name: 'Inventory Alerts', href: '/vendor/alerts', icon: '⚠️' },
     { name: 'Profile', href: '/vendor/profile', icon: '👤' },
 ];
