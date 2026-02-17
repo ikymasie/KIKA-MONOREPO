@@ -1,0 +1,62 @@
+{
+  "name": "kika-platform",
+  "version": "1.0.0",
+  "description": "Multi-Tenant SACCOS Member Management Platform for Botswana",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typeorm": "typeorm-ts-node-commonjs",
+    "migration:generate": "npm run typeorm -- migration:generate -d src/config/database.ts",
+    "migration:run": "npm run typeorm -- migration:run -d src/config/database.ts",
+    "migration:revert": "npm run typeorm -- migration:revert -d src/config/database.ts",
+    "schema:sync": "npm run typeorm -- schema:sync -d src/config/database.ts",
+    "create-user": "ts-node --project tsconfig.scripts.json scripts/create-super-user.ts",
+    "test:sms": "ts-node scripts/test-sms.ts"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.3.4",
+    "@types/nodemailer": "^7.0.10",
+    "bcryptjs": "^2.4.3",
+    "clsx": "^2.1.0",
+    "date-fns": "^3.3.1",
+    "firebase": "^12.9.0",
+    "firebase-admin": "^13.6.1",
+    "lucide-react": "^0.344.0",
+    "mysql2": "^3.17.2",
+    "next": "^14.2.0",
+    "nodemailer": "^8.0.1",
+    "papaparse": "^5.4.1",
+    "pg": "^8.11.3",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-hook-form": "^7.51.0",
+    "recharts": "^2.12.0",
+    "reflect-metadata": "^0.2.1",
+    "tailwind-merge": "^2.2.1",
+    "typeorm": "^0.3.20",
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.11.0",
+    "@types/papaparse": "^5.3.14",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18",
+    "@types/uuid": "^9.0.8",
+    "autoprefixer": "^10.4.17",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "^14.2.0",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}

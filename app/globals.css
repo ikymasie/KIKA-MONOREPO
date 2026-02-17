@@ -1,0 +1,210 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    @apply antialiased text-gray-900 bg-surface-50;
+  }
+
+  ::selection {
+    background-color: rgba(139, 92, 246, 0.3);
+    /* primary-500 with 30% opacity */
+    color: var(--primary-900, #4c1d95);
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 rounded-full hover:bg-gray-400 transition-colors;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass;
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .glass-dark {
+    @apply bg-gray-900/60 backdrop-blur-xl border border-white/10 shadow-glass;
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass rounded-2xl;
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .glass-deep {
+    @apply bg-white/40 backdrop-blur-2xl border border-white/30 shadow-glass;
+    backdrop-filter: blur(40px) saturate(200%);
+  }
+
+  .glass-input {
+    @apply bg-white/50 backdrop-blur-md border border-white/40 focus:bg-white/80 transition-all duration-300;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+  }
+
+  /* ... animated backgrounds ... */
+  .mesh-bg {
+    background-color: #f3f4f6;
+    background-image:
+      radial-gradient(at 0% 0%, hsla(253, 16%, 7%, 1) 0, transparent 50%),
+      radial-gradient(at 50% 0%, hsla(225, 39%, 30%, 1) 0, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(339, 49%, 30%, 1) 0, transparent 50%);
+  }
+
+  .aurora-bg {
+    background: linear-gradient(135deg, lighten(#8b5cf6, 20%) 0%, lighten(#d946ef, 20%) 50%, lighten(#6366f1, 20%) 100%);
+    filter: blur(100px);
+    opacity: 0.5;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all duration-300 transform active:scale-95 disabled:pointer-events-none disabled:opacity-50;
+    padding: 0.6rem 1.25rem;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary-600 to-indigo-600 text-white shadow-lg hover:-translate-y-0.5 border border-transparent;
+    box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3), 0 4px 6px -4px rgba(139, 92, 246, 0.3);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.4), 0 4px 6px -4px rgba(124, 58, 237, 0.4);
+  }
+
+  .btn-secondary {
+    @apply bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 shadow-sm hover:shadow hover:-translate-y-0.5;
+  }
+
+  .btn-glass {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass text-primary-900 hover:bg-white/80 hover:shadow-glow border-white/50;
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .card {
+    @apply bg-white/70 backdrop-blur-xl border border-white/40 shadow-glass rounded-2xl p-6 transition-all duration-300 hover:shadow-xl;
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+
+  .input {
+    @apply bg-white/50 backdrop-blur-md border border-white/40 focus:bg-white/80 transition-all duration-300 flex h-11 w-full rounded-xl px-4 py-2 text-sm placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50 shadow-inner;
+  }
+
+  .input:focus-visible {
+    --tw-ring-color: rgba(139, 92, 246, 0.5);
+    border-color: rgb(139, 92, 246);
+  }
+
+  /* Form Labels */
+  .label {
+    @apply block text-sm font-medium text-gray-700 mb-1.5 ml-1;
+  }
+}
+
+/* Animations */
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s ease-out forwards;
+}
+
+.animate-slide-down {
+  animation: slide-down 0.3s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s infinite;
+}
+
+.delay-100 {
+  animation-delay: 100ms;
+}
+
+.delay-200 {
+  animation-delay: 200ms;
+}
+
+.delay-300 {
+  animation-delay: 300ms;
+}
+
+/* Animated Background Styles (Keeping generic wave/orb if needed) */
+.animated-bg-wrapper {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: -1;
+}
+
+.animated-bg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f5f3ff 0%, #fefce8 100%);
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  mix-blend-mode: multiply;
+  animation: float 20s infinite ease-in-out;
+  opacity: 0.6;
+}
+
+.orb-1 {
+  width: 600px;
+  height: 600px;
+  background: #c4b5fd;
+  /* Light Violet */
+  top: -10%;
+  left: -10%;
+  animation-delay: 0s;
+}
+
+.orb-2 {
+  width: 500px;
+  height: 500px;
+  background: #f0abfc;
+  /* Light Fuchsia */
+  top: 60%;
+  right: -5%;
+  animation-delay: -5s;
+}
+
+.orb-3 {
+  width: 400px;
+  height: 400px;
+  background: #bae6fd;
+  /* Light Sky */
+  bottom: 10%;
+  left: 30%;
+  animation-delay: -10s;
+}
