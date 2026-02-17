@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RegistrationService } from '@/src/services/RegistrationService';
-import { getUserFromRequest } from '@/lib/auth-utils/server';
+
+
+import { getUserFromRequest } from '@/lib/auth-server';
 import { UserRole } from '@/src/entities/User';
 
 export async function GET(req: NextRequest) {

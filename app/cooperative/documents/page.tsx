@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DocumentUpload from '@/components/applicant/DocumentUpload';
 import { Upload, ArrowLeft } from 'lucide-react';
-import Link from 'link';
+import Link from 'next/link';
 
 export default function CooperativeDocumentsPage() {
     const searchParams = useSearchParams();

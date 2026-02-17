@@ -155,6 +155,8 @@ export class FieldOfficerService {
             relations: ['tenant', 'officer'],
             order: { createdAt: 'DESC' },
         });
+    }
+
     /**
      * Log GPS coordinates for a field visit
      */

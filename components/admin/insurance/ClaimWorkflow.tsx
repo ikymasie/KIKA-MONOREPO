@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { SkeletonCard } from '@/components/common/SkeletonLoader';
 
 export default function ClaimWorkflow() {
     const [claims, setClaims] = useState<any[]>([]);
@@ -67,7 +68,11 @@ export default function ClaimWorkflow() {
 
             <div className="flex-1 overflow-y-auto">
                 {loading ? (
-                    <div className="p-8 text-center text-gray-400">Loading claims...</div>
+                    <div className="p-6 space-y-4">
+                        <SkeletonCard />
+                        <SkeletonCard />
+                        <SkeletonCard />
+                    </div>
                 ) : claims.length === 0 ? (
                     <div className="p-20 text-center space-y-4">
                         <div className="text-4xl">✅</div>
