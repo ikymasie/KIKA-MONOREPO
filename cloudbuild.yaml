@@ -1,0 +1,62 @@
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/kika-nextjs:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/kika-nextjs:latest'
+      - '.'
+
+  # Push the Docker image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'gcr.io/$PROJECT_ID/kika-nextjs'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'kika-nextjs'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/kika-nextjs:$COMMIT_SHA'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '3000'
+      - '--memory'
+      - '1Gi'
+      - '--cpu'
+      - '1'
+      - '--min-instances'
+      - '0'
+      - '--max-instances'
+      - '10'
+      - '--set-env-vars'
+      - 'NODE_ENV=production'
+
+  # Deploy Firebase Hosting
+  - name: 'gcr.io/firebase-tools/firebase'
+    args:
+      - 'deploy'
+      - '--only'
+      - 'hosting'
+      - '--project'
+      - '$PROJECT_ID'
+    env:
+      - 'FIREBASE_TOKEN=$_FIREBASE_TOKEN'
+
+images:
+  - 'gcr.io/$PROJECT_ID/kika-nextjs:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/kika-nextjs:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
