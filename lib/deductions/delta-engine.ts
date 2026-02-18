@@ -7,8 +7,6 @@ import { InsurancePolicy, PolicyStatus } from '@/src/entities/InsurancePolicy';
 import { MerchandiseOrder, OrderStatus } from '@/src/entities/MerchandiseOrder';
 import { getDb } from '@/lib/db';
 import Papa from 'papaparse';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { storage } from '@/lib/firebase-client';
 
 export interface DeductionBreakdown {
     memberId: string;
@@ -411,6 +409,10 @@ export class DeltaDeductionEngine {
     }
 
     async uploadCSV(requestId: string, csvContent: string): Promise<string> {
+        // Dynamic imports to avoid Firebase client SDK initialization at build time
+        const { ref, uploadString, getDownloadURL } = await import('firebase/storage');
+        const { storage } = await import('@/lib/firebase-client');
+
         const fileName = `deductions/${this.tenantId}/${this.year}/${String(this.month).padStart(2, '0')}/${requestId}.csv`;
         const storageRef = ref(storage, fileName);
 
