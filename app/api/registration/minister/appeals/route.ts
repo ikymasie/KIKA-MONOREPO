@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { RegistrationService } from '@/src/services/RegistrationService';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { UserRole } from '@/src/entities/User';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
     try {
-        const user = await getUserFromRequest(req);
+        // Dynamic imports to avoid circular dependencies
+        const { RegistrationService } = await import('@/src/services/RegistrationService');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { UserRole } = await import('@/src/entities/User');
+
+
+        const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -23,9 +26,13 @@ export async function GET(req: NextRequest) {
     }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
     try {
-        const user = await getUserFromRequest(req);
+        // Dynamic imports to avoid circular dependencies
+        const { RegistrationService } = await import('@/src/services/RegistrationService');
+        const { UserRole } = await import('@/src/entities/User');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -35,7 +42,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
         }
 
-        const body = await req.json();
+        const body = await request.json();
         const { applicationId, decision, notes } = body;
 
         if (!applicationId || !decision || !notes) {

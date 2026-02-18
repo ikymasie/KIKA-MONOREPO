@@ -8,9 +8,9 @@ import {
     OneToMany,
     JoinColumn,
 } from 'typeorm';
-import { Member } from './Member';
-import { LoanProduct } from './LoanProduct';
-import { LoanGuarantor } from './LoanGuarantor';
+import type { Member } from './Member';
+import type { LoanProduct } from './LoanProduct';
+import type { LoanGuarantor } from './LoanGuarantor';
 import type { Tenant } from './Tenant';
 
 
@@ -65,14 +65,14 @@ export class Loan {
     @Column({ type: 'uuid' })
     memberId!: string;
 
-    @ManyToOne(() => Member, (member) => member.loans)
+    @ManyToOne(() => require('./Member').Member, (member: Member) => member.loans)
     @JoinColumn({ name: 'memberId' })
     member!: Member;
 
     @Column({ type: 'uuid' })
     productId!: string;
 
-    @ManyToOne(() => LoanProduct)
+    @ManyToOne(() => require('./LoanProduct').LoanProduct)
     @JoinColumn({ name: 'productId' })
     product!: LoanProduct;
 
@@ -171,7 +171,7 @@ export class Loan {
     @Column({ type: 'timestamp', nullable: true })
     deductionScheduledAt?: Date;
 
-    @OneToMany(() => LoanGuarantor, (guarantor) => guarantor.loan, { cascade: true })
+    @OneToMany(() => require('./LoanGuarantor').LoanGuarantor, (guarantor: LoanGuarantor) => guarantor.loan, { cascade: true })
     guarantors!: LoanGuarantor[];
 
     @CreateDateColumn()

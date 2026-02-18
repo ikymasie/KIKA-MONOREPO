@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { AuditorService } from '@/src/services/AuditorService';
-import { AccountingService } from '@/src/services/AccountingService';
-import { UserRole } from '@/src/entities/User';
 
 export async function GET(
     request: NextRequest,
     { params }: { params: { tenantId: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AuditorService } = await import('@/src/services/AuditorService');
+        const { AccountingService } = await import('@/src/services/AccountingService');
+        const { UserRole } = await import('@/src/entities/User');
+
+
         const user = await getUserFromRequest(request);
         const { tenantId } = params;
 

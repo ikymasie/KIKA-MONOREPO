@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SocietyApplicationService } from '@/src/services/SocietyApplicationService';
-import { getUserFromRequest } from '@/lib/auth-server';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
     try {
-        const user = await getUserFromRequest(req);
+        // Dynamic imports to avoid circular dependencies
+        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+
+        const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

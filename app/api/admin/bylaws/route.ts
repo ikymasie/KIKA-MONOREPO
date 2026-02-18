@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Bylaw } from '@/src/entities/Bylaw';
-import { ByelawReview, ByelawReviewStatus } from '@/src/entities/ByelawReview';
-import { getUserFromRequest } from '@/lib/auth-server';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { Bylaw } = await import('@/src/entities/Bylaw');
+        const { ByelawReview, ByelawReviewStatus } = await import('@/src/entities/ByelawReview');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -38,6 +40,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { ByelawReview, ByelawReviewStatus } = await import('@/src/entities/ByelawReview');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

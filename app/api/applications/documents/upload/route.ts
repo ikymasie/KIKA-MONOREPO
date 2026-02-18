@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { SocietyApplicationService } from '@/src/services/SocietyApplicationService';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
+
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,6 +29,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -48,6 +54,9 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

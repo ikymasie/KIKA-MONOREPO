@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { ByelawReviewService } from '@/src/services/ByelawReviewService';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const { ByelawReviewService } = await import('@/src/services/ByelawReviewService');
+
+    
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

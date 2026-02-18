@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { AgmResolution } from '@/src/entities/AgmResolution';
-import { getUserFromRequest } from '@/lib/auth-server';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { AgmResolution } = await import('@/src/entities/AgmResolution');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,6 +31,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AppDataSource } = await import('@/src/config/database');
+        const { AgmResolution } = await import('@/src/entities/AgmResolution');
+
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

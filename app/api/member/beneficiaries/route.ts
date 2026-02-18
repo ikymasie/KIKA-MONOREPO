@@ -1,12 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { Beneficiary } from '@/src/entities/Beneficiary';
-import { Member } from '@/src/entities/Member';
-import { getUserFromRequest } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
 async function getMember(userId: string) {
+    const { Member } = await import('@/src/entities/Member');
     const db = await getDb();
     const memberRepo = db.getRepository(Member);
     return await memberRepo.findOne({ where: { userId } });
@@ -14,6 +12,12 @@ async function getMember(userId: string) {
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { Beneficiary } = await import('@/src/entities/Beneficiary');
+        const { Member } = await import('@/src/entities/Member');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -37,6 +41,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { Beneficiary } = await import('@/src/entities/Beneficiary');
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -63,6 +70,9 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { Beneficiary } = await import('@/src/entities/Beneficiary');
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -94,6 +104,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { Beneficiary } = await import('@/src/entities/Beneficiary');
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Loan, LoanStatus } from '@/src/entities/Loan';
-import { Transaction, TransactionType, TransactionStatus } from '@/src/entities/Transaction';
-import { Asset } from '@/src/entities/Asset';
-import { getUserFromRequest } from '@/lib/auth-server';
 import { In } from 'typeorm';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
     try {
+// Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { Loan, LoanStatus } = await import('@/src/entities/Loan');
+        const { Transaction, TransactionType, TransactionStatus } = await import('@/src/entities/Transaction');
+        const { Asset } = await import('@/src/entities/Asset');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+    
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

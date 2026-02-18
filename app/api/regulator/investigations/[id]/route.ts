@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { FieldOfficerService } from '@/src/services/FieldOfficerService';
 
 export async function PATCH(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { FieldOfficerService } = await import('@/src/services/FieldOfficerService');
+
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

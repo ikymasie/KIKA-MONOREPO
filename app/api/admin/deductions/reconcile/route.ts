@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { ReconciliationBatch, ReconciliationStatus } from '@/src/entities/ReconciliationBatch';
-import { ReconciliationItem, MatchStatus, VarianceReason } from '@/src/entities/ReconciliationItem';
-import { Member } from '@/src/entities/Member';
-import { getUserFromRequest } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { ReconciliationBatch } = await import('@/src/entities/ReconciliationBatch');
+        const { ReconciliationStatus } = await import('@/src/enums/ReconciliationStatus');
+        const { ReconciliationItem, MatchStatus, VarianceReason } = await import('@/src/entities/ReconciliationItem');
+        const { Member } = await import('@/src/entities/Member');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -42,7 +45,7 @@ export async function POST(request: NextRequest) {
 
         let totalExpected = 0;
         let totalActual = 0;
-        const reconciliationItems: ReconciliationItem[] = [];
+        const reconciliationItems: any[] = [];
 
         // 2. Process Items
         for (const inputItem of items) {
@@ -55,7 +58,7 @@ export async function POST(request: NextRequest) {
             const variance = actual - expected;
 
             let matchStatus = MatchStatus.MATCHED;
-            let varianceReason: VarianceReason | undefined;
+            let varianceReason: any;
 
             if (variance !== 0) {
                 matchStatus = MatchStatus.VARIANCE;

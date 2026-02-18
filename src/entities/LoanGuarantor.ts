@@ -6,8 +6,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { Loan } from './Loan';
-import { Member } from './Member';
+import type { Loan } from './Loan';
+import type { Member } from './Member';
 
 export enum GuarantorStatus {
     PENDING = 'pending',
@@ -24,14 +24,14 @@ export class LoanGuarantor {
     @Column({ type: 'uuid' })
     loanId!: string;
 
-    @ManyToOne(() => Loan, (loan) => loan.guarantors)
+    @ManyToOne(() => require('./Loan').Loan, (loan: Loan) => loan.guarantors)
     @JoinColumn({ name: 'loanId' })
     loan!: Loan;
 
     @Column({ type: 'uuid' })
     guarantorMemberId!: string;
 
-    @ManyToOne(() => Member)
+    @ManyToOne(() => require('./Member').Member)
     @JoinColumn({ name: 'guarantorMemberId' })
     guarantorMember!: Member;
 

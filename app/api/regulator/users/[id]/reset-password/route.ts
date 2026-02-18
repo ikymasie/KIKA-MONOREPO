@@ -3,14 +3,12 @@ import { AppDataSource } from '@/lib/db';
 import { User } from '@/entities/User';
 import { generateTemporaryPassword, hashPassword } from '@/lib/password';
 import { sendEmail, generateCredentialsEmail } from '@/lib/email';
-import { getUserFromRequest } from '@/lib/auth-server';
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-        const currentUser = await getUserFromRequest(request);
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const currentUser = await getUserFromRequest(request);
         if (!currentUser || !currentUser.isRegulator()) {
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

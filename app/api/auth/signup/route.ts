@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { User, UserRole, UserStatus } from '@/src/entities/User';
 import { syncUserWithFirebase } from '@/lib/firebase-auth';
 import { adminAuth } from '@/lib/firebase-admin';
+import type { UserRole as UserRoleType } from '@/src/entities/User';
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { User, UserRole, UserStatus } = await import('@/src/entities/User');
+
+
         const body = await request.json();
         const { email, password, firstName, lastName, role } = body;
 
@@ -16,7 +20,7 @@ export async function POST(request: NextRequest) {
 
         // Only allow applicant roles for public signup
         const allowedRoles = [UserRole.SOCIETY_APPLICANT, UserRole.COOPERATIVE_APPLICANT];
-        if (!allowedRoles.includes(role as UserRole)) {
+        if (!allowedRoles.includes(role as UserRoleType)) {
             return NextResponse.json({ error: 'Invalid role for registration' }, { status: 400 });
         }
 
@@ -37,7 +41,7 @@ export async function POST(request: NextRequest) {
             email,
             firstName,
             lastName,
-            role: role as UserRole,
+            role: role as UserRoleType,
             status: UserStatus.ACTIVE,
             mfaEnabled: false,
             mustChangePassword: false,

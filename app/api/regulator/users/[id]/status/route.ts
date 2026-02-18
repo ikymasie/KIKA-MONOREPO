@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { AppDataSource } from '@/lib/db';
 import { User, UserStatus } from '@/entities/User';
-import { getUserFromRequest } from '@/lib/auth-server';
 
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-        const currentUser = await getUserFromRequest(request);
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const currentUser = await getUserFromRequest(request);
         if (!currentUser || !currentUser.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

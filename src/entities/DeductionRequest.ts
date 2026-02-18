@@ -8,8 +8,8 @@ import {
     OneToMany,
     JoinColumn,
 } from 'typeorm';
-import { Tenant } from './Tenant';
-import { DeductionItem } from './DeductionItem';
+import type { Tenant } from './Tenant';
+import type { DeductionItem } from './DeductionItem';
 
 export enum DeductionRequestStatus {
     DRAFT = 'draft',
@@ -27,7 +27,7 @@ export class DeductionRequest {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => Tenant, (tenant) => tenant.deductionRequests)
+    @ManyToOne(() => require('./Tenant').Tenant, (tenant: Tenant) => tenant.deductionRequests)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
@@ -61,7 +61,7 @@ export class DeductionRequest {
     @Column({ type: 'text', nullable: true })
     notes?: string;
 
-    @OneToMany(() => DeductionItem, (item) => item.request, { cascade: true })
+    @OneToMany(() => require('./DeductionItem').DeductionItem, (item: DeductionItem) => item.request, { cascade: true })
     items!: DeductionItem[];
 
     @CreateDateColumn()

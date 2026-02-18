@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { Transaction, TransactionType } from '@/src/entities/Transaction';
-import { Member } from '@/src/entities/Member';
-import { getUserFromRequest } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
     try {
+// Dynamic imports to avoid circular dependencies
+        const { Transaction, TransactionType } = await import('@/src/entities/Transaction');
+        const { Member } = await import('@/src/entities/Member');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+    
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

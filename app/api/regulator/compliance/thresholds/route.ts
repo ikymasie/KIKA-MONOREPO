@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { RegulatorSettings } from '@/src/entities/RegulatorSettings';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { RegulatorSettings } = await import('@/src/entities/RegulatorSettings');
+
+
         if (!AppDataSource.isInitialized) {
             await AppDataSource.initialize();
         }
@@ -21,12 +24,15 @@ export async function GET(req: NextRequest) {
     }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { RegulatorSettings } = await import('@/src/entities/RegulatorSettings');
         if (!AppDataSource.isInitialized) {
             await AppDataSource.initialize();
         }
-        const body = await req.json();
+        const body = await request.json();
         const settingsRepo = AppDataSource.getRepository(RegulatorSettings);
 
         let settings = await settingsRepo.findOne({ order: { updatedAt: 'DESC' } });

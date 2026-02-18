@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { DeltaDeductionEngine } from '@/lib/deductions/delta-engine';
+
 import { getDb } from '@/lib/db';
-import { DeductionRequest } from '@/src/entities/DeductionRequest';
 
 export const dynamic = 'force-dynamic';
 
 // Generate new deduction request
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { DeductionRequest } = await import('@/src/entities/DeductionRequest');
+        const { DeltaDeductionEngine } = await import('@/lib/deductions/delta-engine');
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -49,6 +52,10 @@ export async function POST(request: NextRequest) {
 // List all deduction requests
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { DeductionRequest } = await import('@/src/entities/DeductionRequest');
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

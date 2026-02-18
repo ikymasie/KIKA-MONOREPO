@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { Tenant, TenantStatus } from '@/src/entities/Tenant';
-import { TenantStatusLog } from '@/src/entities/TenantStatusLog';
-import { UserRole } from '@/src/entities/User';
+import type { TenantStatus as TenantStatusType } from '@/src/entities/Tenant';
 
 export async function PUT(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { Tenant, TenantStatus } = await import('@/src/entities/Tenant');
+        const { TenantStatusLog } = await import('@/src/entities/TenantStatusLog');
+        const { UserRole } = await import('@/src/entities/User');
+
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -45,7 +49,7 @@ export async function PUT(
         const statusLog = statusLogRepo.create({
             tenantId: tenant.id,
             previousStatus,
-            newStatus: status as TenantStatus,
+            newStatus: status as TenantStatusType,
             reason,
             changedBy: user.id,
             changedAt: new Date(),
@@ -55,7 +59,7 @@ export async function PUT(
         await statusLogRepo.save(statusLog);
 
         // Update tenant status
-        tenant.status = status as TenantStatus;
+        tenant.status = status as TenantStatusType;
         await tenantRepo.save(tenant);
 
         // TODO: Send notification to tenant admins via notification system
@@ -78,6 +82,10 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { UserRole } = await import('@/src/entities/User');
+        const { TenantStatusLog } = await import('@/src/entities/TenantStatusLog');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

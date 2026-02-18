@@ -6,8 +6,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { ReconciliationBatch } from './ReconciliationBatch';
-import { Member } from './Member';
+import type { ReconciliationBatch } from './ReconciliationBatch';
+import type { Member } from './Member';
 
 export enum MatchStatus {
     MATCHED = 'matched',
@@ -32,14 +32,14 @@ export class ReconciliationItem {
     @Column({ type: 'uuid' })
     batchId!: string;
 
-    @ManyToOne(() => ReconciliationBatch, (batch) => batch.items)
+    @ManyToOne(() => require('./ReconciliationBatch').ReconciliationBatch, (batch: ReconciliationBatch) => batch.items)
     @JoinColumn({ name: 'batchId' })
     batch!: ReconciliationBatch;
 
     @Column({ type: 'uuid', nullable: true })
     memberId?: string;
 
-    @ManyToOne(() => Member, { nullable: true })
+    @ManyToOne(() => require('./Member').Member, { nullable: true })
     @JoinColumn({ name: 'memberId' })
     member?: Member;
 

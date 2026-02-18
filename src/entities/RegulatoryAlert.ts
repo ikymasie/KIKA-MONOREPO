@@ -7,7 +7,7 @@ import {
     CreateDateColumn,
     Index,
 } from 'typeorm';
-import { Tenant } from './Tenant';
+import type { Tenant } from './Tenant';
 
 export enum AlertSeverity {
     LOW = 'low',
@@ -39,7 +39,7 @@ export class RegulatoryAlert {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne(() => require('./Tenant').Tenant)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 

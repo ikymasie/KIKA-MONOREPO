@@ -6,8 +6,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { Account } from './Account';
-import { Transaction } from './Transaction';
+import type { Account } from './Account';
+import type { Transaction } from './Transaction';
 
 export enum EntryType {
     DEBIT = 'debit',
@@ -22,14 +22,14 @@ export class JournalEntry {
     @Column({ type: 'uuid' })
     transactionId!: string;
 
-    @ManyToOne(() => Transaction, (transaction) => transaction.journalEntries)
+    @ManyToOne(() => require('./Transaction').Transaction, (transaction: Transaction) => transaction.journalEntries)
     @JoinColumn({ name: 'transactionId' })
     transaction!: Transaction;
 
     @Column({ type: 'uuid' })
     accountId!: string;
 
-    @ManyToOne(() => Account, (account) => account.journalEntries)
+    @ManyToOne(() => require('./Account').Account, (account: Account) => account.journalEntries)
     @JoinColumn({ name: 'accountId' })
     account!: Account;
 

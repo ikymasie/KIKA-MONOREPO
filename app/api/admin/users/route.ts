@@ -1,52 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { User, UserRole, UserStatus } from '@/src/entities/User';
-import { getUserFromRequest } from '@/lib/auth-server';
 import { syncUserWithFirebase } from '@/lib/firebase-auth';
-
-function getDefaultPermissions(role: UserRole): Record<string, boolean> {
-    switch (role) {
-        case UserRole.SACCOS_ADMIN:
-            return {
-                'system:manage': false,
-                'users:manage': true,
-                'members:manage': true,
-                'loans:manage': true,
-                'savings:manage': true,
-                'reports:view': true,
-                'settings:manage': true,
-            };
-        case UserRole.LOAN_OFFICER:
-            return {
-                'members:view': true,
-                'loans:manage': true,
-                'guarantors:manage': true,
-            };
-        case UserRole.ACCOUNTANT:
-            return {
-                'finance:manage': true,
-                'gl:manage': true,
-                'payments:manage': true,
-                'reports:view': true,
-            };
-        case UserRole.MEMBER_SERVICE_REP:
-            return {
-                'members:manage': true,
-                'kyc:update': true,
-                'insurance_claims:initiate': true,
-            };
-        case UserRole.CREDIT_COMMITTEE:
-            return {
-                'loans:view': true,
-                'loans:approve': true,
-            };
-        default:
-            return {};
-    }
-}
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { User, UserRole, UserStatus } = await import('@/src/entities/User');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== UserRole.SACCOS_ADMIN) {
             return NextResponse.json({ error: 'Unauthorized or insufficient permissions' }, { status: 401 });
@@ -89,6 +51,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AppDataSource } = await import('@/src/config/database');
+        const { User, UserRole, UserStatus } = await import('@/src/entities/User');
+
         const currentUser = await getUserFromRequest(request);
         if (!currentUser || currentUser.role !== UserRole.SACCOS_ADMIN) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -113,7 +80,7 @@ export async function POST(request: NextRequest) {
             UserRole.CREDIT_COMMITTEE,
         ];
 
-        if (!allowedRoles.includes(role as UserRole)) {
+        if (!allowedRoles.includes(role as any)) {
             return NextResponse.json({ error: 'Invalid role for organization staff' }, { status: 400 });
         }
 
@@ -132,16 +99,57 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 });
         }
 
+        function getDefaultPermissions(role: any): Record<string, boolean> {
+            switch (role) {
+                case UserRole.SACCOS_ADMIN:
+                    return {
+                        'system:manage': false,
+                        'users:manage': true,
+                        'members:manage': true,
+                        'loans:manage': true,
+                        'savings:manage': true,
+                        'reports:view': true,
+                        'settings:manage': true,
+                    };
+                case UserRole.LOAN_OFFICER:
+                    return {
+                        'members:view': true,
+                        'loans:manage': true,
+                        'guarantors:manage': true,
+                    };
+                case UserRole.ACCOUNTANT:
+                    return {
+                        'finance:manage': true,
+                        'gl:manage': true,
+                        'payments:manage': true,
+                        'reports:view': true,
+                    };
+                case UserRole.MEMBER_SERVICE_REP:
+                    return {
+                        'members:manage': true,
+                        'kyc:update': true,
+                        'insurance_claims:initiate': true,
+                    };
+                case UserRole.CREDIT_COMMITTEE:
+                    return {
+                        'loans:view': true,
+                        'loans:approve': true,
+                    };
+                default:
+                    return {};
+            }
+        }
+
         // Create new user
         const newUser = userRepository.create({
             email,
             firstName,
             lastName,
-            role: role as UserRole,
+            role: role as any,
             tenantId: currentUser.tenantId,
             status: UserStatus.ACTIVE,
             mfaEnabled: false,
-            permissions: getDefaultPermissions(role as UserRole),
+            permissions: getDefaultPermissions(role),
         });
 
         await userRepository.save(newUser);

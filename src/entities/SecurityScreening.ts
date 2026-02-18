@@ -8,9 +8,9 @@ import {
     JoinColumn,
     OneToMany,
 } from 'typeorm';
-import { SocietyApplication } from './SocietyApplication';
-import { User } from './User';
-import { RiskFlag } from './RiskFlag';
+import type { SocietyApplication } from './SocietyApplication';
+import type { User } from './User';
+import type { RiskFlag } from './RiskFlag';
 
 export enum ScreeningStatus {
     PENDING = 'pending',
@@ -34,14 +34,14 @@ export class SecurityScreening {
     @Column({ type: 'uuid' })
     applicationId!: string;
 
-    @ManyToOne(() => SocietyApplication)
+    @ManyToOne(() => require('./SocietyApplication').SocietyApplication)
     @JoinColumn({ name: 'applicationId' })
     application!: SocietyApplication;
 
     @Column({ type: 'uuid' })
     officerId!: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne(() => require('./User').User)
     @JoinColumn({ name: 'officerId' })
     officer!: User;
 
@@ -63,7 +63,7 @@ export class SecurityScreening {
     @Column({ type: 'text', nullable: true })
     notes?: string;
 
-    @OneToMany(() => RiskFlag, (flag) => flag.screening)
+    @OneToMany(() => require('./RiskFlag').RiskFlag, (flag: RiskFlag) => flag.screening)
     riskFlags!: RiskFlag[];
 
     @CreateDateColumn()

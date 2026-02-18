@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Loan } from '@/src/entities/Loan';
-import { getUserFromRequest } from '@/lib/auth-server';
 import {
     recordVote,
     finalizeCommitteeDecision,
     generateMinutes,
 } from '@/lib/committee-workflow';
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { Loan } = await import('@/src/entities/Loan');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -94,6 +94,10 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AppDataSource } = await import('@/src/config/database');
+        const { Loan } = await import('@/src/entities/Loan');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

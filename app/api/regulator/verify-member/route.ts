@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { AppDataSource } from '@/src/config/database';
-import { Member } from '@/src/entities/Member';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const { AppDataSource } = await import('@/src/config/database');
+        const { Member } = await import('@/src/entities/Member');
+
+    
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

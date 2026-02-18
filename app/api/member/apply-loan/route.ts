@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Member } from '@/src/entities/Member';
-import { Loan, LoanStatus } from '@/src/entities/Loan';
-import { LoanProduct } from '@/src/entities/LoanProduct';
-import { getUserFromRequest } from '@/lib/auth-server';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { Member } = await import('@/src/entities/Member');
+        const { Loan, LoanStatus } = await import('@/src/entities/Loan');
+        const { LoanProduct } = await import('@/src/entities/LoanProduct');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -43,6 +46,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AppDataSource } = await import('@/src/config/database');
+        const { Member } = await import('@/src/entities/Member');
+        const { LoanProduct } = await import('@/src/entities/LoanProduct');
+        const { Loan, LoanStatus } = await import('@/src/entities/Loan');
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

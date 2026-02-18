@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ComplianceService } from '@/src/services/ComplianceService';
-import { AppDataSource } from '@/src/config/database';
-import { ComplianceAudit } from '@/src/entities/ComplianceAudit';
 
-export async function GET(req: NextRequest) {
+export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { ComplianceService } = await import('@/src/services/ComplianceService');
+        const { AppDataSource } = await import('@/src/config/database');
+        const { ComplianceAudit } = await import('@/src/entities/ComplianceAudit');
+
+
         if (!AppDataSource.isInitialized) {
             await AppDataSource.initialize();
         }
@@ -20,6 +23,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { ComplianceService } = await import('@/src/services/ComplianceService');
         const body = await req.json();
         const { tenantId, auditorId, scheduledDate } = body;
 

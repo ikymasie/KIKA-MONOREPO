@@ -7,8 +7,9 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { SecurityScreening } from './SecurityScreening';
-import { User } from './User';
+import type { SecurityScreening } from './SecurityScreening';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 export enum RiskFlagType {
     IDENTITY = 'identity',
@@ -26,7 +27,7 @@ export class RiskFlag {
     @Column({ type: 'uuid' })
     screeningId!: string;
 
-    @ManyToOne(() => SecurityScreening, (screening) => screening.riskFlags)
+    @ManyToOne(() => require('./SecurityScreening').SecurityScreening, (screening: SecurityScreening) => screening.riskFlags)
     @JoinColumn({ name: 'screeningId' })
     screening!: SecurityScreening;
 
@@ -45,9 +46,16 @@ export class RiskFlag {
     @Column({ type: 'uuid', nullable: true })
     resolvedById?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne(() => require('./User').User)
     @JoinColumn({ name: 'resolvedById' })
     resolvedBy?: User;
+
+    @Column({ type: 'uuid' })
+    tenantId!: string;
+
+    @ManyToOne(() => require('./Tenant').Tenant)
+    @JoinColumn({ name: 'tenantId' })
+    tenant!: Tenant;
 
     @CreateDateColumn()
     createdAt!: Date;

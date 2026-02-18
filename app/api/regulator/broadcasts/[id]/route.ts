@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { RegulatoryBroadcast } from '@/src/entities/RegulatoryBroadcast';
-import { UserRole } from '@/src/entities/User';
 
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { RegulatoryBroadcast } = await import('@/src/entities/RegulatoryBroadcast');
+        const { UserRole } = await import('@/src/entities/User');
+
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -45,6 +48,10 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { UserRole } = await import('@/src/entities/User');
+        const { RegulatoryBroadcast } = await import('@/src/entities/RegulatoryBroadcast');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -90,6 +97,10 @@ export async function DELETE(
     { params }: { params: { id: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { UserRole } = await import('@/src/entities/User');
+        const { RegulatoryBroadcast } = await import('@/src/entities/RegulatoryBroadcast');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

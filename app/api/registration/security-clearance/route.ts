@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SocietyApplicationService } from '@/src/services/SocietyApplicationService';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { UserRole } from '@/src/entities/User';
 
 export async function POST(request: NextRequest) {
     try {
+// Dynamic imports to avoid circular dependencies
+        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { UserRole } = await import('@/src/entities/User');
+
+    
         const user = await getUserFromRequest(request);
         if (!user || user.role !== UserRole.INTELLIGENCE_LIAISON) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -7,8 +7,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { InsurancePolicy } from './InsurancePolicy';
-import { Tenant } from './Tenant';
+import type { InsurancePolicy } from './InsurancePolicy';
+import type { Tenant } from './Tenant';
 
 
 export enum ClaimStatus {
@@ -42,7 +42,7 @@ export class InsuranceClaim {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne(() => require('./Tenant').Tenant)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
@@ -52,7 +52,7 @@ export class InsuranceClaim {
     @Column({ type: 'uuid' })
     policyId!: string;
 
-    @ManyToOne(() => InsurancePolicy, (policy) => policy.claims)
+    @ManyToOne(() => require('./InsurancePolicy').InsurancePolicy, (policy: InsurancePolicy) => policy.claims)
     @JoinColumn({ name: 'policyId' })
     policy!: InsurancePolicy;
 

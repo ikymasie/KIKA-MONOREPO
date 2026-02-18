@@ -7,8 +7,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { Member } from './Member';
-import { SavingsProduct } from './SavingsProduct';
+import type { Member } from './Member';
+import type { SavingsProduct } from './SavingsProduct';
 
 @Entity('member_savings')
 export class MemberSavings {
@@ -18,14 +18,14 @@ export class MemberSavings {
     @Column({ type: 'uuid' })
     memberId!: string;
 
-    @ManyToOne(() => Member, (member) => member.savings)
+    @ManyToOne(() => require('./Member').Member, (member: Member) => member.savings)
     @JoinColumn({ name: 'memberId' })
     member!: Member;
 
     @Column({ type: 'uuid' })
     productId!: string;
 
-    @ManyToOne(() => SavingsProduct)
+    @ManyToOne(() => require('./SavingsProduct').SavingsProduct)
     @JoinColumn({ name: 'productId' })
     product!: SavingsProduct;
 

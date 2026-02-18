@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Loan, LoanStatus } from '@/src/entities/Loan';
-import { LoanGuarantor } from '@/src/entities/LoanGuarantor';
-import { getUserFromRequest } from '@/lib/auth-server';
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
     try {
+// Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { Loan, LoanStatus } = await import('@/src/entities/Loan');
+        const { LoanGuarantor } = await import('@/src/entities/LoanGuarantor');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+    
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

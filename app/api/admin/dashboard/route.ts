@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Member, MemberStatus } from '@/src/entities/Member';
-import { Loan, LoanStatus } from '@/src/entities/Loan';
-import { MemberSavings } from '@/src/entities/MemberSavings';
-import { Transaction } from '@/src/entities/Transaction';
-import { InsuranceClaim, ClaimStatus } from '@/src/entities/InsuranceClaim';
-import { MerchandiseOrder, OrderStatus } from '@/src/entities/MerchandiseOrder';
-import { getUserFromRequest } from '@/lib/auth-server';
 import { calculateLiquidityRatio } from '@/lib/dashboard-utils';
 
 export async function GET(request: NextRequest) {
     try {
+// Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { Member, MemberStatus } = await import('@/src/entities/Member');
+        const { Loan, LoanStatus } = await import('@/src/entities/Loan');
+        const { MemberSavings } = await import('@/src/entities/MemberSavings');
+        const { Transaction } = await import('@/src/entities/Transaction');
+        const { InsuranceClaim, ClaimStatus } = await import('@/src/entities/InsuranceClaim');
+        const { MerchandiseOrder, OrderStatus } = await import('@/src/entities/MerchandiseOrder');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+    
         // Authenticate user
         const user = await getUserFromRequest(request);
         if (!user) {

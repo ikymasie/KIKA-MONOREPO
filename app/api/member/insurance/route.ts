@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { InsurancePolicy } from '@/src/entities/InsurancePolicy';
-import { InsuranceClaim, ClaimStatus } from '@/src/entities/InsuranceClaim';
-import { InsuranceProduct } from '@/src/entities/InsuranceProduct';
-import { getUserFromRequest } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { InsurancePolicy } = await import('@/src/entities/InsurancePolicy');
+        const { InsuranceClaim, ClaimStatus } = await import('@/src/entities/InsuranceClaim');
+        const { InsuranceProduct } = await import('@/src/entities/InsuranceProduct');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -50,6 +53,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { InsuranceClaim, ClaimStatus } = await import('@/src/entities/InsuranceClaim');
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

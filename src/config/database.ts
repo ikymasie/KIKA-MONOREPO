@@ -64,7 +64,7 @@ const options: DataSourceOptions = {
     password: process.env.DATABASE_PASSWORD,
     database: process.env.DATABASE_NAME,
     ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
-    synchronize: false, // Disabled to avoid duplicate index errors
+    synchronize: true, // Enabled for development to sync schema (e.g. minBalance). DISABLE FOR PRODUCTION.
     logging: process.env.DATABASE_LOGGING === 'true',
     entities: [
         Tenant,

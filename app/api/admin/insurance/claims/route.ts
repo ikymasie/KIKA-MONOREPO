@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { InsuranceClaim } from '@/src/entities/InsuranceClaim';
-import { getUserFromRequest } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
     try {
+// Dynamic imports to avoid circular dependencies
+        const { InsuranceClaim } = await import('@/src/entities/InsuranceClaim');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+    
         const user = await getUserFromRequest(request);
         if (!user || (!user.isTenantAdmin() && !user.isRegulator() && !user.isGovernmentOfficer())) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

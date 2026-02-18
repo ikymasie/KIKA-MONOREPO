@@ -1,11 +1,14 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { AppDataSource } from '@/src/config/database';
 import { RegulatoryAlert } from '@/entities/RegulatoryAlert';
-import { AlertGenerationService } from '@/src/services/AlertGenerationService';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AppDataSource } = await import('@/src/config/database');
+        const { AlertGenerationService } = await import('@/src/services/AlertGenerationService');
+
+
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -62,6 +65,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AlertGenerationService } = await import('@/src/services/AlertGenerationService');
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

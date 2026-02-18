@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { SocietyApplicationService } from '@/src/services/SocietyApplicationService';
-import { ApplicationType } from '@/src/entities/SocietyApplication';
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
+        const { ApplicationType } = await import('@/src/entities/SocietyApplication');
+
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -18,7 +21,7 @@ export async function POST(request: NextRequest) {
         }
 
         const application = await SocietyApplicationService.createApplication({
-            applicationType: applicationType as ApplicationType,
+            applicationType: applicationType as any,
             proposedName,
             primaryContactName,
             primaryContactEmail,

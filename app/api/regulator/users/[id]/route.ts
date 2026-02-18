@@ -1,29 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/lib/db';
-import { User, UserRole } from '@/entities/User';
-import { getUserFromRequest } from '@/lib/auth-server';
 
-const REGULATOR_ROLES = [
-    UserRole.DCD_DIRECTOR,
-    UserRole.DCD_FIELD_OFFICER,
-    UserRole.DCD_COMPLIANCE_OFFICER,
-    UserRole.BOB_PRUDENTIAL_SUPERVISOR,
-    UserRole.BOB_FINANCIAL_AUDITOR,
-    UserRole.BOB_COMPLIANCE_OFFICER,
-    UserRole.DEDUCTION_OFFICER,
-    UserRole.REGISTRY_CLERK,
-    UserRole.INTELLIGENCE_LIAISON,
-    UserRole.LEGAL_OFFICER,
-    UserRole.REGISTRAR,
-    UserRole.DIRECTOR_COOPERATIVES,
-    UserRole.MINISTER_DELEGATE,
-];
+
+// Need to access UserRole for this constant, but it's used inside function or moved inside
+// Moving REGULATOR_ROLES inside PUT or verify where needed, or using dynamic import if top level needed (but cannot await top level easily)
+// Actually, UserRole is enum. Importing it dynamically is tricky for top level constants.
+// For now, I will move REGULATOR_ROLES inside the function or just import UserRole dynamically inside function and define array there.
+
+// Removing top level definition and moving inside function
+
+
 
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AppDataSource } = await import('@/src/config/database');
+        const { User } = await import('@/src/entities/User');
         const currentUser = await getUserFromRequest(request);
         if (!currentUser || !currentUser.isRegulator()) {
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -56,6 +51,8 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
         const currentUser = await getUserFromRequest(request);
         if (!currentUser || !currentUser.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -66,6 +63,25 @@ export async function PUT(
         if (!firstName || !lastName) {
             return NextResponse.json({ error: 'First name and last name are required' }, { status: 400 });
         }
+
+        const { AppDataSource } = await import('@/src/config/database');
+        const { User, UserRole } = await import('@/src/entities/User');
+
+        const REGULATOR_ROLES = [
+            UserRole.DCD_DIRECTOR,
+            UserRole.DCD_FIELD_OFFICER,
+            UserRole.DCD_COMPLIANCE_OFFICER,
+            UserRole.BOB_PRUDENTIAL_SUPERVISOR,
+            UserRole.BOB_FINANCIAL_AUDITOR,
+            UserRole.BOB_COMPLIANCE_OFFICER,
+            UserRole.DEDUCTION_OFFICER,
+            UserRole.REGISTRY_CLERK,
+            UserRole.INTELLIGENCE_LIAISON,
+            UserRole.LEGAL_OFFICER,
+            UserRole.REGISTRAR,
+            UserRole.DIRECTOR_COOPERATIVES,
+            UserRole.MINISTER_DELEGATE,
+        ];
 
         if (role && !REGULATOR_ROLES.includes(role)) {
             return NextResponse.json({ error: 'Invalid role for regulator user' }, { status: 400 });

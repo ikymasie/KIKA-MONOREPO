@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { Suspense } from 'react';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import { BrandingProvider } from '@/components/providers/BrandingProvider';
@@ -20,7 +21,9 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={inter.className}>
-                <RouteProgressBar />
+                <Suspense fallback={null}>
+                    <RouteProgressBar />
+                </Suspense>
                 <AuthProvider>
                     <BrandingProvider>{children}</BrandingProvider>
                 </AuthProvider>

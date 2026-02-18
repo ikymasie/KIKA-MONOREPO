@@ -8,15 +8,10 @@ import {
     OneToMany,
     JoinColumn,
 } from 'typeorm';
-import { Tenant } from './Tenant';
-import { ReconciliationItem } from './ReconciliationItem';
+import type { Tenant } from './Tenant';
+import type { ReconciliationItem } from './ReconciliationItem';
 
-export enum ReconciliationStatus {
-    PENDING = 'pending',
-    IN_PROGRESS = 'in_progress',
-    COMPLETED = 'completed',
-    FAILED = 'failed',
-}
+import { ReconciliationStatus } from '../enums/ReconciliationStatus';
 
 @Entity('reconciliation_batches')
 export class ReconciliationBatch {
@@ -26,7 +21,7 @@ export class ReconciliationBatch {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne(() => require('./Tenant').Tenant)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
@@ -82,7 +77,7 @@ export class ReconciliationBatch {
     @Column({ default: false })
     journalsPosted!: boolean;
 
-    @OneToMany(() => ReconciliationItem, (item) => item.batch, { cascade: true })
+    @OneToMany(() => require('./ReconciliationItem').ReconciliationItem, (item: ReconciliationItem) => item.batch, { cascade: true })
     items!: ReconciliationItem[];
 
     @CreateDateColumn()

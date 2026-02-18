@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SocietyApplicationService } from '@/src/services/SocietyApplicationService';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { UserRole } from '@/src/entities/User';
-import { RiskLevel } from '@/src/entities/SecurityScreening';
+import type { RiskLevel as RiskLevelType } from '@/src/entities/SecurityScreening';
 
 /**
  * POST: Submit final security clearance decision
@@ -10,6 +7,13 @@ import { RiskLevel } from '@/src/entities/SecurityScreening';
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { UserRole } = await import('@/src/entities/User');
+        const { RiskLevel } = await import('@/src/entities/SecurityScreening');
+
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== UserRole.INTELLIGENCE_LIAISON) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -27,7 +31,7 @@ export async function POST(request: NextRequest) {
             user.id,
             isCleared,
             notes,
-            riskLevel as RiskLevel || RiskLevel.LOW
+            riskLevel as RiskLevelType || RiskLevel.LOW
         );
 
         return NextResponse.json(application);

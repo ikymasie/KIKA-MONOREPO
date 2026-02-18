@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Account, AccountStatus, AccountType } from '@/src/entities/Account';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { AccountingService } from '@/src/services/AccountingService';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const { AppDataSource } = await import('@/src/config/database');
+        const { Account } = await import('@/src/entities/Account');
+        const { AccountingService } = await import('@/src/services/AccountingService');
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -47,6 +49,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const { AppDataSource } = await import('@/src/config/database');
+        const { Account, AccountStatus, AccountType } = await import('@/src/entities/Account');
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -79,7 +86,7 @@ export async function POST(request: NextRequest) {
             tenantId: user.tenantId,
             code,
             name,
-            accountType: type as AccountType,
+            accountType: type,
             description,
             balance: 0,
             status: AccountStatus.ACTIVE

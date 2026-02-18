@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { getUserFromRequest } from '@/lib/auth-server';
+import type { User as UserType } from '@/src/entities/User';
 import {
     RegulatoryBroadcast,
     BroadcastType,
     BroadcastPriority,
     BroadcastTargetAudience,
 } from '@/src/entities/RegulatoryBroadcast';
-import { User, UserRole } from '@/src/entities/User';
-import { Tenant } from '@/src/entities/Tenant';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { User, UserRole } = await import('@/src/entities/User');
+        const { Tenant } = await import('@/src/entities/Tenant');
+
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -70,6 +74,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { User, UserRole } = await import('@/src/entities/User');
+        const { Tenant } = await import('@/src/entities/Tenant');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -120,7 +128,7 @@ export async function POST(request: NextRequest) {
         await broadcastRepo.save(broadcast);
 
         // Send broadcast to recipients
-        let recipients: User[] = [];
+        let recipients: UserType[] = [];
 
         if (targetAudience === BroadcastTargetAudience.ALL_TENANTS || !targetAudience) {
             // Get all SACCOS admins

@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * KIKA Database Seed Data Generator
+ * KIKA Database Seed Data Generator with Firebase Authentication
  * 
  * Generates comprehensive SQL seed data for all 62 database tables
  * with realistic multi-tenant data and proper relationships.
+ * Creates Firebase users with authentication (password: 123456)
  * 
  * Usage: node scripts/generate-seed-data.js
  * Output: scripts/seed-data.sql
@@ -13,6 +14,19 @@
 const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+require('dotenv').config();
+
+// Initialize Firebase Admin
+const admin = require('firebase-admin');
+
+// Parse Firebase credentials from environment
+const firebaseCredentials = JSON.parse(process.env.FIREBASE_ADMIN_CREDENTIALS || '{}');
+
+if (!admin.apps.length) {
+    admin.initializeApp({
+        credential: admin.credential.cert(firebaseCredentials),
+    });
+}
 
 // ============================================
 // CONFIGURATION
@@ -26,6 +40,7 @@ const CONFIG = {
     merchandiseOrderPercentage: 0.30, // 30% of members order merchandise
     transactionsPerMemberPerYear: 15, // Average transactions
     yearsOfHistory: 2, // Years of transaction history
+    defaultPassword: '123456', // Default password for all users
 };
 
 // ============================================

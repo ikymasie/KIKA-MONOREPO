@@ -6,7 +6,7 @@ import {
     ManyToOne,
     JoinColumn
 } from 'typeorm';
-import { User } from './User';
+import type { User } from './User';
 
 @Entity('regulator_settings')
 export class RegulatorSettings {
@@ -69,7 +69,7 @@ export class RegulatorSettings {
     @Column({ type: 'uuid', nullable: true })
     updatedById?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne(() => require('./User').User)
     @JoinColumn({ name: 'updatedById' })
     updatedBy?: User;
 

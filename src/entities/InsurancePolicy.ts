@@ -8,9 +8,9 @@ import {
     OneToMany,
     JoinColumn,
 } from 'typeorm';
-import { Member } from './Member';
+import type { Member } from './Member';
 import { InsuranceProduct } from './InsuranceProduct';
-import { InsuranceClaim } from './InsuranceClaim';
+import type { InsuranceClaim } from './InsuranceClaim';
 
 export enum PolicyStatus {
     ACTIVE = 'active',
@@ -30,7 +30,7 @@ export class InsurancePolicy {
     @Column({ type: 'uuid' })
     memberId!: string;
 
-    @ManyToOne(() => Member, (member) => member.insurancePolicies)
+    @ManyToOne(() => require('./Member').Member, (member: Member) => member.insurancePolicies)
     @JoinColumn({ name: 'memberId' })
     member!: Member;
 
@@ -62,7 +62,7 @@ export class InsurancePolicy {
     @Column({ type: 'int', default: 0 })
     monthsPaid!: number;
 
-    @OneToMany(() => InsuranceClaim, (claim) => claim.policy)
+    @OneToMany(() => require('./InsuranceClaim').InsuranceClaim, (claim: InsuranceClaim) => claim.policy)
     claims!: InsuranceClaim[];
 
     @CreateDateColumn()

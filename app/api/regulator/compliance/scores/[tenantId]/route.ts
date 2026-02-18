@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { ComplianceService } from '@/src/services/ComplianceService';
 
 export async function GET(
     request: NextRequest,
     { params }: { params: { tenantId: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { ComplianceService } = await import('@/src/services/ComplianceService');
+
+
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -30,6 +33,9 @@ export async function POST(
     { params }: { params: { tenantId: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { ComplianceService } = await import('@/src/services/ComplianceService');
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

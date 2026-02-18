@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SocietyApplicationService } from '@/src/services/SocietyApplicationService';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { UserRole } from '@/src/entities/User';
-import { RiskFlagType } from '@/src/entities/RiskFlag';
+import type { RiskFlagType as RiskFlagTypeType } from '@/src/entities/RiskFlag';
 
 /**
  * GET: Fetch screening data for an application
@@ -11,6 +8,13 @@ import { RiskFlagType } from '@/src/entities/RiskFlag';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { UserRole } = await import('@/src/entities/User');
+        const { RiskFlagType } = await import('@/src/entities/RiskFlag');
+
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== UserRole.INTELLIGENCE_LIAISON) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -33,6 +37,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { UserRole } = await import('@/src/entities/User');
+        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
+        const { RiskFlagType } = await import('@/src/entities/RiskFlag');
         const user = await getUserFromRequest(request);
         if (!user || user.role !== UserRole.INTELLIGENCE_LIAISON) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -46,7 +55,7 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
             }
             const flag = await SocietyApplicationService.addRiskFlag(screeningId, {
-                type: type as RiskFlagType,
+                type: type as RiskFlagTypeType,
                 description
             });
             return NextResponse.json(flag);

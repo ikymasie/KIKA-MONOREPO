@@ -8,8 +8,8 @@ import {
     JoinColumn,
     OneToMany,
 } from 'typeorm';
-import { JournalEntry } from './JournalEntry';
-import { Member } from './Member';
+import type { JournalEntry } from './JournalEntry';
+import type { Member } from './Member';
 
 export enum TransactionType {
     DEPOSIT = 'deposit',
@@ -67,7 +67,7 @@ export class Transaction {
     @Column({ nullable: true })
     referenceType?: string;
 
-    @ManyToOne(() => Member)
+    @ManyToOne(() => require('./Member').Member)
     @JoinColumn({ name: 'memberId' })
     member?: Member;
 
@@ -83,7 +83,7 @@ export class Transaction {
     @Column({ type: 'timestamp', nullable: true })
     approvedAt?: Date;
 
-    @OneToMany(() => JournalEntry, (entry) => entry.transaction, { cascade: true })
+    @OneToMany(() => require('./JournalEntry').JournalEntry, (entry: JournalEntry) => entry.transaction, { cascade: true })
     journalEntries!: JournalEntry[];
 
     @CreateDateColumn()

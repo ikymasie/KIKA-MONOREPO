@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { Certificate, CertificateType } from '@/src/entities/Certificate';
-import { UserRole } from '@/src/entities/User';
+import type { CertificateType as CertificateTypeType } from '@/src/entities/Certificate';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { Certificate, CertificateType } = await import('@/src/entities/Certificate');
+        const { UserRole } = await import('@/src/entities/User');
+
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -17,7 +21,7 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url);
         const tenantId = searchParams.get('tenantId');
-        const certificateType = searchParams.get('certificateType') as CertificateType | null;
+        const certificateType = searchParams.get('certificateType') as CertificateTypeType | null;
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '20');
 
@@ -65,6 +69,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { UserRole } = await import('@/src/entities/User');
+        const { Certificate } = await import('@/src/entities/Certificate');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

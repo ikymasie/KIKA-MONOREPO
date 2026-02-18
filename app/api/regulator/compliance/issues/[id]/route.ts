@@ -1,14 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { ComplianceIssue, ComplianceIssueStatus } from '@/src/entities/ComplianceIssue';
-import { UserRole } from '@/src/entities/User';
+import type { ComplianceIssueStatus as ComplianceIssueStatusType } from '@/src/entities/ComplianceIssue';
 
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { ComplianceIssue, ComplianceIssueStatus } = await import('@/src/entities/ComplianceIssue');
+        const { UserRole } = await import('@/src/entities/User');
+
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -45,6 +49,9 @@ export async function PUT(
     { params }: { params: { id: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { ComplianceIssue, ComplianceIssueStatus } = await import('@/src/entities/ComplianceIssue');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -67,7 +74,7 @@ export async function PUT(
         }
 
         if (status) {
-            issue.status = status as ComplianceIssueStatus;
+            issue.status = status as ComplianceIssueStatusType;
             if (status === ComplianceIssueStatus.RESOLVED) {
                 issue.resolutionDate = new Date();
             }

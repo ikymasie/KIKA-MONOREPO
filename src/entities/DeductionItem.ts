@@ -6,8 +6,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { DeductionRequest } from './DeductionRequest';
-import { Member } from './Member';
+import type { DeductionRequest } from './DeductionRequest';
+import type { Member } from './Member';
 
 export enum ChangeReason {
     NEW_ENROLLMENT = 'new_enrollment',
@@ -25,14 +25,14 @@ export class DeductionItem {
     @Column({ type: 'uuid' })
     requestId!: string;
 
-    @ManyToOne(() => DeductionRequest, (request) => request.items)
+    @ManyToOne(() => require('./DeductionRequest').DeductionRequest, (request: DeductionRequest) => request.items)
     @JoinColumn({ name: 'requestId' })
     request!: DeductionRequest;
 
     @Column({ type: 'uuid' })
     memberId!: string;
 
-    @ManyToOne(() => Member)
+    @ManyToOne(() => require('./Member').Member)
     @JoinColumn({ name: 'memberId' })
     member!: Member;
 

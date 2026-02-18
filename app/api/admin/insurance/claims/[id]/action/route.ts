@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { InsuranceClaim, ClaimStatus } from '@/src/entities/InsuranceClaim';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { UserRole } from '@/src/entities/User';
 import { sendClaimNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { InsuranceClaim, ClaimStatus } = await import('@/src/entities/InsuranceClaim');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { UserRole } = await import('@/src/entities/User');
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

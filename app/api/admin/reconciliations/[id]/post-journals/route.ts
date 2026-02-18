@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
 import { ReconciliationEngine } from '@/lib/deductions/reconciliation';
 import { getDb } from '@/lib/db';
-import { ReconciliationBatch } from '@/src/entities/ReconciliationBatch';
 
 export const dynamic = 'force-dynamic';
 
 // Post journals for a reconciliation batch
-export async function POST(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const { ReconciliationBatch } = await import('@/src/entities/ReconciliationBatch');
+
+    
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

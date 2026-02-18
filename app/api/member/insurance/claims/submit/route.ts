@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
-import { InsuranceClaim, ClaimStatus } from '@/src/entities/InsuranceClaim';
-import { InsurancePolicy } from '@/src/entities/InsurancePolicy';
-import { getUserFromRequest } from '@/lib/auth-server';
 import { Not, In } from 'typeorm';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
     try {
+// Dynamic imports to avoid circular dependencies
+        const { InsuranceClaim, ClaimStatus } = await import('@/src/entities/InsuranceClaim');
+        const { InsurancePolicy } = await import('@/src/entities/InsurancePolicy');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+    
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

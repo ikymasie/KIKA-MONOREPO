@@ -3,7 +3,6 @@ import { AppDataSource } from '@/lib/db';
 import { User, UserRole, UserStatus } from '@/entities/User';
 import { generateTemporaryPassword, hashPassword } from '@/lib/password';
 import { sendEmail, generateCredentialsEmail } from '@/lib/email';
-import { getUserFromRequest } from '@/lib/auth-server';
 
 // List of regulator and government roles
 const REGULATOR_ROLES = [
@@ -24,7 +23,9 @@ const REGULATOR_ROLES = [
 
 export async function GET(request: NextRequest) {
     try {
-        const user = await getUserFromRequest(request);
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const user = await getUserFromRequest(request);
         // Only super regulators can manage users
         if (!user || !user.isRegulator()) {
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -53,7 +54,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const user = await getUserFromRequest(request);
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

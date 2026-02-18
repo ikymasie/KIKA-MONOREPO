@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Tenant } from '@/src/entities/Tenant';
 
 export async function GET(
     request: NextRequest,
     { params }: { params: { tenantId: string } }
 ) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { Tenant } = await import('@/src/entities/Tenant');
+
+
         const { tenantId } = params;
 
         if (!AppDataSource.isInitialized) {

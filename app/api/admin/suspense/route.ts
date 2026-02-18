@@ -1,20 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
 import { getDb } from '@/lib/db';
-import { SuspenseAccount, SuspenseStatus } from '@/src/entities/SuspenseAccount';
 
 export const dynamic = 'force-dynamic';
 
 // List all suspense account entries
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { SuspenseAccount, SuspenseStatus } = await import('@/src/entities/SuspenseAccount');
+
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { searchParams } = new URL(request.url);
-        const status = searchParams.get('status') as SuspenseStatus | null;
+        const status = searchParams.get('status') as any;
 
         const db = await getDb();
         const suspenseRepo = db.getRepository(SuspenseAccount);
@@ -47,6 +50,9 @@ export async function GET(request: NextRequest) {
 // Allocate suspense entry to a member
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { SuspenseAccount, SuspenseStatus } = await import('@/src/entities/SuspenseAccount');
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

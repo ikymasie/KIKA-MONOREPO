@@ -1,4 +1,5 @@
-import { ReconciliationBatch, ReconciliationStatus } from '@/src/entities/ReconciliationBatch';
+import { ReconciliationBatch } from '@/src/entities/ReconciliationBatch';
+import { ReconciliationStatus } from '@/src/enums/ReconciliationStatus';
 import { ReconciliationItem, MatchStatus, VarianceReason } from '@/src/entities/ReconciliationItem';
 import { DeductionRequest } from '@/src/entities/DeductionRequest';
 import { DeductionItem } from '@/src/entities/DeductionItem';

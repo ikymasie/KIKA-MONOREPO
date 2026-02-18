@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { MemberSavings } from '@/src/entities/MemberSavings';
-import { getUserFromRequest } from '@/lib/auth-server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
     try {
+// Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { MemberSavings } = await import('@/src/entities/MemberSavings');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+    
         const user = await getUserFromRequest(request);
         if (!user || !user.isTenantAdmin()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

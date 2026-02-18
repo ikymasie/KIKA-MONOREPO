@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { AppDataSource } from '@/src/config/database';
-import { Tenant } from '@/src/entities/Tenant';
-import { Account } from '@/src/entities/Account';
-import { Loan } from '@/src/entities/Loan';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const { AppDataSource } = await import('@/src/config/database');
+        const { Tenant } = await import('@/src/entities/Tenant');
+        const { Account } = await import('@/src/entities/Account');
+        const { Loan } = await import('@/src/entities/Loan');
+
+    
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

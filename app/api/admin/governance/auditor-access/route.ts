@@ -1,23 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { AuditorService } from '@/src/services/AuditorService';
-import { UserRole } from '@/src/entities/User';
 
-export async function PATCH(
-    request: NextRequest,
-    { params }: { params: { requestId: string } }
-) {
+export async function PATCH(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AuditorService } = await import('@/src/services/AuditorService');
+        const { UserRole } = await import('@/src/entities/User');
+
         const user = await getUserFromRequest(request);
-        const { requestId } = params;
 
         if (!user || user.role !== UserRole.SACCOS_ADMIN) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const body = await request.json();
-        const { action } = body; // 'approve' or 'reject'
+        const { requestId, action } = body; // 'approve' or 'reject'
+
+        if (!requestId) {
+            return NextResponse.json({ error: 'Request ID is required' }, { status: 400 });
+        }
 
         if (!action || !['approve', 'reject'].includes(action)) {
             return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
@@ -44,6 +46,11 @@ export async function PATCH(
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AppDataSource } = await import('@/src/config/database');
+        const { UserRole } = await import('@/src/entities/User');
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== UserRole.SACCOS_ADMIN) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Member, MemberStatus } from '@/src/entities/Member';
-import { MemberCommunication, CommunicationType, CommunicationDirection } from '@/src/entities/MemberCommunication';
-import { getUserFromRequest } from '@/lib/auth-server';
 import { In } from 'typeorm';
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { Member, MemberStatus } = await import('@/src/entities/Member');
+        const { MemberCommunication, CommunicationType, CommunicationDirection } = await import('@/src/entities/MemberCommunication');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
             communicationRepo.create({
                 tenantId: user.tenantId,
                 memberId,
-                type: type as CommunicationType,
+                type: type,
                 direction: CommunicationDirection.OUTBOUND,
                 subject,
                 content,

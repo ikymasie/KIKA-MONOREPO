@@ -9,8 +9,8 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
-import { Tenant } from './Tenant';
-import { JournalEntry } from './JournalEntry';
+import type { Tenant } from './Tenant';
+import type { JournalEntry } from './JournalEntry';
 
 export enum AccountType {
     ASSET = 'asset',
@@ -34,7 +34,7 @@ export class Account {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => Tenant, (tenant) => tenant.accounts)
+    @ManyToOne(() => require('./Tenant').Tenant, (tenant: Tenant) => tenant.accounts)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
@@ -63,7 +63,7 @@ export class Account {
     @Column({ type: 'enum', enum: AccountStatus, default: AccountStatus.ACTIVE })
     status!: AccountStatus;
 
-    @OneToMany(() => JournalEntry, (entry) => entry.account)
+    @OneToMany(() => require('./JournalEntry').JournalEntry, (entry: JournalEntry) => entry.account)
     journalEntries!: JournalEntry[];
 
     @CreateDateColumn()

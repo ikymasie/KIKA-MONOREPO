@@ -1,14 +1,12 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { AppDataSource } from '@/lib/db';
 import { ApplicationStatusHistory } from '@/entities/ApplicationStatusHistory';
-import { getUserFromRequest } from '@/lib/auth-server';
 
-export async function GET(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-        const user = await getUserFromRequest(request);
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

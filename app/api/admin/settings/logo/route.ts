@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminStorage } from '@/lib/firebase-admin';
-import { getUserFromRequest } from '@/lib/auth-server';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
     try {
-        const user = await getUserFromRequest(request);
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

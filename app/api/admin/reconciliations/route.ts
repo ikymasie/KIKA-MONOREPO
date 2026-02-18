@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
 import { ReconciliationEngine } from '@/lib/deductions/reconciliation';
 import { getDb } from '@/lib/db';
-import { ReconciliationBatch } from '@/src/entities/ReconciliationBatch';
 
 export const dynamic = 'force-dynamic';
 
 // List all reconciliation batches
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const { ReconciliationBatch } = await import('@/src/entities/ReconciliationBatch');
+
+    
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -33,7 +36,9 @@ export async function GET(request: NextRequest) {
 // Create new reconciliation from MoF CSV upload
 export async function POST(request: NextRequest) {
     try {
-        const user = await getUserFromRequest(request);
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

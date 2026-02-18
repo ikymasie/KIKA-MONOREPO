@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { FieldOfficerService } from '@/src/services/FieldOfficerService';
-import { AppDataSource } from '@/src/config/database';
-import { FieldReport } from '@/src/entities/FieldReport';
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { FieldOfficerService } = await import('@/src/services/FieldOfficerService');
+        const { AppDataSource } = await import('@/src/config/database');
+        const { FieldReport } = await import('@/src/entities/FieldReport');
+
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -38,6 +41,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { FieldOfficerService } = await import('@/src/services/FieldOfficerService');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { getUserFromRequest } from '@/lib/auth-server';
-import { AuditorService } from '@/src/services/AuditorService';
-import { UserRole } from '@/src/entities/User';
 
 export async function POST(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { AppDataSource } = await import('@/src/config/database');
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AuditorService } = await import('@/src/services/AuditorService');
+        const { UserRole } = await import('@/src/entities/User');
+
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== UserRole.EXTERNAL_AUDITOR) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -36,6 +39,10 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     try {
+        // Dynamic imports to avoid circular dependencies
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { AuditorService } = await import('@/src/services/AuditorService');
+        const { AppDataSource } = await import('@/src/config/database');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
