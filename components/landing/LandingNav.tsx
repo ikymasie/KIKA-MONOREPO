@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface LandingNavProps {
     onLoginClick: () => void;
@@ -52,9 +53,20 @@ export default function LandingNav({ onLoginClick }: LandingNavProps) {
                 {/* Logo */}
                 <button
                     onClick={() => scrollToSection('home')}
-                    className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-indigo-600 bg-clip-text text-transparent hover:scale-105 transition-transform"
+                    className="hover:scale-105 transition-transform focus:outline-none"
+                    aria-label="KIKA Home"
                 >
-                    KIKA
+                    <Image
+                        src={isScrolled
+                            ? '/assets/logos/kika-logo-darkbg.png'
+                            : '/assets/logos/kika-logo-lightbg.png'
+                        }
+                        alt="KIKA"
+                        width={100}
+                        height={36}
+                        className="h-9 w-auto object-contain transition-all duration-300"
+                        priority
+                    />
                 </button>
 
                 {/* Desktop Navigation */}

@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth-hooks';
 import { getRoleBasedRoute } from '@/lib/route-utils';
 import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
+import Image from 'next/image';
 
 type LoginMethod = 'email' | 'phone';
 
@@ -155,8 +156,15 @@ function SignInForm() {
                 <div className="glass-panel p-8 md:p-10 shadow-2xl shadow-indigo-500/10 border-white/40">
                     {/* Header — fades in from top */}
                     <div className="text-center mb-8 animate-fade-in-down">
-                        <div className="inline-flex h-16 w-16 mb-6 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 items-center justify-center text-white font-bold text-3xl shadow-lg shadow-primary-500/30">
-                            K
+                        <div className="inline-flex mb-6 items-center justify-center">
+                            <Image
+                                src="/assets/logos/kika-logo.png"
+                                alt="KIKA"
+                                width={120}
+                                height={48}
+                                className="h-14 w-auto object-contain"
+                                priority
+                            />
                         </div>
                         <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-700 to-indigo-800 mb-2">
                             Welcome Back

@@ -2,6 +2,7 @@
 
 import { Facebook, Twitter, Linkedin, Mail } from 'lucide-react';
 import { useScrollAnimation } from '@/lib/hooks/useScrollAnimation';
+import Image from 'next/image';
 
 export default function LandingFooter() {
     const currentYear = new Date().getFullYear();
@@ -61,9 +62,15 @@ export default function LandingFooter() {
                         data-stagger-child
                         className="lg:col-span-1 animate-fade-in-up"
                     >
-                        <h3 className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent mb-4">
-                            KIKA Platform
-                        </h3>
+                        <div className="mb-4">
+                            <Image
+                                src="/assets/logos/kika-logo-lightbg.png"
+                                alt="KIKA Platform"
+                                width={120}
+                                height={44}
+                                className="h-10 w-auto object-contain"
+                            />
+                        </div>
                         <p className="text-gray-400 mb-6">
                             Transforming society and co-operative management in Botswana with cutting-edge technology.
                         </p>

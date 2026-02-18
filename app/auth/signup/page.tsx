@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { UserRole } from '@/src/entities/User';
 import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
+import Image from 'next/image';
 import {
     Users,
     Building2,
@@ -142,8 +143,15 @@ export default function SignupPage() {
                 {loading ? (
                     <div className="glass-panel p-12 shadow-2xl border-white/40 text-center animate-scale-in">
                         <div className="relative mb-10 inline-block">
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white font-bold text-2xl animate-float shadow-lg shadow-primary-500/20">
-                                K
+                            <div className="w-20 h-20 rounded-2xl bg-white flex items-center justify-center animate-float shadow-lg shadow-primary-500/20 p-2">
+                                <Image
+                                    src="/assets/logos/kika-logo.png"
+                                    alt="KIKA"
+                                    width={64}
+                                    height={64}
+                                    className="w-full h-full object-contain"
+                                    priority
+                                />
                             </div>
                             <div className="absolute inset-0 rounded-2xl border-2 border-primary-500 animate-pulse-glow"></div>
                         </div>
@@ -176,8 +184,15 @@ export default function SignupPage() {
                     <div className="glass-panel p-8 md:p-12 shadow-2xl border-white/40 animate-scale-in">
                         {/* Header */}
                         <div className="text-center mb-10 animate-fade-in-down">
-                            <Link href="/" className="inline-flex h-12 w-12 mb-6 rounded-xl bg-gradient-to-br from-primary-500 to-indigo-600 items-center justify-center text-white font-bold text-2xl shadow-lg hover:scale-110 transition-transform">
-                                K
+                            <Link href="/" className="inline-flex mb-6 items-center justify-center hover:scale-110 transition-transform">
+                                <Image
+                                    src="/assets/logos/kika-logo.png"
+                                    alt="KIKA"
+                                    width={120}
+                                    height={48}
+                                    className="h-14 w-auto object-contain"
+                                    priority
+                                />
                             </Link>
                             <h1 className="text-3xl font-bold text-gray-900 mb-2 drop-shadow-sm">Register Your Organisation</h1>
                             <p className="text-gray-500 font-medium">Start your digital transformation journey with KIKA</p>
