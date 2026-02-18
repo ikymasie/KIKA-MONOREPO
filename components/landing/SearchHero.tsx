@@ -15,7 +15,9 @@ export default function SearchHero({ onLoginClick }: SearchHeroProps) {
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Searching for:', searchQuery);
+        if (searchQuery.trim()) {
+            window.location.href = `/directory/search?q=${encodeURIComponent(searchQuery)}`;
+        }
     };
 
     const trendingSearches = [

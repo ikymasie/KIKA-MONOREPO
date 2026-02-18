@@ -12,13 +12,13 @@ import { getStorage } from 'firebase/storage';
 //     measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 // }; 
 const firebaseConfig = {
-  apiKey: "AIzaSyDEbq-e54hhgHrhIB6qVX8t8QlCysGPAIw",
-  authDomain: "kika-bw.firebaseapp.com",
-  projectId: "kika-bw",
-  storageBucket: "kika-bw.firebasestorage.app",
-  messagingSenderId: "1054148523063",
-  appId: "1:1054148523063:web:5f51c5a21268f47db7fbb2",
-  measurementId: "G-03TBRC18WQ"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDEbq-e54hhgHrhIB6qVX8t8QlCysGPAIw",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "kika-bw.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "kika-bw",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "kika-bw.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "1054148523063",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:1054148523063:web:5f51c5a21268f47db7fbb2",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-03TBRC18WQ"
 };
 
 // Initialize Firebase client SDK

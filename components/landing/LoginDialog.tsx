@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { X } from 'lucide-react';
 
 interface LoginDialogProps {
@@ -112,5 +113,3 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
         </>
     );
 }
-
-import Link from 'next/link';

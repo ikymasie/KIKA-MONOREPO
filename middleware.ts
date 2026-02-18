@@ -2,13 +2,14 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 // Define public routes that don't require authentication
-const publicRoutes = ['/', '/auth/signin', '/auth/error', '/regulator/auth/signin'];
+const publicRoutes = ['/', '/auth/signin', '/auth/error', '/regulator/auth/signin', '/directory', '/directory/search'];
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Allow public routes
-    if (publicRoutes.includes(pathname)) {
+    // Allow public routes
+    if (publicRoutes.includes(pathname) || pathname.startsWith('/directory')) {
         return NextResponse.next();
     }
 

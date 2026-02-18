@@ -60,10 +60,10 @@ const options: DataSourceOptions = {
     type: 'mysql',
     host: process.env.DATABASE_HOST || 'localhost',
     port: parseInt(process.env.DATABASE_PORT || '3306'),
-    username: process.env.DATABASE_USERNAME,
-    password: process.env.DATABASE_PASSWORD,
-    database: process.env.DATABASE_NAME,
-    ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : false,
+    username: process.env.DATABASE_USERNAME || 'kika-admin',
+    password: process.env.DATABASE_PASSWORD || 'Kika@2026',
+    database: process.env.DATABASE_NAME || 'kikadb',
+    ssl: (process.env.DATABASE_SSL === 'true' || true) ? { rejectUnauthorized: false } : false,
     synchronize: true, // Enabled for development to sync schema (e.g. minBalance). DISABLE FOR PRODUCTION.
     logging: process.env.DATABASE_LOGGING === 'true',
     entities: [
