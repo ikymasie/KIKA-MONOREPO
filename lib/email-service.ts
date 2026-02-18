@@ -46,8 +46,8 @@ class EmailService {
     constructor() {
         const smtpHost = process.env.SMTP_HOST || 'smtp-relay.brevo.com';
         const smtpPort = parseInt(process.env.SMTP_PORT || '587');
-        const smtpUser = process.env.SMTP_USER;
-        const smtpPass = process.env.SMTP_PASS;
+        const smtpUser = process.env.SMTP_USER || 'admin@dl-africa.com';
+        const smtpPass = process.env.SMTP_PASS || 'xCT79s5mYv3q6hB2';
 
         this.isConfigured = !!(smtpUser && smtpPass);
 

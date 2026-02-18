@@ -33,10 +33,11 @@ class SMSPortalService {
     private apiUrl: string;
 
     constructor() {
-        this.clientId = process.env.SMS_PORTAL_CLIENT_ID || '';
-        this.apiSecret = process.env.SMS_PORTAL_API_SECRET || '';
+        this.clientId = process.env.SMS_PORTAL_CLIENT_ID || '1463fda2-2835-4cc2-a443-1954ddfc965b';
+        this.apiSecret = process.env.SMS_PORTAL_API_SECRET || 'c97d097d-b755-47ba-b8c0-8fe3fe4b53a2';
         this.apiUrl = process.env.SMS_PORTAL_API_URL || 'https://rest.smsportal.com/v1';
 
+        console.log('SMS PORTAL CRED TEST',process.env.SMS_PORTAL_API_SECRET)
         if (!this.clientId || !this.apiSecret) {
             console.warn('SMS Portal credentials not configured. SMS sending will fail.');
         }
