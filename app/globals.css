@@ -2,6 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Warm Tan Brown Primary — default palette */
+  --primary-50: #fdf8f0;
+  --primary-100: #faefd9;
+  --primary-200: #f3ddb0;
+  --primary-300: #e8c47e;
+  --primary-400: #d9a54e;
+  --primary-500: #c4882a;
+  --primary-600: #a86e1e;
+  --primary-700: #8a5518;
+  --primary-800: #6e4116;
+  --primary-900: #5a3412;
+  --primary-950: #321c08;
+
+  /* Warm Terracotta/Copper Secondary — default palette */
+  --secondary-50: #fdf4ee;
+  --secondary-100: #fae4d0;
+  --secondary-200: #f4c49e;
+  --secondary-300: #ec9d6a;
+  --secondary-400: #e07840;
+  --secondary-500: #c95d28;
+  --secondary-600: #a8461d;
+  --secondary-700: #87361a;
+  --secondary-800: #6d2c18;
+  --secondary-900: #5a2516;
+  --secondary-950: #311009;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;

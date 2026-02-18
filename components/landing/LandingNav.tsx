@@ -58,8 +58,8 @@ export default function LandingNav({ onLoginClick }: LandingNavProps) {
                 >
                     <Image
                         src={isScrolled
-                            ? '/assets/logos/kika-logo-darkbg.png'
-                            : '/assets/logos/kika-logo-lightbg.png'
+                            ? '/assets/logos/kika-logo-lightbg.png'
+                            : '/assets/logos/kika-logo-darkbg.png'
                         }
                         alt="KIKA"
                         width={100}

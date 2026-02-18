@@ -32,6 +32,7 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
             if (!user?.tenantId) {
                 setBranding(null);
                 setLoading(false);
+                resetBranding();
                 return;
             }
 
@@ -52,6 +53,20 @@ export function BrandingProvider({ children }: { children: React.ReactNode }) {
 
         fetchBranding();
     }, [user?.tenantId]);
+
+    const resetBranding = () => {
+        if (typeof document === 'undefined') return;
+        const root = document.documentElement;
+        // Remove all dynamically-set variables so :root defaults in globals.css take effect
+        [
+            '--primary-50', '--primary-100', '--primary-200', '--primary-300',
+            '--primary-400', '--primary-500', '--primary-600', '--primary-700',
+            '--primary-800', '--primary-900', '--primary-950',
+            '--secondary-50', '--secondary-100', '--secondary-200', '--secondary-300',
+            '--secondary-400', '--secondary-500', '--secondary-600', '--secondary-700',
+            '--secondary-800', '--secondary-900', '--secondary-950',
+        ].forEach(v => root.style.removeProperty(v));
+    };
 
     const applyBranding = (data: BrandingSettings) => {
         if (typeof document === 'undefined') return;
