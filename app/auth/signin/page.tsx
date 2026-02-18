@@ -150,9 +150,11 @@ function SignInForm() {
             {/* Mesh Overlay */}
             <div className="fixed inset-0 z-0 pointer-events-none opacity-40 mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
 
-            <div className="w-full max-w-md relative z-10">
+            {/* Card — scales in on mount */}
+            <div className="w-full max-w-md relative z-10 animate-scale-in">
                 <div className="glass-panel p-8 md:p-10 shadow-2xl shadow-indigo-500/10 border-white/40">
-                    <div className="text-center mb-8">
+                    {/* Header — fades in from top */}
+                    <div className="text-center mb-8 animate-fade-in-down">
                         <div className="inline-flex h-16 w-16 mb-6 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 items-center justify-center text-white font-bold text-3xl shadow-lg shadow-primary-500/30">
                             K
                         </div>
@@ -165,7 +167,7 @@ function SignInForm() {
                     </div>
 
                     {/* Method Toggle */}
-                    <div className="flex bg-gray-100/50 p-1.5 rounded-xl mb-8 border border-white/50 backdrop-blur-sm">
+                    <div className="flex bg-gray-100/50 p-1.5 rounded-xl mb-8 border border-white/50 backdrop-blur-sm animate-reveal-up delay-100">
                         <button
                             onClick={() => { setLoginMethod('phone'); setError(''); setOtpSent(false); }}
                             className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-all duration-300 ${loginMethod === 'phone'
@@ -196,7 +198,7 @@ function SignInForm() {
                     )}
 
                     {loginMethod === 'email' ? (
-                        <form onSubmit={handleEmailSignIn} className="space-y-5 animate-fade-in">
+                        <form onSubmit={handleEmailSignIn} className="space-y-5 animate-reveal-up delay-200">
                             <div>
                                 <label htmlFor="email" className="label">
                                     Email Address
@@ -236,7 +238,7 @@ function SignInForm() {
                             </button>
                         </form>
                     ) : (
-                        <div className="space-y-6 animate-fade-in">
+                        <div className="space-y-6 animate-reveal-up delay-200">
                             {!otpSent ? (
                                 <form onSubmit={handleSendOtp} className="space-y-5">
                                     <div>
@@ -267,7 +269,7 @@ function SignInForm() {
                                     </button>
                                 </form>
                             ) : (
-                                <form onSubmit={handleVerifyOtp} className="space-y-6 animate-fade-in-up">
+                                <form onSubmit={handleVerifyOtp} className="space-y-6 animate-reveal-up">
                                     <div className="bg-primary-50/50 border border-primary-100 p-4 rounded-xl mb-4 text-sm text-primary-700 flex justify-between items-center backdrop-blur-sm">
                                         <span>Code sent to <strong>+267 {phone}</strong></span>
                                         <button
@@ -316,13 +318,13 @@ function SignInForm() {
                         </div>
                     )}
 
-                    <div className="mt-8 text-center text-sm text-gray-500 border-t border-gray-200/50 pt-6">
+                    <div className="mt-8 text-center text-sm text-gray-500 border-t border-gray-200/50 pt-6 animate-reveal-up delay-400">
                         <p>Need help accessing your account?</p>
-                        <p className="mt-1 font-medium text-primary-600">Contact your SACCOS Support Team</p>
+                        <p className="mt-1 font-medium text-primary-600">Contact your Society Support Team</p>
                     </div>
                 </div>
 
-                <div className="mt-8 text-center">
+                <div className="mt-8 text-center animate-reveal-up delay-500">
                     <a href="/" className="inline-flex items-center gap-2 text-sm font-medium text-white/80 hover:text-white transition-colors bg-white/10 px-4 py-2 rounded-full hover:bg-white/20 backdrop-blur-sm border border-white/20">
                         <span>←</span> Back to home
                     </a>
@@ -346,4 +348,3 @@ export default function SignInPage() {
         </Suspense>
     );
 }
-

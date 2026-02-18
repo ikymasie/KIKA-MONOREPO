@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
+import Link from 'next/link';
 
 interface LandingNavProps {
     onLoginClick: () => void;
@@ -10,8 +11,12 @@ interface LandingNavProps {
 export default function LandingNav({ onLoginClick }: LandingNavProps) {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        // Trigger mount animation
+        setMounted(true);
+
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 50);
         };
@@ -38,10 +43,7 @@ export default function LandingNav({ onLoginClick }: LandingNavProps) {
 
     return (
         <nav
-            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 flex justify-center ${isScrolled
-                ? 'py-4'
-                : 'py-6'
-                }`}
+            className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 flex justify-center ${isScrolled ? 'py-4' : 'py-6'} ${mounted ? 'animate-fade-in-down' : 'opacity-0'}`}
         >
             <div className={`container mx-auto px-4 transition-all duration-300 flex items-center justify-between ${isScrolled
                 ? 'glass-panel mx-4 px-6 py-3 shadow-2xl shadow-primary-900/10'
@@ -57,17 +59,17 @@ export default function LandingNav({ onLoginClick }: LandingNavProps) {
 
                 {/* Desktop Navigation */}
                 <div className="hidden md:flex items-center gap-6">
-                    {navLinks.map((link) => (
+                    {navLinks.map((link, i) => (
                         <button
                             key={link.id}
                             onClick={() => scrollToSection(link.id)}
-                            className={`font-medium text-sm transition-colors hover:text-primary-600 ${isScrolled ? 'text-gray-700' : 'text-white'
-                                }`}
+                            className={`font-medium text-sm transition-colors hover:text-primary-600 animate-fade-in-down ${isScrolled ? 'text-gray-700' : 'text-white'}`}
+                            style={{ animationDelay: `${i * 60 + 100}ms` }}
                         >
                             {link.label}
                         </button>
                     ))}
-                    <div className="flex items-center gap-3 ml-2">
+                    <div className="flex items-center gap-3 ml-2 animate-fade-in-down delay-400">
                         <button
                             onClick={onLoginClick}
                             className={`font-bold text-sm px-4 py-2 rounded-full transition-all ${isScrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10'}`}
@@ -86,8 +88,7 @@ export default function LandingNav({ onLoginClick }: LandingNavProps) {
                 {/* Mobile Menu Button */}
                 <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className={`md:hidden p-2 rounded-lg transition-colors ${isScrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10'
-                        }`}
+                    className={`md:hidden p-2 rounded-lg transition-colors ${isScrolled ? 'text-gray-700 hover:bg-gray-100' : 'text-white hover:bg-white/10'}`}
                 >
                     {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
                 </button>
@@ -129,5 +130,3 @@ export default function LandingNav({ onLoginClick }: LandingNavProps) {
         </nav>
     );
 }
-
-import Link from 'next/link';

@@ -23,8 +23,8 @@ type SignupStep = 'role-selection' | 'account-setup';
 
 const PROCESSING_STAGES = [
     { title: 'Creating Security Context', description: 'Setting up encrypted credentials...' },
-    { title: 'Cloud Sync', description: 'Provisioning Firebase authentication...' },
-    { title: 'Database Entry', description: 'Registering your organization profiles...' },
+    { title: 'Cloud Sync', description: 'Provisioning authentication...' },
+    { title: 'Database Entry', description: 'Registering your organisation profile...' },
     { title: 'Portal Ready', description: 'Taking you to your dashboard...' }
 ];
 
@@ -49,7 +49,6 @@ export default function SignupPage() {
     const handleRoleSelect = (role: UserRole) => {
         setPrevStep('role-selection');
         setSelectedRole(role);
-        // Wait for exit animation if we had any, but here we just switch
         setStep('account-setup');
     };
 
@@ -128,7 +127,7 @@ export default function SignupPage() {
 
     return (
         <div className="min-h-screen relative flex items-center justify-center px-4 py-12 overflow-hidden bg-surface-50">
-            {/* ... Animated Background and Mask ... */}
+            {/* Animated Background */}
             <div className="animated-bg-wrapper fixed inset-0 z-0 pointer-events-none">
                 <div className="animated-bg">
                     <div className="orb orb-1"></div>
@@ -176,23 +175,23 @@ export default function SignupPage() {
                 ) : (
                     <div className="glass-panel p-8 md:p-12 shadow-2xl border-white/40 animate-scale-in">
                         {/* Header */}
-                        <div className="text-center mb-10">
+                        <div className="text-center mb-10 animate-fade-in-down">
                             <Link href="/" className="inline-flex h-12 w-12 mb-6 rounded-xl bg-gradient-to-br from-primary-500 to-indigo-600 items-center justify-center text-white font-bold text-2xl shadow-lg hover:scale-110 transition-transform">
                                 K
                             </Link>
-                            <h1 className="text-3xl font-bold text-gray-900 mb-2 drop-shadow-sm">Register Your Organization</h1>
+                            <h1 className="text-3xl font-bold text-gray-900 mb-2 drop-shadow-sm">Register Your Organisation</h1>
                             <p className="text-gray-500 font-medium">Start your digital transformation journey with KIKA</p>
                         </div>
 
                         {/* Step Indicator */}
-                        <div className="flex items-center justify-center gap-4 mb-12">
+                        <div className="flex items-center justify-center gap-4 mb-12 animate-reveal-up delay-100">
                             <div className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-500 ${step === 'role-selection' ? 'bg-primary-600 text-white shadow-xl shadow-primary-200' : 'bg-green-100 text-green-700'}`}>
                                 {step === 'role-selection' ? (
                                     <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span>
                                 ) : (
                                     <Check size={16} className="animate-scale-in" />
                                 )}
-                                Organization Type
+                                Organisation Type
                             </div>
                             <div className={`w-12 h-[2px] transition-colors duration-500 ${step === 'account-setup' ? 'bg-primary-600' : 'bg-gray-200'}`} />
                             <div className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition-all duration-500 ${step === 'account-setup' ? 'bg-primary-600 text-white shadow-xl shadow-primary-200' : 'bg-gray-100 text-gray-400 opacity-60'}`}>
@@ -210,24 +209,26 @@ export default function SignupPage() {
 
                         <div className="relative overflow-hidden min-h-[400px]">
                             {step === 'role-selection' ? (
-                                <div className="grid md:grid-cols-2 gap-8 animate-slide-in-right">
+                                <div className="grid md:grid-cols-2 gap-8">
+                                    {/* SACCO / Co-operative card — slides in from left */}
                                     <button
                                         onClick={() => handleRoleSelect(UserRole.COOPERATIVE_APPLICANT)}
-                                        className="group relative p-8 rounded-[40px] bg-white/60 border-2 border-white/50 hover:border-primary-500 hover:bg-white/90 transition-all text-left shadow-sm hover:shadow-2xl hover:-translate-y-2 backdrop-blur-md"
+                                        className="group relative p-8 rounded-[40px] bg-white/60 border-2 border-white/50 hover:border-primary-500 hover:bg-white/90 transition-all text-left shadow-sm hover:shadow-2xl hover:-translate-y-2 backdrop-blur-md animate-slide-in-left"
                                     >
                                         <div className="w-16 h-16 rounded-2xl bg-primary-100 text-primary-600 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500">
                                             <Building2 size={32} />
                                         </div>
                                         <h3 className="text-2xl font-black text-gray-900 mb-2">SACCO / Co-operative</h3>
-                                        <p className="text-sm text-gray-500 leading-relaxed font-semibold">For saving and credit societies, agricultural co-ops, and financial cooperatives.</p>
+                                        <p className="text-sm text-gray-500 leading-relaxed font-semibold">For saving and credit societies, agricultural co-ops, and financial co-operatives.</p>
                                         <div className="mt-8 inline-flex items-center text-primary-600 font-black text-sm uppercase tracking-wider group-hover:gap-3 gap-2 transition-all">
-                                            Select & Continue <ArrowRight size={18} className="translate-x-0 group-hover:translate-x-1 transition-transform" />
+                                            Select &amp; Continue <ArrowRight size={18} className="translate-x-0 group-hover:translate-x-1 transition-transform" />
                                         </div>
                                     </button>
 
+                                    {/* General Society card — slides in from right */}
                                     <button
                                         onClick={() => handleRoleSelect(UserRole.SOCIETY_APPLICANT)}
-                                        className="group relative p-8 rounded-[40px] bg-white/60 border-2 border-white/50 hover:border-indigo-500 hover:bg-white/90 transition-all text-left shadow-sm hover:shadow-2xl hover:-translate-y-2 backdrop-blur-md"
+                                        className="group relative p-8 rounded-[40px] bg-white/60 border-2 border-white/50 hover:border-indigo-500 hover:bg-white/90 transition-all text-left shadow-sm hover:shadow-2xl hover:-translate-y-2 backdrop-blur-md animate-slide-in-right"
                                     >
                                         <div className="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500">
                                             <Users size={32} />
@@ -235,14 +236,14 @@ export default function SignupPage() {
                                         <h3 className="text-2xl font-black text-gray-900 mb-2">General Society</h3>
                                         <p className="text-sm text-gray-500 leading-relaxed font-semibold">For burial societies, social clubs, professional associations, and NGOs.</p>
                                         <div className="mt-8 inline-flex items-center text-indigo-600 font-black text-sm uppercase tracking-wider group-hover:gap-3 gap-2 transition-all">
-                                            Select & Continue <ArrowRight size={18} className="translate-x-0 group-hover:translate-x-1 transition-transform" />
+                                            Select &amp; Continue <ArrowRight size={18} className="translate-x-0 group-hover:translate-x-1 transition-transform" />
                                         </div>
                                     </button>
                                 </div>
                             ) : (
                                 <form onSubmit={handleSignup} className="space-y-6 animate-slide-in-right">
                                     <div className="grid md:grid-cols-2 gap-6">
-                                        <div className="group">
+                                        <div className="group animate-reveal-up delay-100">
                                             <label className="label flex items-center gap-2 group-focus-within:text-primary-600 transition-colors">
                                                 <UserIcon size={16} />
                                                 First Name
@@ -256,7 +257,7 @@ export default function SignupPage() {
                                                 onChange={e => setFormData({ ...formData, firstName: e.target.value })}
                                             />
                                         </div>
-                                        <div className="group">
+                                        <div className="group animate-reveal-up delay-200">
                                             <label className="label">Last Name</label>
                                             <input
                                                 type="text"
@@ -269,7 +270,7 @@ export default function SignupPage() {
                                         </div>
                                     </div>
 
-                                    <div className="group">
+                                    <div className="group animate-reveal-up delay-300">
                                         <label className="label flex items-center gap-2 group-focus-within:text-primary-600 transition-colors">
                                             <Mail size={16} />
                                             Email Address
@@ -285,7 +286,7 @@ export default function SignupPage() {
                                     </div>
 
                                     <div className="grid md:grid-cols-2 gap-6">
-                                        <div className="group">
+                                        <div className="group animate-reveal-up delay-400">
                                             <label className="label flex items-center gap-2 group-focus-within:text-primary-600 transition-colors">
                                                 <Lock size={16} />
                                                 Password
@@ -299,7 +300,7 @@ export default function SignupPage() {
                                                 onChange={e => setFormData({ ...formData, password: e.target.value })}
                                             />
                                         </div>
-                                        <div className="group">
+                                        <div className="group animate-reveal-up delay-500">
                                             <label className="label">Confirm Password</label>
                                             <input
                                                 type="password"
@@ -312,7 +313,7 @@ export default function SignupPage() {
                                         </div>
                                     </div>
 
-                                    <div className="pt-6 flex flex-col md:flex-row gap-4">
+                                    <div className="pt-6 flex flex-col md:flex-row gap-4 animate-reveal-up delay-600">
                                         <button
                                             type="button"
                                             onClick={handleBack}
@@ -325,7 +326,7 @@ export default function SignupPage() {
                                             type="submit"
                                             className="flex-1 bg-gradient-to-r from-primary-600 to-indigo-700 text-white font-black text-lg py-5 rounded-[20px] shadow-2xl shadow-primary-500/30 hover:shadow-primary-500/50 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3 group"
                                         >
-                                            Create Account & Start Process
+                                            Create Account &amp; Start Process
                                             <ShieldCheck size={22} className="group-hover:scale-125 transition-transform" />
                                         </button>
                                     </div>
@@ -333,7 +334,7 @@ export default function SignupPage() {
                             )}
                         </div>
 
-                        <div className="mt-12 text-center pt-8 border-t border-gray-100/50">
+                        <div className="mt-12 text-center pt-8 border-t border-gray-100/50 animate-reveal-up delay-700">
                             <p className="text-gray-500 font-semibold">
                                 Already have an account?{' '}
                                 <Link href="/auth/signin" className="text-primary-600 font-black hover:underline hover:text-primary-700 transition-colors">
@@ -344,7 +345,7 @@ export default function SignupPage() {
                     </div>
                 )}
 
-                <p className="mt-8 text-center text-sm font-medium text-gray-400">
+                <p className="mt-8 text-center text-sm font-medium text-gray-400 animate-reveal-up delay-800">
                     By registering, you agree to our <span className="text-gray-600 hover:underline cursor-pointer">Terms of Service</span> and <span className="text-gray-600 hover:underline cursor-pointer">Privacy Policy</span>.
                 </p>
             </div>

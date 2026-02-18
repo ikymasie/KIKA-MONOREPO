@@ -1,28 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import { Building2, Users, FileText, BarChart3, Settings, Shield } from 'lucide-react';
+import Link from 'next/link';
+import { useScrollAnimation } from '@/lib/hooks/useScrollAnimation';
 
 export default function ForSaccossSection() {
-    const [isVisible, setIsVisible] = useState(false);
-    const sectionRef = useRef<HTMLElement>(null);
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                if (entry.isIntersecting) {
-                    setIsVisible(true);
-                }
-            },
-            { threshold: 0.1 }
-        );
-
-        if (sectionRef.current) {
-            observer.observe(sectionRef.current);
-        }
-
-        return () => observer.disconnect();
-    }, []);
+    const { ref: headerRef } = useScrollAnimation<HTMLDivElement>({ threshold: 0.1 });
+    const { ref: gridRef } = useScrollAnimation<HTMLDivElement>({ threshold: 0.05, staggerChildren: true });
+    const { ref: ctaRef } = useScrollAnimation<HTMLDivElement>({ threshold: 0.1 });
 
     const features = [
         {
@@ -66,31 +51,37 @@ export default function ForSaccossSection() {
     return (
         <section
             id="for-saccoss"
-            ref={sectionRef}
             className="py-24 bg-gradient-to-b from-gray-50 to-white"
         >
             <div className="container mx-auto px-4">
                 {/* Section Header */}
-                <div className={`text-center mb-16 ${isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+                <div
+                    ref={headerRef}
+                    data-animate
+                    className="text-center mb-16 animate-reveal-up"
+                >
                     <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary-100 text-primary-700 rounded-full font-medium mb-4">
                         <Building2 size={20} />
-                        For SACCOSS Organizations
+                        For Societies &amp; Co-operatives
                     </div>
                     <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-                        Everything You Need to Manage Your SACCOS
+                        Everything You Need to Manage Your Society
                     </h2>
                     <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                        A complete, integrated platform designed specifically for SACCOS operations in Botswana.
+                        A complete, integrated platform designed for SACCOS, co-operatives, and financial societies in Botswana.
                     </p>
                 </div>
 
-                {/* Features Grid */}
-                <div className={`grid md:grid-cols-2 lg:grid-cols-3 gap-8 ${isVisible ? 'animate-fade-in-up animation-delay-200' : 'opacity-0'}`}>
-                    {features.map((feature, index) => (
+                {/* Features Grid — staggered */}
+                <div
+                    ref={gridRef}
+                    className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
+                >
+                    {features.map((feature) => (
                         <div
                             key={feature.title}
-                            className="group bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2"
-                            style={{ animationDelay: `${index * 100}ms` }}
+                            data-stagger-child
+                            className="group bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 animate-reveal-up"
                         >
                             <div className="inline-flex p-4 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 mb-6 group-hover:scale-110 transition-transform shadow-lg">
                                 <feature.icon className="w-8 h-8 text-white" />
@@ -114,11 +105,15 @@ export default function ForSaccossSection() {
                 </div>
 
                 {/* CTA */}
-                <div className={`mt-16 text-center ${isVisible ? 'animate-fade-in-up animation-delay-600' : 'opacity-0'}`}>
+                <div
+                    ref={ctaRef}
+                    data-animate
+                    className="mt-16 text-center animate-scale-in"
+                >
                     <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-3xl p-12 text-white">
-                        <h3 className="text-3xl font-bold mb-4">Ready to Transform Your SACCOS?</h3>
+                        <h3 className="text-3xl font-bold mb-4">Ready to Transform Your Society?</h3>
                         <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-                            Join leading SACCOS organizations across Botswana using KIKA Platform
+                            Join leading societies and co-operatives across Botswana using KIKA Platform
                         </p>
                         <Link
                             href="/auth/signup"
@@ -132,5 +127,3 @@ export default function ForSaccossSection() {
         </section>
     );
 }
-
-import Link from 'next/link';

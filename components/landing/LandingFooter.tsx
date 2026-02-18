@@ -1,22 +1,24 @@
 'use client';
 
 import { Facebook, Twitter, Linkedin, Mail } from 'lucide-react';
+import { useScrollAnimation } from '@/lib/hooks/useScrollAnimation';
 
 export default function LandingFooter() {
     const currentYear = new Date().getFullYear();
+    const { ref: footerRef } = useScrollAnimation<HTMLDivElement>({ threshold: 0.05, staggerChildren: true });
 
     const footerLinks = {
         Platform: [
             { label: 'About Us', href: '#about' },
-            { label: 'Features', href: '#for-saccoss' },
+            { label: 'Features', href: '#for-societies' },
             { label: 'Pricing', href: '#contact' },
             { label: 'Contact', href: '#contact' }
         ],
-        'For SACCOSS': [
-            { label: 'Member Management', href: '#for-saccoss' },
-            { label: 'Loan Processing', href: '#for-saccoss' },
-            { label: 'Reporting', href: '#for-saccoss' },
-            { label: 'Compliance', href: '#for-saccoss' }
+        'For Societies': [
+            { label: 'Member Management', href: '#for-societies' },
+            { label: 'Loan Processing', href: '#for-societies' },
+            { label: 'Reporting', href: '#for-societies' },
+            { label: 'Compliance', href: '#for-societies' }
         ],
         'For Members': [
             { label: 'Account Access', href: '#for-members' },
@@ -49,15 +51,21 @@ export default function LandingFooter() {
     return (
         <footer className="bg-gray-900 text-white pt-16 pb-8">
             <div className="container mx-auto px-4">
-                {/* Main Footer Content */}
-                <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12">
+                {/* Main Footer Content — staggered columns */}
+                <div
+                    ref={footerRef}
+                    className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 mb-12"
+                >
                     {/* Brand Column */}
-                    <div className="lg:col-span-1">
+                    <div
+                        data-stagger-child
+                        className="lg:col-span-1 animate-fade-in-up"
+                    >
                         <h3 className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent mb-4">
                             KIKA Platform
                         </h3>
                         <p className="text-gray-400 mb-6">
-                            Transforming SACCOS management in Botswana with cutting-edge technology.
+                            Transforming society and co-operative management in Botswana with cutting-edge technology.
                         </p>
                         <div className="flex gap-3">
                             {socialLinks.map((social) => (
@@ -65,7 +73,7 @@ export default function LandingFooter() {
                                     key={social.label}
                                     href={social.href}
                                     aria-label={social.label}
-                                    className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors"
+                                    className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors hover:scale-110 transition-all"
                                 >
                                     <social.icon size={20} />
                                 </a>
@@ -74,15 +82,20 @@ export default function LandingFooter() {
                     </div>
 
                     {/* Link Columns */}
-                    {Object.entries(footerLinks).map(([category, links]) => (
-                        <div key={category}>
+                    {Object.entries(footerLinks).map(([category, links], i) => (
+                        <div
+                            key={category}
+                            data-stagger-child
+                            className="animate-fade-in-up"
+                            style={{ '--stagger-index': i + 1 } as React.CSSProperties}
+                        >
                             <h4 className="font-bold mb-4">{category}</h4>
                             <ul className="space-y-2">
                                 {links.map((link) => (
                                     <li key={link.label}>
                                         <button
                                             onClick={() => scrollToSection(link.href)}
-                                            className="text-gray-400 hover:text-white transition-colors text-left"
+                                            className="text-gray-400 hover:text-white transition-colors text-left hover:translate-x-1 transition-transform inline-block"
                                         >
                                             {link.label}
                                         </button>
@@ -108,7 +121,7 @@ export default function LandingFooter() {
                             />
                             <button
                                 type="submit"
-                                className="px-6 py-2 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-lg font-medium hover:shadow-lg transition-all"
+                                className="px-6 py-2 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-lg font-medium hover:shadow-lg transition-all hover:scale-105"
                             >
                                 Subscribe
                             </button>
