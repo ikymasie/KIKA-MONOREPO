@@ -4,6 +4,7 @@ import { MerchandiseOrder, OrderStatus } from '@/src/entities/MerchandiseOrder';
 import { getUserFromRequest } from '@/lib/auth-server';
 import { asyncHandler, ForbiddenError, ValidationError } from '@/lib/errors';
 
+export const dynamic = 'force-dynamic';
 export const POST = asyncHandler(async (
     request: NextRequest,
     { params }: { params: { id: string } }

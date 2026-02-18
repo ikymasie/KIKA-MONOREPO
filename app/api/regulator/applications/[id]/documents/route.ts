@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AppDataSource } from '@/lib/db';
 import { ApplicationDocument, DocumentType } from '@/entities/ApplicationDocument';
 
+export const dynamic = 'force-dynamic';
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
@@ -77,7 +78,7 @@ export async function POST(
         // Validate that the URL is from Firebase Storage
         if (!fileUrl.includes('firebasestorage.googleapis.com')) {
             return NextResponse.json({ error: 'Invalid file URL. Must be from Firebase Storage' }, { status: 400 });
-        }
+}
 
         // Save to database
         if (!AppDataSource.isInitialized) {

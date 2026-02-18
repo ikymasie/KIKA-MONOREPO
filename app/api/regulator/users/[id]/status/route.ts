@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AppDataSource } from '@/lib/db';
 import { User, UserStatus } from '@/entities/User';
 
+export const dynamic = 'force-dynamic';
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies

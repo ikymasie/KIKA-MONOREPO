@@ -4,6 +4,7 @@ import { User, UserRole, UserStatus } from '@/entities/User';
 import { generateTemporaryPassword, hashPassword } from '@/lib/password';
 import { sendEmail, generateCredentialsEmail } from '@/lib/email';
 
+export const dynamic = 'force-dynamic';
 // List of regulator and government roles
 const REGULATOR_ROLES = [
     UserRole.DCD_DIRECTOR,

@@ -2,6 +2,7 @@ import { NextResponse, NextRequest } from 'next/server';
 import { AppDataSource } from '@/lib/db';
 import { ApplicationStatusHistory } from '@/entities/ApplicationStatusHistory';
 
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies

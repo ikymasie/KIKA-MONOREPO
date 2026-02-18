@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
+export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies

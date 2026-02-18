@@ -5,6 +5,7 @@ import { getUserFromRequest } from '@/lib/auth-server';
 import { asyncHandler, ForbiddenError, BadRequestError, DatabaseError } from '@/lib/errors';
 import { In } from 'typeorm';
 
+export const dynamic = 'force-dynamic';
 export const PATCH = asyncHandler(async (request: NextRequest) => {
     // Authenticate user
     const user = await getUserFromRequest(request);

@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import type { User as UserType } from '@/src/entities/User';
 import {
-    RegulatoryBroadcast,
+RegulatoryBroadcast,
     BroadcastType,
     BroadcastPriority,
     BroadcastTargetAudience,
 } from '@/src/entities/RegulatoryBroadcast';
 
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies

@@ -4,6 +4,7 @@ import { Member, MemberStatus } from '@/src/entities/Member';
 import { getUserFromRequest } from '@/lib/auth-server';
 import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, DatabaseError } from '@/lib/errors';
 
+export const dynamic = 'force-dynamic';
 export const GET = asyncHandler(async (request: NextRequest) => {
     // Authenticate user
     const user = await getUserFromRequest(request);

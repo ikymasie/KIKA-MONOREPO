@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import {
-    ComplianceIssue,
+ComplianceIssue,
     ComplianceIssueType,
     ComplianceIssueSeverity,
     ComplianceIssueStatus,
 } from '@/src/entities/ComplianceIssue';
 
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies

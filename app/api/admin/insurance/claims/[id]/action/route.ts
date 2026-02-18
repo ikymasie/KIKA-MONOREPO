@@ -3,7 +3,6 @@ import { getDb } from '@/lib/db';
 import { sendClaimNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
-
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies

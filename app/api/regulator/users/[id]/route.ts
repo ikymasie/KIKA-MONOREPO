@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-
+export const dynamic = 'force-dynamic';
 // Need to access UserRole for this constant, but it's used inside function or moved inside
 // Moving REGULATOR_ROLES inside PUT or verify where needed, or using dynamic import if top level needed (but cannot await top level easily)
 // Actually, UserRole is enum. Importing it dynamically is tricky for top level constants.

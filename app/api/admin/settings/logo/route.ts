@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminStorage } from '@/lib/firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 
+export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies

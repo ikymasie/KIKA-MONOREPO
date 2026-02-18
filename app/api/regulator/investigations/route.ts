@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { InvestigationStatus as InvestigationStatusType } from '@/src/entities/Investigation';
 
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies

@@ -3,7 +3,6 @@ import { DeltaDeductionEngine } from '@/lib/deductions/delta-engine';
 import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-
 // Submit deduction request to MoF
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {

@@ -5,6 +5,7 @@ import { MerchandiseProduct } from '@/src/entities/MerchandiseProduct';
 import { getUserFromRequest } from '@/lib/auth-server';
 import { asyncHandler, ForbiddenError, NotFoundError, BadRequestError } from '@/lib/errors';
 
+export const dynamic = 'force-dynamic';
 export const GET = asyncHandler(async (request: NextRequest, { params }: { params: { id: string } }) => {
     const user = await getUserFromRequest(request);
     if (!user || !user.isTenantAdmin()) {

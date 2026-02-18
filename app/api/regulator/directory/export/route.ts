@@ -4,11 +4,12 @@ import { Tenant } from '@/entities/Tenant';
 import { Member } from '@/entities/Member';
 import { Account } from '@/entities/Account';
 
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const user = await getUserFromRequest(request);
+        const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }

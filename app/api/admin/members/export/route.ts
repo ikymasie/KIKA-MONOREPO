@@ -5,6 +5,7 @@ import { getUserFromRequest } from '@/lib/auth-server';
 import { asyncHandler, ForbiddenError, BadRequestError } from '@/lib/errors';
 import Papa from 'papaparse';
 
+export const dynamic = 'force-dynamic';
 export const GET = asyncHandler(async (request: NextRequest) => {
     // Authenticate user
     const user = await getUserFromRequest(request);

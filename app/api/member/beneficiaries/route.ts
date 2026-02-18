@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-
 async function getMember(userId: string) {
     const { Member } = await import('@/src/entities/Member');
     const db = await getDb();

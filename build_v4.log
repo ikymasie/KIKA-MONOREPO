@@ -1,0 +1,338 @@
+
+> kika-platform@1.0.0 build
+> next build
+
+  ▲ Next.js 14.2.35
+  - Environments: .env
+
+   Creating an optimized production build ...
+(node:80479) ExperimentalWarning: Type Stripping is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+[Email Service] Brevo SMTP configured successfully
+[Email Service] Brevo SMTP configured successfully
+   Generating static pages (0/122) ...
+Ignoring invalid configuration option passed to Connection: max. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+Ignoring invalid configuration option passed to Connection: connectionTimeoutMillis. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+[90m[4mquery:[24m[39m [94mSELECT[0m [95mversion[0m[37m([0m[37m)[0m
+   Generating static pages (30/122) 
+[Email Service] Brevo SMTP configured successfully
+   Generating static pages (60/122) 
+   Generating static pages (91/122) 
+ ✓ Generating static pages (122/122)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                             Size     First Load JS
+┌ ○ /                                                   10.6 kB         112 kB
+├ ○ /_not-found                                         883 B          88.4 kB
+├ ○ /admin/accounting                                   1.61 kB         147 kB
+├ ○ /admin/accounting/bank-rec                          2.21 kB         147 kB
+├ ○ /admin/accounting/coa                               1.95 kB         147 kB
+├ ○ /admin/accounting/gl                                1.56 kB         146 kB
+├ ○ /admin/accounting/journals/new                      2.18 kB         147 kB
+├ ○ /admin/accounting/payments                          1.88 kB         147 kB
+├ ○ /admin/accounting/statements                        1.62 kB         147 kB
+├ ○ /admin/analytics                                    2.42 kB         147 kB
+├ ○ /admin/bylaws                                       2.01 kB         147 kB
+├ ○ /admin/communications                               1.78 kB         147 kB
+├ ○ /admin/dashboard                                    4.46 kB         212 kB
+├ ○ /admin/deductions                                   1.96 kB         147 kB
+├ ○ /admin/deductions/batches                           1.95 kB         147 kB
+├ ○ /admin/deductions/suspense                          1.86 kB         147 kB
+├ ○ /admin/governance                                   2.35 kB         147 kB
+├ ○ /admin/governance/auditor-access                    1.58 kB         146 kB
+├ ○ /admin/insurance                                    5.56 kB         141 kB
+├ ○ /admin/insurance/claims                             1.82 kB         153 kB
+├ ƒ /admin/insurance/claims/[id]                        2.48 kB         153 kB
+├ ○ /admin/loans                                        2.36 kB         147 kB
+├ ƒ /admin/loans/[id]                                   2.97 kB         148 kB
+├ ○ /admin/members                                      3.38 kB         148 kB
+├ ƒ /admin/members/[id]                                 7.55 kB         152 kB
+├ ○ /admin/members/new                                  2.24 kB         147 kB
+├ ○ /admin/merchandise                                  1.96 kB         147 kB
+├ ○ /admin/merchandise/orders                           1.77 kB         147 kB
+├ ƒ /admin/merchandise/orders/[id]                      2.46 kB         147 kB
+├ ○ /admin/merchandise/products                         2.47 kB         147 kB
+├ ○ /admin/merchandise/vendors                          1.29 kB         146 kB
+├ ○ /admin/savings                                      1.73 kB         147 kB
+├ ○ /admin/savings/products                             2.2 kB          147 kB
+├ ○ /admin/settings                                     4.54 kB         155 kB
+├ ƒ /admin/settings/products/new/[type]                 4.52 kB         153 kB
+├ ○ /admin/team                                         25.5 kB         170 kB
+├ ƒ /api/admin/accounting/chart-of-accounts             0 B                0 B
+├ ƒ /api/admin/accounting/financial-statements          0 B                0 B
+├ ƒ /api/admin/accounting/general-ledger                0 B                0 B
+├ ƒ /api/admin/accounting/journal-entries               0 B                0 B
+├ ƒ /api/admin/accounting/payments/insurance            0 B                0 B
+├ ƒ /api/admin/accounting/payments/vendors              0 B                0 B
+├ ƒ /api/admin/accounting/trial-balance                 0 B                0 B
+├ ƒ /api/admin/analytics                                0 B                0 B
+├ ƒ /api/admin/analytics/churn                          0 B                0 B
+├ ƒ /api/admin/bylaws                                   0 B                0 B
+├ ƒ /api/admin/communications/bulk                      0 B                0 B
+├ ƒ /api/admin/communications/delivery-status           0 B                0 B
+├ ƒ /api/admin/dashboard                                0 B                0 B
+├ ƒ /api/admin/deductions                               0 B                0 B
+├ ƒ /api/admin/deductions/[id]                          0 B                0 B
+├ ƒ /api/admin/deductions/[id]/submit                   0 B                0 B
+├ ƒ /api/admin/deductions/generate                      0 B                0 B
+├ ƒ /api/admin/deductions/reconcile                     0 B                0 B
+├ ƒ /api/admin/governance/agm                           0 B                0 B
+├ ƒ /api/admin/governance/auditor-access                0 B                0 B
+├ ƒ /api/admin/governance/board-meetings                0 B                0 B
+├ ƒ /api/admin/insurance/claims                         0 B                0 B
+├ ƒ /api/admin/insurance/claims/[id]                    0 B                0 B
+├ ƒ /api/admin/insurance/claims/[id]/action             0 B                0 B
+├ ƒ /api/admin/insurance/policies                       0 B                0 B
+├ ƒ /api/admin/loan-officer/metrics                     0 B                0 B
+├ ƒ /api/admin/loan-officer/portfolio                   0 B                0 B
+├ ƒ /api/admin/loan-officer/tasks                       0 B                0 B
+├ ƒ /api/admin/loans                                    0 B                0 B
+├ ƒ /api/admin/loans/[id]                               0 B                0 B
+├ ƒ /api/admin/loans/[id]/approve                       0 B                0 B
+├ ƒ /api/admin/loans/[id]/assign-officer                0 B                0 B
+├ ƒ /api/admin/loans/[id]/committee-vote                0 B                0 B
+├ ƒ /api/admin/loans/[id]/disburse                      0 B                0 B
+├ ƒ /api/admin/loans/[id]/eligibility-check             0 B                0 B
+├ ƒ /api/admin/loans/[id]/officer-recommend             0 B                0 B
+├ ƒ /api/admin/loans/[id]/reject                        0 B                0 B
+├ ƒ /api/admin/loans/[id]/request-guarantors            0 B                0 B
+├ ƒ /api/admin/member-service/beneficiaries             0 B                0 B
+├ ƒ /api/admin/member-service/claims/assist             0 B                0 B
+├ ƒ /api/admin/member-service/communications            0 B                0 B
+├ ƒ /api/admin/member-service/tickets                   0 B                0 B
+├ ƒ /api/admin/members                                  0 B                0 B
+├ ƒ /api/admin/members/[id]                             0 B                0 B
+├ ƒ /api/admin/members/bulk-update                      0 B                0 B
+├ ƒ /api/admin/members/create                           0 B                0 B
+├ ƒ /api/admin/members/export                           0 B                0 B
+├ ƒ /api/admin/merchandise/orders                       0 B                0 B
+├ ƒ /api/admin/merchandise/orders/[id]                  0 B                0 B
+├ ƒ /api/admin/products/insurance                       0 B                0 B
+├ ƒ /api/admin/products/loans                           0 B                0 B
+├ ƒ /api/admin/products/merchandise                     0 B                0 B
+├ ƒ /api/admin/products/merchandise/[id]                0 B                0 B
+├ ƒ /api/admin/products/merchandise/bulk                0 B                0 B
+├ ƒ /api/admin/products/savings                         0 B                0 B
+├ ƒ /api/admin/reconciliations                          0 B                0 B
+├ ƒ /api/admin/reconciliations/[id]/post-journals       0 B                0 B
+├ ƒ /api/admin/reports                                  0 B                0 B
+├ ƒ /api/admin/savings                                  0 B                0 B
+├ ƒ /api/admin/settings                                 0 B                0 B
+├ ƒ /api/admin/settings/logo                            0 B                0 B
+├ ƒ /api/admin/settings/maintenance                     0 B                0 B
+├ ƒ /api/admin/suspense                                 0 B                0 B
+├ ƒ /api/admin/users                                    0 B                0 B
+├ ƒ /api/applications/[id]                              0 B                0 B
+├ ƒ /api/applications/appeals/submit                    0 B                0 B
+├ ƒ /api/applications/create                            0 B                0 B
+├ ƒ /api/applications/documents/upload                  0 B                0 B
+├ ƒ /api/applications/list                              0 B                0 B
+├ ƒ /api/applications/members                           0 B                0 B
+├ ƒ /api/auth/maintenance-status                        0 B                0 B
+├ ƒ /api/auth/otp/send                                  0 B                0 B
+├ ƒ /api/auth/otp/verify                                0 B                0 B
+├ ƒ /api/auth/session                                   0 B                0 B
+├ ƒ /api/auth/signin                                    0 B                0 B
+├ ƒ /api/auth/signout                                   0 B                0 B
+├ ƒ /api/auth/signup                                    0 B                0 B
+├ ƒ /api/branding/[tenantId]                            0 B                0 B
+├ ƒ /api/external-auditor/[tenantId]/accounts           0 B                0 B
+├ ƒ /api/external-auditor/[tenantId]/transactions       0 B                0 B
+├ ƒ /api/external-auditor/access-request                0 B                0 B
+├ ƒ /api/external-auditor/reports/submit                0 B                0 B
+├ ƒ /api/external-auditor/working-papers                0 B                0 B
+├ ƒ /api/member/apply-loan                              0 B                0 B
+├ ƒ /api/member/beneficiaries                           0 B                0 B
+├ ƒ /api/member/contributions/track                     0 B                0 B
+├ ƒ /api/member/dashboard                               0 B                0 B
+├ ƒ /api/member/guarantor-requests                      0 B                0 B
+├ ƒ /api/member/insurance                               0 B                0 B
+├ ƒ /api/member/insurance/certificate                   0 B                0 B
+├ ƒ /api/member/insurance/claims/[id]/dispute           0 B                0 B
+├ ƒ /api/member/insurance/claims/submit                 0 B                0 B
+├ ƒ /api/member/loans                                   0 B                0 B
+├ ƒ /api/member/merchandise                             0 B                0 B
+├ ƒ /api/member/notifications/preferences               0 B                0 B
+├ ƒ /api/member/profile                                 0 B                0 B
+├ ƒ /api/member/savings                                 0 B                0 B
+├ ƒ /api/member/savings/apply                           0 B                0 B
+├ ƒ /api/member/savings/contribution                    0 B                0 B
+├ ƒ /api/member/savings/products                        0 B                0 B
+├ ƒ /api/member/transactions                            0 B                0 B
+├ ƒ /api/notifications/sms                              0 B                0 B
+├ ƒ /api/registration/appeals                           0 B                0 B
+├ ƒ /api/registration/applications                      0 B                0 B
+├ ƒ /api/registration/applications/[id]                 0 B                0 B
+├ ƒ /api/registration/applications/[id]/communications  0 B                0 B
+├ ƒ /api/registration/approve                           0 B                0 B
+├ ƒ /api/registration/assign                            0 B                0 B
+├ ƒ /api/registration/bulk-assign                       0 B                0 B
+├ ƒ /api/registration/certificates/issue                0 B                0 B
+├ ƒ /api/registration/completeness-check                0 B                0 B
+├ ƒ /api/registration/director/approve                  0 B                0 B
+├ ƒ /api/registration/minister/appeals                  0 B                0 B
+├ ƒ /api/registration/minister/approve                  0 B                0 B
+├ ƒ /api/registration/pending                           0 B                0 B
+├ ƒ /api/registration/registry                          0 B                0 B
+├ ƒ /api/registration/security-clearance                0 B                0 B
+├ ƒ /api/registration/security/approve                  0 B                0 B
+├ ƒ /api/registration/security/screening                0 B                0 B
+├ ƒ /api/regulator/alerts                               0 B                0 B
+├ ƒ /api/regulator/applications                         0 B                0 B
+├ ƒ /api/regulator/applications/[id]                    0 B                0 B
+├ ƒ /api/regulator/applications/[id]/action             0 B                0 B
+├ ƒ /api/regulator/applications/[id]/documents          0 B                0 B
+├ ƒ /api/regulator/applications/[id]/history            0 B                0 B
+├ ƒ /api/regulator/broadcasts                           0 B                0 B
+├ ƒ /api/regulator/broadcasts/[id]                      0 B                0 B
+├ ƒ /api/regulator/byelaws/[id]/approve                 0 B                0 B
+├ ƒ /api/regulator/byelaws/[id]/reject                  0 B                0 B
+├ ƒ /api/regulator/byelaws/[id]/review                  0 B                0 B
+├ ƒ /api/regulator/byelaws/pending                      0 B                0 B
+├ ƒ /api/regulator/bylaws                               0 B                0 B
+├ ƒ /api/regulator/bylaws/[id]                          0 B                0 B
+├ ƒ /api/regulator/bylaws/[id]/approve                  0 B                0 B
+├ ƒ /api/regulator/bylaws/[id]/reject                   0 B                0 B
+├ ƒ /api/regulator/certificates                         0 B                0 B
+├ ƒ /api/regulator/certificates/[id]                    0 B                0 B
+├ ƒ /api/regulator/compliance                           0 B                0 B
+├ ƒ /api/regulator/compliance/audits                    0 B                0 B
+├ ƒ /api/regulator/compliance/issues                    0 B                0 B
+├ ƒ /api/regulator/compliance/issues/[id]               0 B                0 B
+├ ƒ /api/regulator/compliance/rules                     0 B                0 B
+├ ƒ /api/regulator/compliance/scores                    0 B                0 B
+├ ƒ /api/regulator/compliance/scores/[tenantId]         0 B                0 B
+├ ƒ /api/regulator/compliance/thresholds                0 B                0 B
+├ ƒ /api/regulator/dashboard                            0 B                0 B
+├ ƒ /api/regulator/directory                            0 B                0 B
+├ ƒ /api/regulator/directory/export                     0 B                0 B
+├ ƒ /api/regulator/field-reports                        0 B                0 B
+├ ƒ /api/regulator/field-visits                         0 B                0 B
+├ ƒ /api/regulator/field-visits/geo                     0 B                0 B
+├ ƒ /api/regulator/field-visits/schedule                0 B                0 B
+├ ƒ /api/regulator/insurance/claims/[id]/rule           0 B                0 B
+├ ƒ /api/regulator/investigations                       0 B                0 B
+├ ƒ /api/regulator/investigations/[id]                  0 B                0 B
+├ ƒ /api/regulator/kyc/batch-verify                     0 B                0 B
+├ ƒ /api/regulator/kyc/verify                           0 B                0 B
+├ ƒ /api/regulator/kyc/verify/[id]                      0 B                0 B
+├ ƒ /api/regulator/reporting                            0 B                0 B
+├ ƒ /api/regulator/reporting/export                     0 B                0 B
+├ ƒ /api/regulator/saccos                               0 B                0 B
+├ ƒ /api/regulator/saccos/[id]                          0 B                0 B
+├ ƒ /api/regulator/saccos/[id]/status                   0 B                0 B
+├ ƒ /api/regulator/settings                             0 B                0 B
+├ ƒ /api/regulator/tenants/[id]/status                  0 B                0 B
+├ ƒ /api/regulator/users                                0 B                0 B
+├ ƒ /api/regulator/users/[id]                           0 B                0 B
+├ ƒ /api/regulator/users/[id]/reset-password            0 B                0 B
+├ ƒ /api/regulator/users/[id]/status                    0 B                0 B
+├ ƒ /api/regulator/verify-member                        0 B                0 B
+├ ƒ /api/vendor/invoices                                0 B                0 B
+├ ƒ /api/vendor/orders                                  0 B                0 B
+├ ƒ /api/vendor/orders/[id]/delivery                    0 B                0 B
+├ ƒ /api/vendor/orders/[id]/fulfill                     0 B                0 B
+├ ƒ /api/vendor/payments                                0 B                0 B
+├ ƒ /api/vendor/products                                0 B                0 B
+├ ○ /applicant                                          6.62 kB         211 kB
+├ ○ /applicant/appeals                                  5.18 kB         201 kB
+├ ○ /applicant/apply                                    3.38 kB         209 kB
+├ ○ /applicant/documents                                2.37 kB         139 kB
+├ ○ /applicant/members                                  2.08 kB         137 kB
+├ ƒ /auditor/[tenantId]/records                         1.65 kB        89.2 kB
+├ ƒ /auditor/[tenantId]/reports                         1.99 kB        89.5 kB
+├ ƒ /auditor/[tenantId]/working-papers                  1.87 kB        89.4 kB
+├ ○ /auditor/access                                     2.08 kB         135 kB
+├ ○ /auditor/dashboard                                  2.34 kB         144 kB
+├ ○ /auth/error                                         634 B          88.2 kB
+├ ○ /auth/signin                                        3.95 kB         142 kB
+├ ○ /auth/signup                                        6.07 kB         216 kB
+├ ○ /cooperative                                        6.24 kB         210 kB
+├ ○ /cooperative/appeals                                5.63 kB         210 kB
+├ ○ /cooperative/documents                              2.23 kB         147 kB
+├ ○ /cooperative/members                                1.57 kB         100 kB
+├ ○ /cooperative/new                                    3.7 kB          209 kB
+├ ○ /director/appeals                                   2.3 kB         89.9 kB
+├ ○ /director/certificates                              1.45 kB          89 kB
+├ ○ /director/dashboard                                 2.09 kB        98.4 kB
+├ ○ /director/policy                                    1.63 kB        89.2 kB
+├ ○ /director/strategic                                 1.46 kB          89 kB
+├ ○ /intelligence/dashboard                             2.04 kB         147 kB
+├ ƒ /intelligence/screening/[id]                        2.94 kB         148 kB
+├ ƒ /intelligence/vetting/[id]                          2.46 kB         147 kB
+├ ○ /maintenance                                        816 B          97.1 kB
+├ ○ /member/apply-loan                                  2.19 kB         147 kB
+├ ○ /member/dashboard                                   2.06 kB         153 kB
+├ ○ /member/insurance                                   4.67 kB         138 kB
+├ ○ /member/loans                                       1.7 kB          152 kB
+├ ○ /member/loans/calculator                            1.75 kB         147 kB
+├ ○ /member/loans/guarantor-requests                    2.04 kB         153 kB
+├ ○ /member/marketplace                                 2.44 kB         147 kB
+├ ƒ /member/marketplace/[id]                            2.53 kB         147 kB
+├ ○ /member/profile                                     1.58 kB         152 kB
+├ ○ /member/profile/beneficiaries                       2.43 kB         153 kB
+├ ○ /member/profile/notifications                       1.77 kB         147 kB
+├ ○ /member/savings                                     2.94 kB         148 kB
+├ ○ /member/savings/contributions                       99.3 kB         250 kB
+├ ○ /member/statements                                  1.8 kB          147 kB
+├ ○ /minister/appeals                                   2.53 kB        90.1 kB
+├ ○ /minister/approvals                                 2.36 kB        89.9 kB
+├ ○ /minister/dashboard                                 2.4 kB         98.7 kB
+├ ○ /minister/policy                                    2 kB           89.6 kB
+├ ○ /minister/settings                                  2.13 kB         135 kB
+├ ○ /registry/applications                              1.41 kB         146 kB
+├ ƒ /registry/applications/[id]                         3.65 kB         148 kB
+├ ○ /registry/bulk-assignment                           2.44 kB         147 kB
+├ ○ /registry/dashboard                                 1.55 kB         146 kB
+├ ○ /regulator/alerts                                   1.94 kB         147 kB
+├ ○ /regulator/applications                             1.16 kB         146 kB
+├ ƒ /regulator/applications/[id]                        3.94 kB         149 kB
+├ ○ /regulator/auth/signin                              3.31 kB         136 kB
+├ ○ /regulator/broadcasts                               2.62 kB        90.2 kB
+├ ○ /regulator/bylaws                                   2.6 kB         90.2 kB
+├ ○ /regulator/certificates                             2.22 kB        89.8 kB
+├ ○ /regulator/compliance                               2.69 kB        90.2 kB
+├ ○ /regulator/compliance/audits                        2.65 kB         147 kB
+├ ○ /regulator/compliance/byelaws                       2.06 kB         147 kB
+├ ○ /regulator/compliance/kyc                           2.46 kB         147 kB
+├ ○ /regulator/compliance/rules                         2.81 kB         148 kB
+├ ○ /regulator/compliance/scores                        1.99 kB         147 kB
+├ ○ /regulator/compliance/thresholds                    2.57 kB         147 kB
+├ ○ /regulator/dashboard                                2.28 kB         147 kB
+├ ○ /regulator/field-officer                            1.63 kB         146 kB
+├ ○ /regulator/field-officer/investigations             1.97 kB         147 kB
+├ ○ /regulator/field-officer/reports                    1.31 kB         146 kB
+├ ○ /regulator/field-officer/visits                     2.71 kB         153 kB
+├ ƒ /regulator/field-officer/visits/[id]/report         4.07 kB         149 kB
+├ ○ /regulator/insurance/disputes                       1.62 kB         146 kB
+├ ƒ /regulator/insurance/disputes/[id]                  2.46 kB         153 kB
+├ ○ /regulator/registrar                                1.6 kB          146 kB
+├ ○ /regulator/registry                                 2.33 kB         147 kB
+├ ○ /regulator/reporting                                1.76 kB         146 kB
+├ ○ /regulator/saccos                                   1.71 kB         146 kB
+├ ƒ /regulator/saccos/[id]                              3.1 kB          148 kB
+├ ƒ /regulator/saccos/[id]/report                       2.79 kB         147 kB
+├ ○ /regulator/settings                                 1.55 kB         146 kB
+├ ○ /regulator/settings/system                          2.08 kB         147 kB
+├ ○ /regulator/settings/users                           2.51 kB         147 kB
+├ ○ /regulator/settings/workflows                       1.57 kB         146 kB
+├ ○ /vendor/dashboard                                   2.19 kB         217 kB
+├ ○ /vendor/invoices                                    2.21 kB         217 kB
+├ ○ /vendor/orders                                      2.71 kB         217 kB
+├ ○ /vendor/payments                                    1.26 kB         146 kB
+└ ○ /vendor/products                                    2.18 kB         217 kB
++ First Load JS shared by all                           87.6 kB
+  ├ chunks/2117-6261f89ac25697e4.js                     31.9 kB
+  ├ chunks/fd9d1056-9974eff7e5f0ec21.js                 53.7 kB
+  └ other shared chunks (total)                         2 kB
+
+
+ƒ Middleware                                            25.6 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+

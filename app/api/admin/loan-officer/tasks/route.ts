@@ -4,6 +4,7 @@ import { Loan, LoanStatus, WorkflowStage } from '@/src/entities/Loan';
 import { getUserFromRequest } from '@/lib/auth-server';
 import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, DatabaseError } from '@/lib/errors';
 
+export const dynamic = 'force-dynamic';
 export const GET = asyncHandler(async (request: NextRequest) => {
     const user = await getUserFromRequest(request);
 

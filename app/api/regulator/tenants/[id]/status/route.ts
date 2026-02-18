@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import type { TenantStatus as TenantStatusType } from '@/src/entities/Tenant';
 
+export const dynamic = 'force-dynamic';
 export async function PUT(
     request: NextRequest,
     { params }: { params: { id: string } }

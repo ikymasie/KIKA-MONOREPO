@@ -4,6 +4,7 @@ import { Tenant } from '@/entities/Tenant';
 import { Account } from '@/entities/Account';
 import { Loan } from '@/entities/Loan';
 
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies

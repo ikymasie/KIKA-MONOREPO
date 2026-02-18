@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-    recordVote,
+recordVote,
     finalizeCommitteeDecision,
     generateMinutes,
 } from '@/lib/committee-workflow';
 
+export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies

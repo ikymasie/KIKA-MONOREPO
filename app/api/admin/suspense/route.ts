@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-
 // List all suspense account entries
 export async function GET(request: NextRequest) {
     try {

@@ -1,0 +1,72 @@
+
+> kika-platform@1.0.0 build
+> next build
+
+  ▲ Next.js 14.2.35
+  - Environments: .env
+
+   Creating an optimized production build ...
+Failed to compile.
+
+./app/api/admin/loans/[id]/committee-vote/route.ts
+Error: 
+  [31mx[0m cannot import as reserved word
+   ,-[[36;1;4m/Users/ikymasie/Documents/GitHub/KIKA/app/api/admin/loans/[id]/committee-vote/route.ts[0m:1:1]
+ [2m1[0m | import { NextRequest, NextResponse } from 'next/server';
+ [2m2[0m | import {
+ [2m3[0m | 
+ [2m4[0m | export const dynamic = 'force-dynamic';
+   : [31;1m^^^^^^[0m
+ [2m5[0m |     recordVote,
+ [2m6[0m |     finalizeCommitteeDecision,
+ [2m7[0m |     generateMinutes,
+   `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/api/admin/loans/[id]/committee-vote/route.ts
+
+./app/api/regulator/broadcasts/route.ts
+Error: 
+  [31mx[0m cannot import as reserved word
+   ,-[[36;1;4m/Users/ikymasie/Documents/GitHub/KIKA/app/api/regulator/broadcasts/route.ts[0m:3:1]
+ [2m3[0m | import type { User as UserType } from '@/src/entities/User';
+ [2m4[0m | import {
+ [2m5[0m | 
+ [2m6[0m | export const dynamic = 'force-dynamic';
+   : [31;1m^^^^^^[0m
+ [2m7[0m |     RegulatoryBroadcast,
+ [2m8[0m |     BroadcastType,
+ [2m9[0m |     BroadcastPriority,
+   `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/api/regulator/broadcasts/route.ts
+
+./app/api/regulator/compliance/issues/route.ts
+Error: 
+  [31mx[0m cannot import as reserved word
+   ,-[[36;1;4m/Users/ikymasie/Documents/GitHub/KIKA/app/api/regulator/compliance/issues/route.ts[0m:2:1]
+ [2m2[0m | import { getDb } from '@/lib/db';
+ [2m3[0m | import {
+ [2m4[0m | 
+ [2m5[0m | export const dynamic = 'force-dynamic';
+   : [31;1m^^^^^^[0m
+ [2m6[0m |     ComplianceIssue,
+ [2m7[0m |     ComplianceIssueType,
+ [2m8[0m |     ComplianceIssueSeverity,
+   `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/api/regulator/compliance/issues/route.ts
+
+
+> Build failed because of webpack errors

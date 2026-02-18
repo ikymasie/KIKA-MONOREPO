@@ -3,7 +3,6 @@ import { getDb } from '@/lib/db';
 import { Not, In } from 'typeorm';
 
 export const dynamic = 'force-dynamic';
-
 export async function POST(request: NextRequest) {
     try {
 // Dynamic imports to avoid circular dependencies

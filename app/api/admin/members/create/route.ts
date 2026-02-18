@@ -6,6 +6,7 @@ import { getUserFromRequest } from '@/lib/auth-server';
 import { syncUserWithFirebase } from '@/lib/firebase-auth';
 import { asyncHandler, ForbiddenError, BadRequestError } from '@/lib/errors';
 
+export const dynamic = 'force-dynamic';
 export const POST = asyncHandler(async (request: NextRequest) => {
     // Authenticate user
     const user = await getUserFromRequest(request);

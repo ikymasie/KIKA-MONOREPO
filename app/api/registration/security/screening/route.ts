@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { RiskFlagType as RiskFlagTypeType } from '@/src/entities/RiskFlag';
 
+export const dynamic = 'force-dynamic';
 /**
  * GET: Fetch screening data for an application
  * POST: Create or update screening data (background checks, risk flags)

@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-
 // Generate new deduction request
 export async function POST(request: NextRequest) {
     try {

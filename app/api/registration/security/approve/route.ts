@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { RiskLevel as RiskLevelType } from '@/src/entities/SecurityScreening';
 
+export const dynamic = 'force-dynamic';
 /**
  * POST: Submit final security clearance decision
  */

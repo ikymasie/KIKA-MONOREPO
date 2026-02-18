@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AppDataSource } from '@/lib/db';
 import { RegulatorSettings } from '@/entities/RegulatorSettings';
 
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies

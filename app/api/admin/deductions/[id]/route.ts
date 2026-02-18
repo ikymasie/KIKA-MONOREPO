@@ -3,7 +3,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-
 // Get specific deduction request details
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
     try {

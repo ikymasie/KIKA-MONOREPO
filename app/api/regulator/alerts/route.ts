@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { RegulatoryAlert } from '@/entities/RegulatoryAlert';
 
+export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies

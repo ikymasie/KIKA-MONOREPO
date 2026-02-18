@@ -3,7 +3,6 @@ import { ReconciliationEngine } from '@/lib/deductions/reconciliation';
 import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
-
 // Post journals for a reconciliation batch
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {

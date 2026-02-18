@@ -4,6 +4,7 @@ import { User } from '@/entities/User';
 import { generateTemporaryPassword, hashPassword } from '@/lib/password';
 import { sendEmail, generateCredentialsEmail } from '@/lib/email';
 
+export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies
