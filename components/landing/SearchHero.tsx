@@ -36,7 +36,7 @@ export default function SearchHero({ onLoginClick }: SearchHeroProps) {
                 <h1 className="text-5xl md:text-7xl font-bold text-white mb-6 animate-fade-in-down drop-shadow-lg">
                     Explore the Future of
                     <br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-100 to-purple-200 drop-shadow-none">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 to-primary-200 drop-shadow-none">
                         Society &amp; Co-op Management
                     </span>
                 </h1>

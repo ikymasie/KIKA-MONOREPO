@@ -27,7 +27,7 @@ export default function AboutSection() {
             title: 'Member-Centric',
             description: 'Empowering society and co-op members with self-service tools, real-time insights, and seamless digital experiences.',
             icon: Users,
-            color: 'from-purple-500 to-pink-500'
+            color: 'from-primary-500 to-secondary-500'
         },
         {
             title: 'Data-Driven',

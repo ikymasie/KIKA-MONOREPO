@@ -19,7 +19,7 @@ export default function ForMembersSection() {
             icon: CreditCard,
             title: 'Easy Loan Applications',
             description: 'Apply for loans online with instant status updates and transparent approval processes.',
-            gradient: 'from-purple-500 to-pink-500'
+            gradient: 'from-primary-500 to-secondary-500'
         },
         {
             icon: FileText,
@@ -37,7 +37,7 @@ export default function ForMembersSection() {
             icon: Lock,
             title: 'Secure & Private',
             description: 'Your data is protected with bank-level security and encryption.',
-            gradient: 'from-indigo-500 to-purple-500'
+            gradient: 'from-primary-600 to-secondary-600'
         },
         {
             icon: Zap,
