@@ -339,7 +339,7 @@ export default function SignupPage() {
                                         </button>
                                         <button
                                             type="submit"
-                                            className="flex-1 bg-gradient-to-r from-primary-600 to-indigo-700 text-white font-black text-lg py-5 rounded-[20px] shadow-2xl shadow-primary-500/30 hover:shadow-primary-500/50 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3 group"
+                                            className="flex-1 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-black text-lg py-5 rounded-[20px] shadow-2xl shadow-primary-500/30 hover:shadow-primary-500/50 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3 group"
                                         >
                                             Create Account &amp; Start Process
                                             <ShieldCheck size={22} className="group-hover:scale-125 transition-transform" />

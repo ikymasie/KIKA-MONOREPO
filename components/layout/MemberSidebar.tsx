@@ -35,7 +35,7 @@ export default function MemberSidebar() {
                     {branding?.logoUrl ? (
                         <img src={branding.logoUrl} alt="Logo" className="h-10 w-auto object-contain drop-shadow-lg" />
                     ) : (
-                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary-500/30">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary-500 to-secondary-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-primary-500/30">
                             K
                         </div>
                     )}

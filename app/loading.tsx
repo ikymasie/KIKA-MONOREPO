@@ -34,12 +34,12 @@ export default function Loading() {
             <div className="relative z-10 flex flex-col items-center max-w-xs w-full px-6">
                 {/* Logo Spinner */}
                 <div className="relative mb-8">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-indigo-600 flex items-center justify-center text-white font-bold text-3xl shadow-xl shadow-primary-500/20 animate-float">
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary-500 to-secondary-600 flex items-center justify-center text-white font-bold text-3xl shadow-xl shadow-primary-500/20 animate-float">
                         K
                     </div>
                     {/* Pulsing rings */}
                     <div className="absolute inset-0 rounded-2xl border-2 border-primary-400 animate-pulse-glow"></div>
-                    <div className="absolute inset-[-10px] rounded-3xl border border-indigo-200/50 animate-pulse-glow delay-200"></div>
+                    <div className="absolute inset-[-10px] rounded-3xl border border-primary-200/50 animate-pulse-glow delay-200"></div>
                 </div>
 
                 {/* Progress Bar */}

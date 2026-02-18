@@ -66,7 +66,7 @@ export default function DashboardLayout({ children, sidebar }: DashboardLayoutPr
                             />
                         </svg>
                     </button>
-                    <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-indigo-600">KIKA Platform</h1>
+                    <h1 className="text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-secondary-600">KIKA Platform</h1>
                     <div className="w-10" /> {/* Spacer for centering */}
                 </div>
 

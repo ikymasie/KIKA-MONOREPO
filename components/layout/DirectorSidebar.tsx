@@ -29,7 +29,7 @@ export default function DirectorSidebar() {
         <div className="flex flex-col h-full glass-panel overflow-hidden">
             {/* Logo/Branding */}
             <div className="p-6 border-b border-white/20 bg-white/10 backdrop-blur-md">
-                <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-indigo-600">KIKA Platform</h1>
+                <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-secondary-600">KIKA Platform</h1>
                 <p className="text-xs text-gray-500 mt-1 font-bold uppercase tracking-wider text-primary-700">Director's Portal</p>
             </div>
 

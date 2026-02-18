@@ -45,7 +45,7 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-primary-600/90 to-indigo-600/90 px-8 py-8 relative backdrop-blur-sm">
+                    <div className="bg-gradient-to-r from-primary-600/90 to-secondary-600/90 px-8 py-8 relative backdrop-blur-sm">
                         <button
                             onClick={onClose}
                             className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors p-2 hover:bg-white/10 rounded-full"

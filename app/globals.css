@@ -9,8 +9,8 @@
   }
 
   ::selection {
-    background-color: rgba(139, 92, 246, 0.3);
-    color: var(--primary-900, #4c1d95);
+    background-color: rgba(196, 136, 42, 0.25);
+    color: var(--primary-900, #5a3412);
   }
 
   ::-webkit-scrollbar {
@@ -53,7 +53,7 @@
   }
 
   .text-glow {
-    text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+    text-shadow: 0 0 20px rgba(196, 136, 42, 0.5);
   }
 
   .mesh-bg {
@@ -78,12 +78,12 @@
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-primary-600 to-indigo-600 text-white shadow-lg hover:-translate-y-0.5 border border-transparent;
-    box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3), 0 4px 6px -4px rgba(139, 92, 246, 0.3);
+    @apply bg-gradient-to-r from-primary-600 to-secondary-600 text-white shadow-lg hover:-translate-y-0.5 border border-transparent;
+    box-shadow: 0 10px 15px -3px rgba(168, 110, 30, 0.3), 0 4px 6px -4px rgba(168, 110, 30, 0.3);
   }
 
   .btn-primary:hover {
-    box-shadow: 0 10px 15px -3px rgba(124, 58, 237, 0.4), 0 4px 6px -4px rgba(124, 58, 237, 0.4);
+    box-shadow: 0 10px 15px -3px rgba(168, 110, 30, 0.45), 0 4px 6px -4px rgba(168, 110, 30, 0.45);
   }
 
   .btn-secondary {
@@ -105,8 +105,8 @@
   }
 
   .input:focus-visible {
-    --tw-ring-color: rgba(139, 92, 246, 0.5);
-    border-color: rgb(139, 92, 246);
+    --tw-ring-color: rgba(196, 136, 42, 0.5);
+    border-color: rgb(196, 136, 42);
   }
 
   .label {
@@ -244,15 +244,15 @@
 
 @keyframes pulse-glow {
   0% {
-    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4);
+    box-shadow: 0 0 0 0 rgba(196, 136, 42, 0.4);
   }
 
   70% {
-    box-shadow: 0 0 0 15px rgba(139, 92, 246, 0);
+    box-shadow: 0 0 0 15px rgba(196, 136, 42, 0);
   }
 
   100% {
-    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
+    box-shadow: 0 0 0 0 rgba(196, 136, 42, 0);
   }
 }
 
@@ -436,7 +436,7 @@
 .orb-1 {
   width: 600px;
   height: 600px;
-  background: #c4b5fd;
+  background: #e8c47e;
   top: -10%;
   left: -10%;
   animation-delay: 0s;
@@ -445,7 +445,7 @@
 .orb-2 {
   width: 500px;
   height: 500px;
-  background: #f0abfc;
+  background: #ec9d6a;
   top: 60%;
   right: -5%;
   animation-delay: -5s;
@@ -454,7 +454,7 @@
 .orb-3 {
   width: 400px;
   height: 400px;
-  background: #bae6fd;
+  background: #fde68a;
   bottom: 10%;
   left: 30%;
   animation-delay: -10s;

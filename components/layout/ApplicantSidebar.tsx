@@ -29,7 +29,7 @@ export default function ApplicantSidebar() {
             <div className="p-6 border-b border-white/20 bg-white/10 backdrop-blur-md">
                 <div className="flex items-center gap-2 mb-1 text-primary-600">
                     <Building2 size={24} />
-                    <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-indigo-600">KIKA Platform</h1>
+                    <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-secondary-600">KIKA Platform</h1>
                 </div>
                 <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Applicant Portal</p>
             </div>

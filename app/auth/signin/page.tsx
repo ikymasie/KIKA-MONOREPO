@@ -166,7 +166,7 @@ function SignInForm() {
                                 priority
                             />
                         </div>
-                        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-700 to-indigo-800 mb-2">
+                        <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-700 to-secondary-700 mb-2">
                             Welcome Back
                         </h1>
                         <p className="text-gray-600 font-medium">

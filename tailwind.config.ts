@@ -9,33 +9,33 @@ const config: Config = {
     theme: {
         extend: {
             colors: {
-                // Vibrant Violet/Indigo Primary
+                // Warm Tan Brown Primary
                 primary: {
-                    50: 'var(--primary-50, #f5f3ff)',
-                    100: 'var(--primary-100, #ede9fe)',
-                    200: 'var(--primary-200, #ddd6fe)',
-                    300: 'var(--primary-300, #c4b5fd)',
-                    400: 'var(--primary-400, #a78bfa)',
-                    500: 'var(--primary-500, #8b5cf6)',
-                    600: 'var(--primary-600, #7c3aed)',
-                    700: 'var(--primary-700, #6d28d9)',
-                    800: 'var(--primary-800, #5b21b6)',
-                    900: 'var(--primary-900, #4c1d95)',
-                    950: 'var(--primary-950, #2e1065)',
+                    50: 'var(--primary-50, #fdf8f0)',
+                    100: 'var(--primary-100, #faefd9)',
+                    200: 'var(--primary-200, #f3ddb0)',
+                    300: 'var(--primary-300, #e8c47e)',
+                    400: 'var(--primary-400, #d9a54e)',
+                    500: 'var(--primary-500, #c4882a)',
+                    600: 'var(--primary-600, #a86e1e)',
+                    700: 'var(--primary-700, #8a5518)',
+                    800: 'var(--primary-800, #6e4116)',
+                    900: 'var(--primary-900, #5a3412)',
+                    950: 'var(--primary-950, #321c08)',
                 },
-                // Deep Fuchsia/Pink Secondary
+                // Warm Terracotta/Copper Secondary
                 secondary: {
-                    50: 'var(--secondary-50, #fdf4ff)',
-                    100: 'var(--secondary-100, #fae8ff)',
-                    200: 'var(--secondary-200, #f5d0fe)',
-                    300: 'var(--secondary-300, #f0abfc)',
-                    400: 'var(--secondary-400, #e879f9)',
-                    500: 'var(--secondary-500, #d946ef)',
-                    600: 'var(--secondary-600, #c026d3)',
-                    700: 'var(--secondary-700, #a21caf)',
-                    800: 'var(--secondary-800, #86198f)',
-                    900: 'var(--secondary-900, #701a75)',
-                    950: 'var(--secondary-950, #4a044e)',
+                    50: 'var(--secondary-50, #fdf4ee)',
+                    100: 'var(--secondary-100, #fae4d0)',
+                    200: 'var(--secondary-200, #f4c49e)',
+                    300: 'var(--secondary-300, #ec9d6a)',
+                    400: 'var(--secondary-400, #e07840)',
+                    500: 'var(--secondary-500, #c95d28)',
+                    600: 'var(--secondary-600, #a8461d)',
+                    700: 'var(--secondary-700, #87361a)',
+                    800: 'var(--secondary-800, #6d2c18)',
+                    900: 'var(--secondary-900, #5a2516)',
+                    950: 'var(--secondary-950, #311009)',
                 },
                 // Modern Surface Colors for backgrounds
                 surface: {
@@ -95,7 +95,7 @@ const config: Config = {
                 'soft': '0 2px 15px -3px rgba(0, 0, 0, 0.07), 0 10px 20px -2px rgba(0, 0, 0, 0.04)',
                 'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.15)',
                 'glass-inset': 'inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
-                'glow': '0 0 20px rgba(139, 92, 246, 0.5)',
+                'glow': '0 0 20px rgba(168, 110, 30, 0.5)',
             },
             animation: {
                 'fade-in': 'fade-in 0.6s ease-out',
