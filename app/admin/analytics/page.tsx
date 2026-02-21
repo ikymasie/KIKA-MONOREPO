@@ -8,8 +8,8 @@ import { formatCompactNumber } from '@/lib/dashboard-utils';
 export default function AnalyticsPage() {
     const [data, setData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-
     const [churnData, setChurnData] = useState<any>(null);
+    const [reengageStates, setReengageStates] = useState<Record<string, 'idle' | 'loading' | 'done' | 'error'>>({});
 
     useEffect(() => {
         const fetchBaseData = fetch('/api/admin/analytics').then(res => res.json());
@@ -22,6 +22,27 @@ export default function AnalyticsPage() {
             })
             .finally(() => setLoading(false));
     }, []);
+
+    async function handleReengage(memberId: string, memberName: string) {
+        setReengageStates(prev => ({ ...prev, [memberId]: 'loading' }));
+        try {
+            const res = await fetch('/api/admin/communications/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    memberIds: [memberId],
+                    type: 'SMS',
+                    subject: 'We miss you!',
+                    content: `Dear ${memberName}, we noticed you haven\'t been active recently. Your SACCOS account is waiting for you — log in today to check your savings and benefits.`,
+                }),
+            });
+            if (!res.ok) throw new Error('Failed to send');
+            setReengageStates(prev => ({ ...prev, [memberId]: 'done' }));
+        } catch {
+            setReengageStates(prev => ({ ...prev, [memberId]: 'error' }));
+            setTimeout(() => setReengageStates(prev => ({ ...prev, [memberId]: 'idle' })), 3000);
+        }
+    }
 
     if (loading) {
         return (
@@ -176,7 +197,19 @@ export default function AnalyticsPage() {
                                                     {m.lastActive ? new Date(m.lastActive).toLocaleDateString() : 'Never'}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <button className="text-primary-600 font-bold hover:underline">Re-engage</button>
+                                                    {reengageStates[m.id] === 'done' ? (
+                                                        <span className="text-success-600 font-bold text-xs">✓ Sent!</span>
+                                                    ) : reengageStates[m.id] === 'error' ? (
+                                                        <span className="text-danger-600 font-bold text-xs">✗ Failed</span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => handleReengage(m.id, m.fullName)}
+                                                            disabled={reengageStates[m.id] === 'loading'}
+                                                            className="text-primary-600 font-bold hover:underline disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                                                        >
+                                                            {reengageStates[m.id] === 'loading' ? 'Sending…' : 'Re-engage'}
+                                                        </button>
+                                                    )}
                                                 </td>
                                             </tr>
                                         ))}

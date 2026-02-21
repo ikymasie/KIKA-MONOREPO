@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 
@@ -23,16 +23,31 @@ interface Metrics {
     insuranceTotal: number;
 }
 
+function generatePeriodOptions(): { label: string; value: string }[] {
+    const options = [];
+    const now = new Date();
+    for (let i = 0; i < 6; i++) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const label = d.toLocaleString('default', { month: 'long', year: 'numeric' });
+        const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        options.push({ label, value });
+    }
+    return options;
+}
+
 export default function AdminDeductionsPage() {
     const [deductions, setDeductions] = useState<DeductionRow[]>([]);
     const [metrics, setMetrics] = useState<Metrics | null>(null);
     const [loading, setLoading] = useState(true);
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const periodOptions = useMemo(() => generatePeriodOptions(), []);
+    const [selectedPeriod, setSelectedPeriod] = useState(periodOptions[0].value);
 
     useEffect(() => {
         async function fetchDeductions() {
             try {
+                setLoading(true);
                 const response = await fetch('/api/admin/deductions');
                 if (!response.ok) throw new Error('Failed to fetch deduction data');
                 const data = await response.json();
@@ -45,7 +60,7 @@ export default function AdminDeductionsPage() {
             }
         }
         fetchDeductions();
-    }, []);
+    }, [selectedPeriod]);
 
     const handleGenerateCSV = () => {
         setIsGenerating(true);
@@ -75,7 +90,7 @@ export default function AdminDeductionsPage() {
             const date = new Date().toISOString().split('T')[0];
 
             link.setAttribute('href', url);
-            link.setAttribute('download', `Deductions_${date}.csv`);
+            link.setAttribute('download', `Deductions_${selectedPeriod}.csv`);
             link.style.visibility = 'hidden';
             document.body.appendChild(link);
             link.click();
@@ -100,8 +115,14 @@ export default function AdminDeductionsPage() {
                     <div className="flex gap-4">
                         <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg border border-gray-200">
                             <span className="text-sm font-medium text-gray-500">Period:</span>
-                            <select className="bg-transparent font-bold text-gray-900 outline-none">
-                                <option>Current Month</option>
+                            <select
+                                className="bg-transparent font-bold text-gray-900 outline-none cursor-pointer"
+                                value={selectedPeriod}
+                                onChange={(e) => setSelectedPeriod(e.target.value)}
+                            >
+                                {periodOptions.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
                             </select>
                         </div>
                         <button

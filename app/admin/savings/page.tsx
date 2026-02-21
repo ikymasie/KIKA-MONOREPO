@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import { format } from 'date-fns';
 
 interface SavingAccount {
+    memberId?: string;
     id: string;
     balance: number;
     monthlyContribution: number;
@@ -28,6 +30,7 @@ interface Metrics {
 }
 
 export default function AdminSavingsPage() {
+    const router = useRouter();
     const [savings, setSavings] = useState<SavingAccount[]>([]);
     const [metrics, setMetrics] = useState<Metrics | null>(null);
     const [loading, setLoading] = useState(true);
@@ -60,12 +63,15 @@ export default function AdminSavingsPage() {
                     </div>
                     <div className="flex gap-4">
                         <button
-                            onClick={() => window.location.href = '/admin/savings/products'}
+                            onClick={() => router.push('/admin/savings/products')}
                             className="btn border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-semibold px-4 py-2 rounded-lg"
                         >
                             Savings Products
                         </button>
-                        <button className="btn btn-primary px-4 py-2 rounded-lg font-semibold">
+                        <button
+                            onClick={() => router.push('/admin/members')}
+                            className="btn btn-primary px-4 py-2 rounded-lg font-semibold"
+                        >
                             + New Saving Account
                         </button>
                     </div>
@@ -141,7 +147,12 @@ export default function AdminSavingsPage() {
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <button className="text-primary-600 font-bold hover:text-primary-700 text-xs">Manage</button>
+                                                <button
+                                                    onClick={() => router.push(acc.memberId ? `/admin/members/${acc.memberId}` : '/admin/members')}
+                                                    className="text-primary-600 font-bold hover:text-primary-700 text-xs"
+                                                >
+                                                    Manage
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
