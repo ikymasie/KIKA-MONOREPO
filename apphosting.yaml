@@ -40,10 +40,6 @@ env:
     value: smtp.example.com
   - variable: EMAIL_PORT
     value: "587"
-  - variable: EMAIL_USER
-    value: ""
-  - variable: EMAIL_PASSWORD
-    value: ""
   - variable: EMAIL_FROM
     value: noreply@kika.bw
 
