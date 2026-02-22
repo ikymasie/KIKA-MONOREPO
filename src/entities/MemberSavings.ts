@@ -18,14 +18,14 @@ export class MemberSavings {
     @Column({ type: 'uuid' })
     memberId!: string;
 
-    @ManyToOne(() => Member, (member: Member) => member.savings)
+    @ManyToOne(() => require('./Member').Member, (member: Member) => member.savings)
     @JoinColumn({ name: 'memberId' })
     member!: Member;
 
     @Column({ type: 'uuid' })
     productId!: string;
 
-    @ManyToOne(() => SavingsProduct)
+    @ManyToOne(() => require('./SavingsProduct').SavingsProduct)
     @JoinColumn({ name: 'productId' })
     product!: SavingsProduct;
 

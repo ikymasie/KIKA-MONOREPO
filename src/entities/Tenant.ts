@@ -6,14 +6,14 @@ import {
     UpdateDateColumn,
     OneToMany,
 } from 'typeorm';
-import { User } from './User';
-import { Member } from './Member';
-import { SavingsProduct } from './SavingsProduct';
-import { LoanProduct } from './LoanProduct';
-import { InsuranceProduct } from './InsuranceProduct';
-import { MerchandiseProduct } from './MerchandiseProduct';
-import { DeductionRequest } from './DeductionRequest';
-import { Account } from './Account';
+import type { User } from './User';
+import type { Member } from './Member';
+import type { SavingsProduct } from './SavingsProduct';
+import type { LoanProduct } from './LoanProduct';
+import type { InsuranceProduct } from './InsuranceProduct';
+import type { MerchandiseProduct } from './MerchandiseProduct';
+import type { DeductionRequest } from './DeductionRequest';
+import type { Account } from './Account';
 
 export enum TenantStatus {
     ACTIVE = 'active',
@@ -111,27 +111,27 @@ export class Tenant {
     @UpdateDateColumn()
     updatedAt!: Date;
 
-    @OneToMany(() => User, (user) => user.tenant)
+    @OneToMany(() => require('./User').User, (user: any) => user.tenant)
     users!: User[];
 
-    @OneToMany(() => Member, (member) => member.tenant)
+    @OneToMany(() => require('./Member').Member, (member: any) => member.tenant)
     members!: Member[];
 
-    @OneToMany(() => SavingsProduct, (product) => product.tenant)
+    @OneToMany(() => require('./SavingsProduct').SavingsProduct, (product: any) => product.tenant)
     savingsProducts!: SavingsProduct[];
 
-    @OneToMany(() => LoanProduct, (product) => product.tenant)
+    @OneToMany(() => require('./LoanProduct').LoanProduct, (product: any) => product.tenant)
     loanProducts!: LoanProduct[];
 
-    @OneToMany(() => InsuranceProduct, (product) => product.tenant)
+    @OneToMany(() => require('./InsuranceProduct').InsuranceProduct, (product: any) => product.tenant)
     insuranceProducts!: InsuranceProduct[];
 
-    @OneToMany(() => MerchandiseProduct, (product) => product.tenant)
+    @OneToMany(() => require('./MerchandiseProduct').MerchandiseProduct, (product: any) => product.tenant)
     merchandiseProducts!: MerchandiseProduct[];
 
-    @OneToMany(() => DeductionRequest, (request) => request.tenant)
+    @OneToMany(() => require('./DeductionRequest').DeductionRequest, (request: any) => request.tenant)
     deductionRequests!: DeductionRequest[];
 
-    @OneToMany(() => Account, (account) => account.tenant)
+    @OneToMany(() => require('./Account').Account, (account: any) => account.tenant)
     accounts!: Account[];
 }

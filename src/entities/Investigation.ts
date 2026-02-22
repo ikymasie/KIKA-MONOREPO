@@ -7,8 +7,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import type { Tenant } from './Tenant';
-import type { User } from './User';
+import { Tenant } from './Tenant';
+import { User } from './User';
 
 export enum InvestigationStatus {
     OPEN = 'open',

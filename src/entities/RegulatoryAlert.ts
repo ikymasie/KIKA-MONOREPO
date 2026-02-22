@@ -7,7 +7,7 @@ import {
     CreateDateColumn,
     Index,
 } from 'typeorm';
-import type { Tenant } from './Tenant';
+import { Tenant } from './Tenant';
 
 export enum AlertSeverity {
     LOW = 'low',

@@ -9,7 +9,7 @@ import {
     JoinColumn,
 } from 'typeorm';
 import type { Member } from './Member';
-import { InsuranceProduct } from './InsuranceProduct';
+import type { InsuranceProduct } from './InsuranceProduct';
 import type { InsuranceClaim } from './InsuranceClaim';
 
 export enum PolicyStatus {
@@ -30,14 +30,14 @@ export class InsurancePolicy {
     @Column({ type: 'uuid' })
     memberId!: string;
 
-    @ManyToOne(() => Member, (member: Member) => member.insurancePolicies)
+    @ManyToOne(() => require('./Member').Member, (member: Member) => member.insurancePolicies)
     @JoinColumn({ name: 'memberId' })
     member!: Member;
 
     @Column({ type: 'uuid' })
     productId!: string;
 
-    @ManyToOne(() => InsuranceProduct)
+    @ManyToOne(() => require('./InsuranceProduct').InsuranceProduct)
     @JoinColumn({ name: 'productId' })
     product!: InsuranceProduct;
 
@@ -62,7 +62,7 @@ export class InsurancePolicy {
     @Column({ type: 'int', default: 0 })
     monthsPaid!: number;
 
-    @OneToMany(() => InsuranceClaim, (claim: InsuranceClaim) => claim.policy)
+    @OneToMany(() => require('./InsuranceClaim').InsuranceClaim, (claim: InsuranceClaim) => claim.policy)
     claims!: InsuranceClaim[];
 
     @CreateDateColumn()

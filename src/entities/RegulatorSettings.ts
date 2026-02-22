@@ -6,7 +6,7 @@ import {
     ManyToOne,
     JoinColumn
 } from 'typeorm';
-import type { User } from './User';
+import { User } from './User';
 
 @Entity('regulator_settings')
 export class RegulatorSettings {

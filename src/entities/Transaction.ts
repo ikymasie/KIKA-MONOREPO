@@ -67,7 +67,7 @@ export class Transaction {
     @Column({ nullable: true })
     referenceType?: string;
 
-    @ManyToOne(() => Member)
+    @ManyToOne(() => require('./Member').Member)
     @JoinColumn({ name: 'memberId' })
     member?: Member;
 
@@ -83,7 +83,7 @@ export class Transaction {
     @Column({ type: 'timestamp', nullable: true })
     approvedAt?: Date;
 
-    @OneToMany(() => JournalEntry, (entry: JournalEntry) => entry.transaction, { cascade: true })
+    @OneToMany(() => require('./JournalEntry').JournalEntry, (entry: JournalEntry) => entry.transaction, { cascade: true })
     journalEntries!: JournalEntry[];
 
     @CreateDateColumn()

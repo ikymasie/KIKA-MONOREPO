@@ -28,7 +28,7 @@ export class InsuranceProduct {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => Tenant, (tenant: any) => tenant.insuranceProducts)
+    @ManyToOne(() => require('./Tenant').Tenant, (tenant: any) => tenant.insuranceProducts)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 

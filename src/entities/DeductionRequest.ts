@@ -27,7 +27,7 @@ export class DeductionRequest {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => Tenant, (tenant: Tenant) => tenant.deductionRequests)
+    @ManyToOne(() => require('./Tenant').Tenant, (tenant: Tenant) => tenant.deductionRequests)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
@@ -61,7 +61,7 @@ export class DeductionRequest {
     @Column({ type: 'text', nullable: true })
     notes?: string;
 
-    @OneToMany(() => DeductionItem, (item: DeductionItem) => item.request, { cascade: true })
+    @OneToMany(() => require('./DeductionItem').DeductionItem, (item: DeductionItem) => item.request, { cascade: true })
     items!: DeductionItem[];
 
     @CreateDateColumn()

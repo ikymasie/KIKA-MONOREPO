@@ -34,7 +34,7 @@ export class MerchandiseProduct {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => Tenant, (tenant: any) => tenant.merchandiseProducts)
+    @ManyToOne(() => require('./Tenant').Tenant, (tenant: any) => tenant.merchandiseProducts)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 

@@ -61,23 +61,24 @@ export class KYCVerificationService {
             throw new Error('KYC record not found');
         }
 
-        // Update the appropriate verification field
+        // Update the appropriate verification field and its metadata
+        const now = new Date();
         switch (request.documentType) {
             case 'identity':
                 kyc.identityVerified = request.verified;
+                kyc.identityVerifiedBy = request.verified ? request.verifiedBy : undefined;
+                kyc.identityVerifiedAt = request.verified ? now : undefined;
                 break;
             case 'residence':
                 kyc.residenceVerified = request.verified;
+                kyc.residenceVerifiedBy = request.verified ? request.verifiedBy : undefined;
+                kyc.residenceVerifiedAt = request.verified ? now : undefined;
                 break;
             case 'income':
                 kyc.incomeVerified = request.verified;
+                kyc.incomeVerifiedBy = request.verified ? request.verifiedBy : undefined;
+                kyc.incomeVerifiedAt = request.verified ? now : undefined;
                 break;
-        }
-
-        // Update verification metadata if all documents are verified
-        if (kyc.identityVerified && kyc.residenceVerified && kyc.incomeVerified) {
-            kyc.verifiedBy = request.verifiedBy;
-            kyc.verifiedAt = new Date();
         }
 
         // Add notes
@@ -193,11 +194,16 @@ export class KYCVerificationService {
         const kycs = await kycRepo.findByIds(kycIds);
 
         for (const kyc of kycs) {
+            const now = new Date();
             kyc.identityVerified = verified;
+            kyc.identityVerifiedBy = verified ? verifiedBy : undefined;
+            kyc.identityVerifiedAt = verified ? now : undefined;
             kyc.residenceVerified = verified;
+            kyc.residenceVerifiedBy = verified ? verifiedBy : undefined;
+            kyc.residenceVerifiedAt = verified ? now : undefined;
             kyc.incomeVerified = verified;
-            kyc.verifiedBy = verifiedBy;
-            kyc.verifiedAt = new Date();
+            kyc.incomeVerifiedBy = verified ? verifiedBy : undefined;
+            kyc.incomeVerifiedAt = verified ? now : undefined;
 
             if (notes) {
                 kyc.notes = kyc.notes

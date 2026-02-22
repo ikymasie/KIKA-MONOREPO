@@ -22,14 +22,14 @@ export class JournalEntry {
     @Column({ type: 'uuid' })
     transactionId!: string;
 
-    @ManyToOne(() => Transaction, (transaction: Transaction) => transaction.journalEntries)
+    @ManyToOne(() => require('./Transaction').Transaction, (transaction: Transaction) => transaction.journalEntries)
     @JoinColumn({ name: 'transactionId' })
     transaction!: Transaction;
 
     @Column({ type: 'uuid' })
     accountId!: string;
 
-    @ManyToOne(() => Account, (account: Account) => account.journalEntries)
+    @ManyToOne(() => require('./Account').Account, (account: Account) => account.journalEntries)
     @JoinColumn({ name: 'accountId' })
     account!: Account;
 

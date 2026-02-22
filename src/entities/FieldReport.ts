@@ -9,8 +9,8 @@ import {
     OneToOne,
 } from 'typeorm';
 import type { FieldVisit } from './FieldVisit';
-import type { User } from './User';
-import type { Tenant } from './Tenant';
+import { User } from './User';
+import { Tenant } from './Tenant';
 
 @Entity('field_reports')
 export class FieldReport {
@@ -20,7 +20,7 @@ export class FieldReport {
     @Column({ type: 'uuid' })
     visitId!: string;
 
-    @OneToOne(() => FieldVisit, (visit: any) => visit.report)
+    @OneToOne(() => require('./FieldVisit').FieldVisit, (visit: any) => visit.report)
     @JoinColumn({ name: 'visitId' })
     visit!: FieldVisit;
 

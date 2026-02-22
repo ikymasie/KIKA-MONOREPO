@@ -46,14 +46,14 @@ export class Member {
     @Column({ type: 'uuid', nullable: true })
     userId?: string;
 
-    @OneToOne(() => User)
+    @OneToOne(() => require('./User').User)
     @JoinColumn({ name: 'userId' })
     user?: User;
 
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => Tenant, (tenant: any) => tenant.members)
+    @ManyToOne(() => require('./Tenant').Tenant, (tenant: any) => tenant.members)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
@@ -122,25 +122,25 @@ export class Member {
     @Column({ type: 'text', nullable: true })
     exitReason?: string;
 
-    @OneToOne(() => KYC, (kyc: any) => kyc.member, { cascade: true })
+    @OneToOne(() => require('./KYC').KYC, (kyc: any) => kyc.member, { cascade: true })
     kyc?: any;
 
-    @OneToMany(() => Beneficiary, (beneficiary: any) => beneficiary.member, { cascade: true })
+    @OneToMany(() => require('./Beneficiary').Beneficiary, (beneficiary: any) => beneficiary.member, { cascade: true })
     beneficiaries!: any[];
 
-    @OneToMany(() => Dependent, (dependent: any) => dependent.member, { cascade: true })
+    @OneToMany(() => require('./Dependent').Dependent, (dependent: any) => dependent.member, { cascade: true })
     dependents!: any[];
 
-    @OneToMany(() => MemberSavings, (savings: any) => savings.member)
+    @OneToMany(() => require('./MemberSavings').MemberSavings, (savings: any) => savings.member)
     savings!: any[];
 
-    @OneToMany(() => Loan, (loan: any) => loan.member)
+    @OneToMany(() => require('./Loan').Loan, (loan: any) => loan.member)
     loans!: any[];
 
-    @OneToMany(() => InsurancePolicy, (policy: any) => policy.member)
+    @OneToMany(() => require('./InsurancePolicy').InsurancePolicy, (policy: any) => policy.member)
     insurancePolicies!: any[];
 
-    @OneToMany(() => MemberBankAccount, (account: any) => account.member, { cascade: true })
+    @OneToMany(() => require('./MemberBankAccount').MemberBankAccount, (account: any) => account.member, { cascade: true })
     bankAccounts!: any[];
 
     @CreateDateColumn()

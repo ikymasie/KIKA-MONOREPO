@@ -8,8 +8,8 @@ import {
     OneToMany,
     JoinColumn,
 } from 'typeorm';
-import type { DeductionRequest } from './DeductionRequest';
-import type { Tenant } from './Tenant';
+import { DeductionRequest } from './DeductionRequest';
+import { Tenant } from './Tenant';
 import type { ReconciliationItem } from './ReconciliationItem';
 
 import { ReconciliationStatus } from '../enums/ReconciliationStatus';
@@ -78,7 +78,7 @@ export class ReconciliationBatch {
     @Column({ default: false })
     journalsPosted!: boolean;
 
-    @OneToMany(() => ReconciliationItem, (item: ReconciliationItem) => item.batch, { cascade: true })
+    @OneToMany(() => require('./ReconciliationItem').ReconciliationItem, (item: ReconciliationItem) => item.batch, { cascade: true })
     items!: ReconciliationItem[];
 
     @CreateDateColumn()

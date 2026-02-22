@@ -8,8 +8,8 @@ import {
     JoinColumn,
     OneToMany,
 } from 'typeorm';
-import type { SocietyApplication } from './SocietyApplication';
-import type { User } from './User';
+import { SocietyApplication } from './SocietyApplication';
+import { User } from './User';
 import type { RiskFlag } from './RiskFlag';
 
 export enum ScreeningStatus {
@@ -63,7 +63,7 @@ export class SecurityScreening {
     @Column({ type: 'text', nullable: true })
     notes?: string;
 
-    @OneToMany(() => RiskFlag, (flag: RiskFlag) => flag.screening)
+    @OneToMany(() => require('./RiskFlag').RiskFlag, (flag: RiskFlag) => flag.screening)
     riskFlags!: RiskFlag[];
 
     @CreateDateColumn()

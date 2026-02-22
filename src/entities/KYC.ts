@@ -7,7 +7,7 @@ import {
     OneToOne,
     JoinColumn,
 } from 'typeorm';
-import { Member } from './Member';
+import type { Member } from './Member';
 
 @Entity('kyc')
 export class KYC {
@@ -17,7 +17,7 @@ export class KYC {
     @Column({ type: 'uuid' })
     memberId!: string;
 
-    @OneToOne(() => Member, (member) => member.kyc)
+    @OneToOne(() => require('./Member').Member, (member: any) => member.kyc)
     @JoinColumn({ name: 'memberId' })
     member!: Member;
 

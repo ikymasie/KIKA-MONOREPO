@@ -7,7 +7,7 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { Member } from './Member';
+import type { Member } from './Member';
 
 export enum DependentRelationship {
     SPOUSE = 'spouse',
@@ -25,7 +25,7 @@ export class Dependent {
     @Column({ type: 'uuid' })
     memberId!: string;
 
-    @ManyToOne(() => Member, (member) => member.dependents)
+    @ManyToOne(() => require('./Member').Member, (member: any) => member.dependents)
     @JoinColumn({ name: 'memberId' })
     member!: Member;
 

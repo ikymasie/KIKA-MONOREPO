@@ -8,7 +8,7 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
-import { Member } from './Member';
+import type { Member } from './Member';
 
 @Entity('member_bank_accounts')
 @Index(['memberId', 'isPrimary'])
@@ -19,7 +19,7 @@ export class MemberBankAccount {
     @Column({ type: 'uuid' })
     memberId!: string;
 
-    @ManyToOne(() => Member, (member) => member.bankAccounts)
+    @ManyToOne(() => require('./Member').Member, (member: any) => member.bankAccounts)
     @JoinColumn({ name: 'memberId' })
     member!: Member;
 

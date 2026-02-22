@@ -59,7 +59,7 @@ async function getUserByFirebaseUid(firebaseUid: string) {
         });
 
         const [rows] = await connection.execute(
-            'SELECT id, email, firstName, lastName, role, tenantId, firebaseUid, status, phone, mfaEnabled FROM users WHERE firebaseUid = ? LIMIT 1',
+            'SELECT id, email, firstName, lastName, role, tenantId, firebaseUid, status, phone, mfaEnabled, mustChangePassword, createdAt, updatedAt FROM users WHERE firebaseUid = ? LIMIT 1',
             [firebaseUid]
         );
 
@@ -80,6 +80,9 @@ async function getUserByFirebaseUid(firebaseUid: string) {
             status: u.status,
             phone: u.phone,
             mfaEnabled: u.mfaEnabled,
+            mustChangePassword: u.mustChangePassword ?? false,
+            createdAt: u.createdAt ? new Date(u.createdAt) : new Date(),
+            updatedAt: u.updatedAt ? new Date(u.updatedAt) : new Date(),
             get fullName() { return `${u.firstName} ${u.lastName}`; },
             isTenantAdmin() {
                 return ['saccos_admin', 'loan_officer', 'accountant', 'member_service_rep', 'credit_committee'].includes(u.role);

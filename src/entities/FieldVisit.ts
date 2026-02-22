@@ -9,8 +9,8 @@ import {
     OneToOne,
 } from 'typeorm';
 import type { FieldReport } from './FieldReport';
-import type { Tenant } from './Tenant';
-import type { User } from './User';
+import { Tenant } from './Tenant';
+import { User } from './User';
 
 export enum FieldVisitStatus {
     SCHEDULED = 'scheduled',
@@ -53,7 +53,7 @@ export class FieldVisit {
     @Column({ type: 'text', nullable: true })
     notes?: string;
 
-    @OneToOne(() => FieldReport, (report: any) => report.visit)
+    @OneToOne(() => require('./FieldReport').FieldReport, (report: any) => report.visit)
     report?: any; // Use any or Import type for the type hint
 
     @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
