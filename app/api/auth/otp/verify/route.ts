@@ -3,16 +3,27 @@ import { otpService } from '@/lib/otp-service';
 import { adminAuth } from '@/lib/firebase-admin';
 import mysql from 'mysql2/promise';
 
+/** Normalise a Botswana phone number to the format stored in the DB: 267XXXXXXXX */
+function normalisePhone(raw: string): string {
+    let p = raw.trim().replace(/\s+/g, '');
+    if (p.startsWith('+267')) p = p.slice(1);
+    if (p.startsWith('0')) p = '267' + p.slice(1);
+    if (!p.startsWith('267')) p = '267' + p;
+    return p;
+}
+
 export async function POST(request: NextRequest) {
     try {
-        const { phone, code } = await request.json();
+        const { phone: rawPhone, code } = await request.json();
 
-        if (!phone || !code) {
+        if (!rawPhone || !code) {
             return NextResponse.json(
                 { error: 'Phone number and code are required' },
                 { status: 400 }
             );
         }
+
+        const phone = normalisePhone(rawPhone);
 
         // 1. Verify OTP
         const verificationResult = await otpService.verifyOtp(phone, code);

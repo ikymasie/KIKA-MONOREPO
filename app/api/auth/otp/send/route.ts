@@ -2,16 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { otpService } from '@/lib/otp-service';
 import mysql from 'mysql2/promise';
 
+/** Normalise a Botswana phone number to the format stored in the DB: 267XXXXXXXX */
+function normalisePhone(raw: string): string {
+    let p = raw.trim().replace(/\s+/g, '');
+    if (p.startsWith('+267')) p = p.slice(1);       // +26771... → 26771...
+    if (p.startsWith('0')) p = '267' + p.slice(1); // 071...   → 26771...
+    if (!p.startsWith('267')) p = '267' + p;          // 71...    → 26771...
+    return p;
+}
+
 export async function POST(request: NextRequest) {
     try {
-        const { phone } = await request.json();
+        const { phone: rawPhone } = await request.json();
 
-        if (!phone) {
+        if (!rawPhone) {
             return NextResponse.json(
                 { error: 'Phone number is required' },
                 { status: 400 }
             );
         }
+
+        const phone = normalisePhone(rawPhone);
 
         // Verify that a user/member exists with this phone number
         // We use direct mysql connection to avoid circular dependencies during initial phases
@@ -60,7 +71,7 @@ export async function POST(request: NextRequest) {
                 );
             }
 
-            return NextResponse.json({ success: true, message: 'OTP sent successfully' });
+            return NextResponse.json({ success: true, message: 'OTP sent successfully', phone });
 
         } finally {
             await connection.end();
