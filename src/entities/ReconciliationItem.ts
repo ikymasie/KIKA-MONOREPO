@@ -32,14 +32,14 @@ export class ReconciliationItem {
     @Column({ type: 'uuid' })
     batchId!: string;
 
-    @ManyToOne(() => require('./ReconciliationBatch').ReconciliationBatch, (batch: ReconciliationBatch) => batch.items)
+    @ManyToOne(() => ReconciliationBatch, (batch: ReconciliationBatch) => batch.items)
     @JoinColumn({ name: 'batchId' })
     batch!: ReconciliationBatch;
 
     @Column({ type: 'uuid', nullable: true })
     memberId?: string;
 
-    @ManyToOne(() => require('./Member').Member, { nullable: true })
+    @ManyToOne(() => Member, { nullable: true })
     @JoinColumn({ name: 'memberId' })
     member?: Member;
 

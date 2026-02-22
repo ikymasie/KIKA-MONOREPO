@@ -6,7 +6,14 @@ import {
     UpdateDateColumn,
     OneToMany,
 } from 'typeorm';
-import type { User } from './User';
+import { User } from './User';
+import { Member } from './Member';
+import { SavingsProduct } from './SavingsProduct';
+import { LoanProduct } from './LoanProduct';
+import { InsuranceProduct } from './InsuranceProduct';
+import { MerchandiseProduct } from './MerchandiseProduct';
+import { DeductionRequest } from './DeductionRequest';
+import { Account } from './Account';
 
 export enum TenantStatus {
     ACTIVE = 'active',
@@ -104,27 +111,27 @@ export class Tenant {
     @UpdateDateColumn()
     updatedAt!: Date;
 
-    @OneToMany(() => require('./User').User, (user: any) => user.tenant)
+    @OneToMany(() => User, (user) => user.tenant)
     users!: User[];
 
-    @OneToMany(() => require('./Member').Member, (member: any) => member.tenant)
-    members!: any[];
+    @OneToMany(() => Member, (member) => member.tenant)
+    members!: Member[];
 
-    @OneToMany(() => require('./SavingsProduct').SavingsProduct, (product: any) => product.tenant)
-    savingsProducts!: any[];
+    @OneToMany(() => SavingsProduct, (product) => product.tenant)
+    savingsProducts!: SavingsProduct[];
 
-    @OneToMany(() => require('./LoanProduct').LoanProduct, (product: any) => product.tenant)
-    loanProducts!: any[];
+    @OneToMany(() => LoanProduct, (product) => product.tenant)
+    loanProducts!: LoanProduct[];
 
-    @OneToMany(() => require('./InsuranceProduct').InsuranceProduct, (product: any) => product.tenant)
-    insuranceProducts!: any[];
+    @OneToMany(() => InsuranceProduct, (product) => product.tenant)
+    insuranceProducts!: InsuranceProduct[];
 
-    @OneToMany(() => require('./MerchandiseProduct').MerchandiseProduct, (product: any) => product.tenant)
-    merchandiseProducts!: any[];
+    @OneToMany(() => MerchandiseProduct, (product) => product.tenant)
+    merchandiseProducts!: MerchandiseProduct[];
 
-    @OneToMany(() => require('./DeductionRequest').DeductionRequest, (request: any) => request.tenant)
-    deductionRequests!: any[];
+    @OneToMany(() => DeductionRequest, (request) => request.tenant)
+    deductionRequests!: DeductionRequest[];
 
-    @OneToMany(() => require('./Account').Account, (account: any) => account.tenant)
-    accounts!: any[];
+    @OneToMany(() => Account, (account) => account.tenant)
+    accounts!: Account[];
 }

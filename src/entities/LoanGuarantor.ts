@@ -24,14 +24,14 @@ export class LoanGuarantor {
     @Column({ type: 'uuid' })
     loanId!: string;
 
-    @ManyToOne(() => require('./Loan').Loan, (loan: Loan) => loan.guarantors)
+    @ManyToOne(() => Loan, (loan: Loan) => loan.guarantors)
     @JoinColumn({ name: 'loanId' })
     loan!: Loan;
 
     @Column({ type: 'uuid' })
     guarantorMemberId!: string;
 
-    @ManyToOne(() => require('./Member').Member)
+    @ManyToOne(() => Member)
     @JoinColumn({ name: 'guarantorMemberId' })
     guarantorMember!: Member;
 

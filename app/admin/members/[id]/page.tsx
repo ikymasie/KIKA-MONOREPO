@@ -8,6 +8,7 @@ import BeneficiaryModal from '@/components/admin/BeneficiaryModal';
 import CommunicationModal from '@/components/admin/CommunicationModal';
 import TicketModal from '@/components/admin/TicketModal';
 import ClaimAssistModal from '@/components/admin/ClaimAssistModal';
+import KYCVerification from '@/components/admin/KYCVerification';
 
 interface MemberDetail {
     id: string;
@@ -67,11 +68,7 @@ interface MemberDetail {
         relationship: string;
         isActive: boolean;
     }>;
-    kyc?: {
-        identityVerified: boolean;
-        residenceVerified: boolean;
-        incomeVerified: boolean;
-    };
+    kyc?: any;
 }
 
 export default function MemberDetailPage() {
@@ -87,7 +84,7 @@ export default function MemberDetailPage() {
     const [pendingStatus, setPendingStatus] = useState<string>('');
 
     // Member Service States
-    const [activeTab, setActiveTab] = useState<'overview' | 'financials' | 'tickets' | 'communications'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'financials' | 'tickets' | 'communications' | 'kyc'>('overview');
     const [tickets, setTickets] = useState<any[]>([]);
     const [communications, setCommunications] = useState<any[]>([]);
     const [ticketsLoading, setTicketsLoading] = useState(false);
@@ -328,6 +325,12 @@ export default function MemberDetailPage() {
                     >
                         Communication History
                     </button>
+                    <button
+                        onClick={() => setActiveTab('kyc')}
+                        className={`px-6 py-3 text-sm font-bold transition-colors border-b-2 ${activeTab === 'kyc' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+                    >
+                        KYC & Compliance
+                    </button>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -553,6 +556,14 @@ export default function MemberDetailPage() {
                                     )}
                                 </div>
                             </div>
+                        )}
+
+                        {activeTab === 'kyc' && (
+                            <KYCVerification
+                                memberId={memberId}
+                                kycData={member.kyc}
+                                onUpdate={fetchMemberDetails}
+                            />
                         )}
                     </div>
 

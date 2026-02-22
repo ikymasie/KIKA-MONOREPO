@@ -27,7 +27,7 @@ export class RiskFlag {
     @Column({ type: 'uuid' })
     screeningId!: string;
 
-    @ManyToOne(() => require('./SecurityScreening').SecurityScreening, (screening: SecurityScreening) => screening.riskFlags)
+    @ManyToOne(() => SecurityScreening, (screening: SecurityScreening) => screening.riskFlags)
     @JoinColumn({ name: 'screeningId' })
     screening!: SecurityScreening;
 
@@ -46,14 +46,14 @@ export class RiskFlag {
     @Column({ type: 'uuid', nullable: true })
     resolvedById?: string;
 
-    @ManyToOne(() => require('./User').User)
+    @ManyToOne(() => User)
     @JoinColumn({ name: 'resolvedById' })
     resolvedBy?: User;
 
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant)
+    @ManyToOne(() => Tenant)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 

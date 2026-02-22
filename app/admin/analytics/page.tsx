@@ -69,15 +69,15 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                     <div className="card p-6 border-l-4 border-l-primary-500 bg-gradient-to-br from-white to-primary-50/30">
                         <div className="text-sm font-medium text-gray-500 mb-1">Total Loan Portfolio</div>
-                        <div className="text-2xl font-bold text-gray-900">P {formatCompactNumber(data?.summary.totalPortfolio || 0)}</div>
+                        <div className="text-2xl font-bold text-gray-900">P {formatCompactNumber(data?.summary?.totalPortfolio || 0)}</div>
                     </div>
                     <div className="card p-6 border-l-4 border-l-success-500 bg-gradient-to-br from-white to-success-50/30">
                         <div className="text-sm font-medium text-gray-500 mb-1">Active Loans</div>
-                        <div className="text-2xl font-bold text-gray-900">{data?.summary.activeLoansCount} Applications</div>
+                        <div className="text-2xl font-bold text-gray-900">{data?.summary?.activeLoansCount ?? 0} Applications</div>
                     </div>
                     <div className="card p-6 border-l-4 border-l-indigo-500 bg-gradient-to-br from-white to-indigo-50/30">
                         <div className="text-sm font-medium text-gray-500 mb-1">Member Growth</div>
-                        <div className="text-2xl font-bold text-gray-900">+{data?.memberGrowth.length > 0 ? data.memberGrowth[data.memberGrowth.length - 1].count : 0} this month</div>
+                        <div className="text-2xl font-bold text-gray-900">+{(data?.memberGrowth?.length ?? 0) > 0 ? data.memberGrowth[data.memberGrowth.length - 1].count : 0} this month</div>
                     </div>
                     <div className="card p-6 border-l-4 border-l-orange-500 bg-gradient-to-br from-white to-orange-50/30">
                         <div className="text-sm font-medium text-gray-500 mb-1">Risk Profile</div>
@@ -95,11 +95,11 @@ export default function AnalyticsPage() {
                             <span>👥</span> Member Growth Trends
                         </h3>
                         <div className="h-64 flex items-end gap-4">
-                            {data?.memberGrowth.map((g: any, i: number) => (
+                            {(data?.memberGrowth ?? []).map((g: any, i: number) => (
                                 <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
                                     <div
                                         className="w-full bg-primary-500 rounded-t-lg transition-all hover:bg-primary-600 relative"
-                                        style={{ height: `${(g.count / Math.max(...data.memberGrowth.map((x: any) => x.count))) * 100}%` }}
+                                        style={{ height: `${(g.count / Math.max(...(data?.memberGrowth ?? [{ count: 1 }]).map((x: any) => x.count))) * 100}%` }}
                                     >
                                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                                             {g.count} members
@@ -116,11 +116,11 @@ export default function AnalyticsPage() {
                             <span>💰</span> Savings trends (Last 6 Months)
                         </h3>
                         <div className="h-64 flex items-end gap-4">
-                            {data?.savingsTrends.map((s: any, i: number) => (
+                            {(data?.savingsTrends ?? []).map((s: any, i: number) => (
                                 <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
                                     <div
                                         className="w-full bg-indigo-400 rounded-t-lg transition-all hover:bg-indigo-500 relative"
-                                        style={{ height: `${(s.total / Math.max(...data.savingsTrends.map((x: any) => x.total))) * 100}%` }}
+                                        style={{ height: `${(s.total / Math.max(...(data?.savingsTrends ?? [{ total: 1 }]).map((x: any) => x.total))) * 100}%` }}
                                     >
                                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                                             P {formatCompactNumber(s.total)}
@@ -150,23 +150,23 @@ export default function AnalyticsPage() {
                                 <div>
                                     <div className="text-sm text-gray-500 mb-1">Risk Percentage</div>
                                     <div className="text-4xl font-black text-orange-600">
-                                        {churnData?.summary.riskPercentage.toFixed(1)}%
+                                        {churnData?.summary?.riskPercentage?.toFixed(1) ?? '0.0'}%
                                     </div>
                                     <div className="w-full h-2 bg-gray-100 rounded-full mt-2 overflow-hidden">
                                         <div
                                             className="h-full bg-orange-500 transition-all duration-1000"
-                                            style={{ width: `${churnData?.summary.riskPercentage}%` }}
+                                            style={{ width: `${churnData?.summary?.riskPercentage ?? 0}%` }}
                                         ></div>
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="p-4 bg-white rounded-xl border border-orange-100">
                                         <div className="text-[10px] uppercase font-bold text-gray-400">High Risk</div>
-                                        <div className="text-xl font-bold text-gray-900">{churnData?.summary.highRiskCount}</div>
+                                        <div className="text-xl font-bold text-gray-900">{churnData?.summary?.highRiskCount ?? 0}</div>
                                     </div>
                                     <div className="p-4 bg-white rounded-xl border border-orange-100">
                                         <div className="text-[10px] uppercase font-bold text-gray-400">Total Active</div>
-                                        <div className="text-xl font-bold text-gray-900">{churnData?.summary.totalActive}</div>
+                                        <div className="text-xl font-bold text-gray-900">{churnData?.summary?.totalActive ?? 0}</div>
                                     </div>
                                 </div>
                             </div>
@@ -176,7 +176,7 @@ export default function AnalyticsPage() {
                             <div className="card p-0 overflow-hidden">
                                 <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                                     <h4 className="font-bold text-gray-800">Inactive Members (&gt;90 Days)</h4>
-                                    <span className="badge badge-warning">{churnData?.inactiveMembers.length} Flagged</span>
+                                    <span className="badge badge-warning">{churnData?.inactiveMembers?.length ?? 0} Flagged</span>
                                 </div>
                                 <table className="w-full text-left text-sm">
                                     <thead className="bg-gray-50 text-gray-500 uppercase text-[10px]">
@@ -187,7 +187,7 @@ export default function AnalyticsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
-                                        {churnData?.inactiveMembers.map((m: any) => (
+                                        {(churnData?.inactiveMembers ?? []).map((m: any) => (
                                             <tr key={m.id} className="hover:bg-gray-50/50">
                                                 <td className="px-6 py-4">
                                                     <div className="font-bold text-gray-900">{m.fullName}</div>

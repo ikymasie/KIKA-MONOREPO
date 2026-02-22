@@ -34,14 +34,14 @@ export class SecurityScreening {
     @Column({ type: 'uuid' })
     applicationId!: string;
 
-    @ManyToOne(() => require('./SocietyApplication').SocietyApplication)
+    @ManyToOne(() => SocietyApplication)
     @JoinColumn({ name: 'applicationId' })
     application!: SocietyApplication;
 
     @Column({ type: 'uuid' })
     officerId!: string;
 
-    @ManyToOne(() => require('./User').User)
+    @ManyToOne(() => User)
     @JoinColumn({ name: 'officerId' })
     officer!: User;
 
@@ -63,7 +63,7 @@ export class SecurityScreening {
     @Column({ type: 'text', nullable: true })
     notes?: string;
 
-    @OneToMany(() => require('./RiskFlag').RiskFlag, (flag: RiskFlag) => flag.screening)
+    @OneToMany(() => RiskFlag, (flag: RiskFlag) => flag.screening)
     riskFlags!: RiskFlag[];
 
     @CreateDateColumn()

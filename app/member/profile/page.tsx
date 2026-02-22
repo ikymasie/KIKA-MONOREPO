@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import MemberSidebar from '@/components/layout/MemberSidebar';
 import { format } from 'date-fns';
+import KYCManagement from '@/components/member/KYCManagement';
 
 interface MemberProfile {
     firstName: string;
@@ -132,9 +133,12 @@ export default function MemberProfilePage() {
                             </div>
                         </div>
                     </div>
+
+                    {/* KYC Documents */}
+                    <KYCManagement />
                 </div>
             </div>
-        </DashboardLayout>
+        </DashboardLayout >
     );
 }
 

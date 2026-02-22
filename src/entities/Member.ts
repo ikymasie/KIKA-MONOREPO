@@ -10,6 +10,13 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
+import type { Beneficiary } from './Beneficiary';
+import type { Dependent } from './Dependent';
+import type { InsurancePolicy } from './InsurancePolicy';
+import type { KYC } from './KYC';
+import type { Loan } from './Loan';
+import type { MemberBankAccount } from './MemberBankAccount';
+import type { MemberSavings } from './MemberSavings';
 import type { Tenant } from './Tenant';
 import type { User } from './User';
 
@@ -39,14 +46,14 @@ export class Member {
     @Column({ type: 'uuid', nullable: true })
     userId?: string;
 
-    @OneToOne(() => require('./User').User)
+    @OneToOne(() => User)
     @JoinColumn({ name: 'userId' })
     user?: User;
 
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant, (tenant: any) => tenant.members)
+    @ManyToOne(() => Tenant, (tenant: any) => tenant.members)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
@@ -115,25 +122,25 @@ export class Member {
     @Column({ type: 'text', nullable: true })
     exitReason?: string;
 
-    @OneToOne(() => require('./KYC').KYC, (kyc: any) => kyc.member, { cascade: true })
+    @OneToOne(() => KYC, (kyc: any) => kyc.member, { cascade: true })
     kyc?: any;
 
-    @OneToMany(() => require('./Beneficiary').Beneficiary, (beneficiary: any) => beneficiary.member, { cascade: true })
+    @OneToMany(() => Beneficiary, (beneficiary: any) => beneficiary.member, { cascade: true })
     beneficiaries!: any[];
 
-    @OneToMany(() => require('./Dependent').Dependent, (dependent: any) => dependent.member, { cascade: true })
+    @OneToMany(() => Dependent, (dependent: any) => dependent.member, { cascade: true })
     dependents!: any[];
 
-    @OneToMany(() => require('./MemberSavings').MemberSavings, (savings: any) => savings.member)
+    @OneToMany(() => MemberSavings, (savings: any) => savings.member)
     savings!: any[];
 
-    @OneToMany(() => require('./Loan').Loan, (loan: any) => loan.member)
+    @OneToMany(() => Loan, (loan: any) => loan.member)
     loans!: any[];
 
-    @OneToMany(() => require('./InsurancePolicy').InsurancePolicy, (policy: any) => policy.member)
+    @OneToMany(() => InsurancePolicy, (policy: any) => policy.member)
     insurancePolicies!: any[];
 
-    @OneToMany(() => require('./MemberBankAccount').MemberBankAccount, (account: any) => account.member, { cascade: true })
+    @OneToMany(() => MemberBankAccount, (account: any) => account.member, { cascade: true })
     bankAccounts!: any[];
 
     @CreateDateColumn()

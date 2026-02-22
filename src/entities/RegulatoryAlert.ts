@@ -39,7 +39,7 @@ export class RegulatoryAlert {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant)
+    @ManyToOne(() => Tenant)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 

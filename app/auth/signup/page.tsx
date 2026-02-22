@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { UserRole } from '@/src/entities/User';
 import { signInWithCustomToken } from 'firebase/auth';
 import { auth } from '@/lib/firebase-client';
@@ -35,7 +36,7 @@ export default function SignupPage() {
     const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
     const [loading, setLoading] = useState(false);
     const [processingStage, setProcessingStage] = useState(0);
-    const [error, setError] = useState('');
+    // Error state removed in favor of toast
 
     const [formData, setFormData] = useState({
         email: '',
@@ -60,10 +61,9 @@ export default function SignupPage() {
 
     const handleSignup = async (e: FormEvent) => {
         e.preventDefault();
-        setError('');
 
         if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match');
+            toast.error('Passwords do not match');
             return;
         }
 
@@ -120,7 +120,7 @@ export default function SignupPage() {
 
         } catch (err: any) {
             console.error('Signup error:', err);
-            setError(err.message || 'Failed to create account');
+            toast.error(err.message || 'Failed to create account');
             setLoading(false);
             clearInterval(stageInterval);
         }
@@ -215,12 +215,7 @@ export default function SignupPage() {
                             </div>
                         </div>
 
-                        {error && (
-                            <div className="mb-8 p-5 bg-red-50/80 backdrop-blur-sm border border-red-200/50 rounded-2xl animate-shake flex items-start gap-3">
-                                <AlertCircle className="text-red-500 shrink-0 mt-0.5" size={20} />
-                                <p className="text-sm text-red-600 font-bold">{error}</p>
-                            </div>
-                        )}
+
 
                         <div className="relative overflow-hidden min-h-[400px]">
                             {step === 'role-selection' ? (

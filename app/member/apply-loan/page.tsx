@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import MemberSidebar from '@/components/layout/MemberSidebar';
 
@@ -20,7 +21,7 @@ export default function ApplyLoanPage() {
     const [products, setProducts] = useState<LoanProduct[]>([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    // Error state removed in favor of toast
 
     const [formData, setFormData] = useState({
         productId: '',
@@ -40,7 +41,7 @@ export default function ApplyLoanPage() {
                     setFormData(prev => ({ ...prev, productId: data[0].id }));
                 }
             } catch (err: any) {
-                setError(err.message);
+                toast.error(err.message || 'Failed to load loan products');
             } finally {
                 setLoading(false);
             }
@@ -53,7 +54,6 @@ export default function ApplyLoanPage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setSubmitting(true);
-        setError(null);
 
         try {
             const response = await fetch('/api/member/apply-loan', {
@@ -67,10 +67,10 @@ export default function ApplyLoanPage() {
                 throw new Error(data.error || 'Failed to submit application');
             }
 
-            alert('Application submitted successfully!');
+            toast.success('Application submitted successfully!');
             router.push('/member/loans');
         } catch (err: any) {
-            setError(err.message);
+            toast.error(err.message || 'Failed to submit application');
         } finally {
             setSubmitting(false);
         }
@@ -92,11 +92,7 @@ export default function ApplyLoanPage() {
                     <p className="text-gray-600">Choose a loan product and enter your application details</p>
                 </div>
 
-                {error && (
-                    <div className="mb-6 p-4 bg-danger-50 border border-danger-200 text-danger-700 rounded-xl">
-                        {error}
-                    </div>
-                )}
+
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2">

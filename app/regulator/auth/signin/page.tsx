@@ -2,13 +2,14 @@
 
 import { useState, FormEvent, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { useAuth } from '@/lib/auth-hooks';
 import { Shield, Lock, Eye } from 'lucide-react';
 
 function RegulatorSignInForm() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    // Error state removed in favor of toast
     const [loading, setLoading] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -18,14 +19,14 @@ function RegulatorSignInForm() {
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-        setError('');
         setLoading(true);
 
         try {
             await signIn(email, password);
             router.push(callbackUrl);
+            toast.success('Signed in successfully');
         } catch (err: any) {
-            setError(err.message || 'Failed to sign in');
+            toast.error(err.message || 'Failed to sign in');
         } finally {
             setLoading(false);
         }
@@ -69,11 +70,7 @@ function RegulatorSignInForm() {
                         </p>
                     </div>
 
-                    {error && (
-                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-                            <p className="text-sm text-red-400">{error}</p>
-                        </div>
-                    )}
+
 
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div>

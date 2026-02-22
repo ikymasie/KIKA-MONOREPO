@@ -8,6 +8,7 @@ import {
     OneToMany,
     JoinColumn,
 } from 'typeorm';
+import type { DeductionRequest } from './DeductionRequest';
 import type { Tenant } from './Tenant';
 import type { ReconciliationItem } from './ReconciliationItem';
 
@@ -21,7 +22,7 @@ export class ReconciliationBatch {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant)
+    @ManyToOne(() => Tenant)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
@@ -40,7 +41,7 @@ export class ReconciliationBatch {
     @Column({ type: 'uuid', nullable: true })
     deductionRequestId?: string;
 
-    @ManyToOne(() => require('./DeductionRequest').DeductionRequest, { nullable: true })
+    @ManyToOne(() => DeductionRequest, { nullable: true })
     @JoinColumn({ name: 'deductionRequestId' })
     deductionRequest?: any;
 
@@ -77,7 +78,7 @@ export class ReconciliationBatch {
     @Column({ default: false })
     journalsPosted!: boolean;
 
-    @OneToMany(() => require('./ReconciliationItem').ReconciliationItem, (item: ReconciliationItem) => item.batch, { cascade: true })
+    @OneToMany(() => ReconciliationItem, (item: ReconciliationItem) => item.batch, { cascade: true })
     items!: ReconciliationItem[];
 
     @CreateDateColumn()

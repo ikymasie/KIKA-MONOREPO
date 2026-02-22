@@ -27,6 +27,7 @@ export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState('');
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchOrders();
@@ -35,14 +36,23 @@ export default function OrdersPage() {
     const fetchOrders = async () => {
         try {
             setLoading(true);
+            setError(null);
             const url = statusFilter
                 ? `/api/admin/merchandise/orders?status=${statusFilter}`
                 : '/api/admin/merchandise/orders';
             const response = await fetch(url);
             const data = await response.json();
-            setOrders(data);
-        } catch (error) {
-            console.error('Failed to fetch orders:', error);
+            if (!response.ok) {
+                const msg = data?.error?.message || data?.error || 'Failed to load orders';
+                setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+                setOrders([]);
+                return;
+            }
+            setOrders(Array.isArray(data) ? data : []);
+        } catch (err) {
+            console.error('Failed to fetch orders:', err);
+            setError('Network error — could not load orders.');
+            setOrders([]);
         } finally {
             setLoading(false);
         }
@@ -77,14 +87,20 @@ export default function OrdersPage() {
                             key={status}
                             onClick={() => setStatusFilter(status)}
                             className={`px-6 py-2 rounded-xl text-sm font-bold border-2 transition-all whitespace-nowrap ${statusFilter === status
-                                    ? 'bg-primary-600 border-primary-600 text-white shadow-lg shadow-primary-200'
-                                    : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200'
+                                ? 'bg-primary-600 border-primary-600 text-white shadow-lg shadow-primary-200'
+                                : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200'
                                 }`}
                         >
                             {status === '' ? 'All Orders' : status.charAt(0).toUpperCase() + status.slice(1)}
                         </button>
                     ))}
                 </div>
+
+                {error && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 font-medium text-sm">
+                        ⚠️ {error}
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="space-y-4">

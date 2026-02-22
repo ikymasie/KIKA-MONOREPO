@@ -69,7 +69,7 @@ export class RegulatorSettings {
     @Column({ type: 'uuid', nullable: true })
     updatedById?: string;
 
-    @ManyToOne(() => require('./User').User)
+    @ManyToOne(() => User)
     @JoinColumn({ name: 'updatedById' })
     updatedBy?: User;
 

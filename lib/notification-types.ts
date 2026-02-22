@@ -15,6 +15,8 @@ export enum NotificationEvent {
     MEMBER_GUARANTOR_REQUEST = 'member_guarantor_request',
     MEMBER_CLAIM_STATUS = 'member_claim_status',
     MEMBER_MISSED_PAYMENT = 'member_missed_payment',
+    MEMBER_KYC_EXPIRY_WARNING = 'member_kyc_expiry_warning',
+    MEMBER_KYC_EXPIRED = 'member_kyc_expired',
 
     // Tenant Tier - SACCOS Admin (3 events)
     SACCOS_SYSTEM_ALERT = 'saccos_system_alert',

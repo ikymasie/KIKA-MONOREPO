@@ -8,6 +8,7 @@ import {
     JoinColumn,
     OneToOne,
 } from 'typeorm';
+import type { FieldReport } from './FieldReport';
 import type { Tenant } from './Tenant';
 import type { User } from './User';
 
@@ -26,14 +27,14 @@ export class FieldVisit {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant)
+    @ManyToOne(() => Tenant)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
     @Column({ type: 'uuid' })
     officerId!: string;
 
-    @ManyToOne(() => require('./User').User)
+    @ManyToOne(() => User)
     @JoinColumn({ name: 'officerId' })
     officer!: User;
 
@@ -52,7 +53,7 @@ export class FieldVisit {
     @Column({ type: 'text', nullable: true })
     notes?: string;
 
-    @OneToOne(() => require('./FieldReport').FieldReport, (report: any) => report.visit)
+    @OneToOne(() => FieldReport, (report: any) => report.visit)
     report?: any; // Use any or Import type for the type hint
 
     @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })

@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 import { adminAuth } from './firebase-admin';
+import mysql from 'mysql2/promise';
 
 export interface ServerSession {
     user: {
@@ -42,7 +43,75 @@ export async function verifySessionCookie(sessionCookie: string) {
 }
 
 /**
- * Get the current user session from server-side
+ * Look up a User from the DB by firebaseUid using raw MySQL query.
+ * Uses mysql2 directly to avoid TypeORM entity metadata circular dependency issues.
+ */
+async function getUserByFirebaseUid(firebaseUid: string) {
+    let connection: mysql.Connection | null = null;
+    try {
+        connection = await mysql.createConnection({
+            host: process.env.DATABASE_HOST || 'localhost',
+            port: parseInt(process.env.DATABASE_PORT || '3306'),
+            user: process.env.DATABASE_USERNAME,
+            password: process.env.DATABASE_PASSWORD,
+            database: process.env.DATABASE_NAME,
+            ssl: process.env.DATABASE_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+        });
+
+        const [rows] = await connection.execute(
+            'SELECT id, email, firstName, lastName, role, tenantId, firebaseUid, status, phone, mfaEnabled FROM users WHERE firebaseUid = ? LIMIT 1',
+            [firebaseUid]
+        );
+
+        const users = rows as any[];
+        if (!users || users.length === 0) return null;
+
+        const u = users[0];
+
+        // Return a plain object that mimics the User entity methods used downstream
+        return {
+            id: u.id,
+            email: u.email,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            role: u.role,
+            tenantId: u.tenantId,
+            firebaseUid: u.firebaseUid,
+            status: u.status,
+            phone: u.phone,
+            mfaEnabled: u.mfaEnabled,
+            get fullName() { return `${u.firstName} ${u.lastName}`; },
+            isTenantAdmin() {
+                return ['saccos_admin', 'loan_officer', 'accountant', 'member_service_rep', 'credit_committee'].includes(u.role);
+            },
+            isRegulator() {
+                return ['super_regulator', 'dcd_director', 'dcd_field_officer', 'dcd_compliance_officer',
+                    'bob_prudential_supervisor', 'bob_financial_auditor', 'bob_compliance_officer', 'deduction_officer'].includes(u.role);
+            },
+            isDCD() {
+                return ['dcd_director', 'dcd_field_officer', 'dcd_compliance_officer'].includes(u.role);
+            },
+            isBoB() {
+                return ['bob_prudential_supervisor', 'bob_financial_auditor', 'bob_compliance_officer'].includes(u.role);
+            },
+            isApplicant() {
+                return ['society_applicant', 'cooperative_applicant'].includes(u.role);
+            },
+            isGovernmentOfficer() {
+                return ['registry_clerk', 'intelligence_liaison', 'legal_officer', 'registrar', 'director_cooperatives', 'minister_delegate'].includes(u.role);
+            },
+        };
+    } catch (error) {
+        console.error('Error fetching user from DB:', error);
+        return null;
+    } finally {
+        if (connection) await connection.end().catch(() => { });
+    }
+}
+
+/**
+ * Get the current user session from server-side cookies.
+ * Role is sourced exclusively from the DB.
  */
 export async function getServerSession(): Promise<ServerSession | null> {
     try {
@@ -58,22 +127,7 @@ export async function getServerSession(): Promise<ServerSession | null> {
             return null;
         }
 
-        // Dynamically import database to avoid circular dependencies
-        const { AppDataSource } = await import('../src/config/database');
-        const { User } = await import('../src/entities/User');
-
-        // Initialize database if needed
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        // Get user from database
-        const userRepository = AppDataSource.getRepository(User);
-        const user = await userRepository.findOne({
-            where: { firebaseUid: decodedToken.uid },
-            relations: ['tenant'],
-        });
-
+        const user = await getUserByFirebaseUid(decodedToken.uid);
         if (!user || user.status !== 'active') {
             return null;
         }
@@ -118,30 +172,11 @@ export async function requireRole(allowedRoles: string[]): Promise<ServerSession
 }
 
 /**
- * Get user with custom claims from Firebase token
+ * @deprecated Use getUserFromRequest instead.
+ * Kept for backward compatibility — returns the DB User entity for the given Firebase UID.
  */
 export async function getUserWithClaims(firebaseUid: string) {
-    try {
-        // Dynamically import database to avoid circular dependencies
-        const { AppDataSource } = await import('../src/config/database');
-        const { User } = await import('../src/entities/User');
-
-        // Initialize database if needed
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const userRepository = AppDataSource.getRepository(User);
-        const user = await userRepository.findOne({
-            where: { firebaseUid },
-            relations: ['tenant'],
-        });
-
-        return user;
-    } catch (error) {
-        console.error('Error getting user with claims:', error);
-        return null;
-    }
+    return getUserByFirebaseUid(firebaseUid);
 }
 
 /**
@@ -167,25 +202,22 @@ export async function clearSessionCookie() {
 }
 
 /**
- * Get User entity from NextRequest (for API routes)
+ * Get User entity from NextRequest (for API routes).
+ * Role is sourced exclusively from the DB — no Firebase custom claims involved.
  */
 export async function getUserFromRequest(request: NextRequest) {
     try {
-        // Get session from cookie
         const sessionCookie = request.cookies.get(SESSION_COOKIE_NAME)?.value;
         if (!sessionCookie) {
             return null;
         }
 
-        // Verify session
         const decodedToken = await verifySessionCookie(sessionCookie);
         if (!decodedToken) {
             return null;
         }
 
-        // Get user from database
-        const user = await getUserWithClaims(decodedToken.uid);
-        return user;
+        return await getUserByFirebaseUid(decodedToken.uid);
     } catch (error) {
         console.error('Error getting user from request:', error);
         return null;

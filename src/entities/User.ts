@@ -8,6 +8,7 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
+import type { Tenant } from './Tenant';
 
 export enum UserRole {
     // Higher-level Regulatory Auth
@@ -102,7 +103,7 @@ export class User {
 
     @ManyToOne('Tenant', 'users', { nullable: true })
     @JoinColumn({ name: 'tenantId' })
-    tenant?: any;
+    tenant?: Tenant;
 
     @Column({ type: 'timestamp', nullable: true })
     lastLoginAt?: Date;

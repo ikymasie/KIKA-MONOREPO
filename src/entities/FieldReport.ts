@@ -20,21 +20,21 @@ export class FieldReport {
     @Column({ type: 'uuid' })
     visitId!: string;
 
-    @OneToOne(() => require('./FieldVisit').FieldVisit, (visit: any) => visit.report)
+    @OneToOne(() => FieldVisit, (visit: any) => visit.report)
     @JoinColumn({ name: 'visitId' })
     visit!: FieldVisit;
 
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant)
+    @ManyToOne(() => Tenant)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
     @Column({ type: 'uuid' })
     submittedById!: string;
 
-    @ManyToOne(() => require('./User').User)
+    @ManyToOne(() => User)
     @JoinColumn({ name: 'submittedById' })
     submittedBy!: User;
 

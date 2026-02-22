@@ -5,16 +5,14 @@ export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const { AppDataSource } = await import('@/src/config/database');
+        const { getDataSource } = await import('@/src/config/database');
 
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const AppDataSource = await getDataSource();
 
         // 1. Members with NO transactions in the last 90 days (High Risk)
         const inactiveMembers = await AppDataSource.query(`

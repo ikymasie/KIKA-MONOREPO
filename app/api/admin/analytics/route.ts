@@ -3,23 +3,17 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Member } = await import('@/src/entities/Member');
+        // Dynamic imports to avoid circular dependencies
+        const { getDataSource } = await import('@/src/config/database');
         const { Loan, LoanStatus } = await import('@/src/entities/Loan');
-        const { MemberSavings } = await import('@/src/entities/MemberSavings');
-        const { Transaction } = await import('@/src/entities/Transaction');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
-    
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const AppDataSource = await getDataSource();
 
         // 1. Member Growth (last 6 months)
         const memberGrowth = await AppDataSource.query(`

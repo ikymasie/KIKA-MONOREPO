@@ -42,7 +42,7 @@ export class InsuranceClaim {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant)
+    @ManyToOne(() => Tenant)
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
@@ -52,7 +52,7 @@ export class InsuranceClaim {
     @Column({ type: 'uuid' })
     policyId!: string;
 
-    @ManyToOne(() => require('./InsurancePolicy').InsurancePolicy, (policy: InsurancePolicy) => policy.claims)
+    @ManyToOne(() => InsurancePolicy, (policy: InsurancePolicy) => policy.claims)
     @JoinColumn({ name: 'policyId' })
     policy!: InsurancePolicy;
 

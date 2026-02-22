@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { syncUserWithFirebase } from '@/lib/firebase-auth';
 import { adminAuth } from '@/lib/firebase-admin';
-import type { UserRole as UserRoleType } from '@/src/entities/User';
+import { UserRole as UserRoleType } from '@/src/entities/User';
+import { AppDataSource } from '@/src/config/database';
+import { User, UserRole, UserStatus } from '@/src/entities/User';
 
 export async function POST(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { User, UserRole, UserStatus } = await import('@/src/entities/User');
-
-
         const body = await request.json();
         const { email, password, firstName, lastName, role } = body;
 

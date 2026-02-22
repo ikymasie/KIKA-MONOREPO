@@ -13,6 +13,8 @@ export const metadata: Metadata = {
     description: 'Multi-Tenant SACCOS Member Management Platform for Botswana',
 };
 
+import { Toaster } from 'sonner';
+
 export default function RootLayout({
     children,
 }: {
@@ -25,7 +27,10 @@ export default function RootLayout({
                     <RouteProgressBar />
                 </Suspense>
                 <AuthProvider>
-                    <BrandingProvider>{children}</BrandingProvider>
+                    <BrandingProvider>
+                        {children}
+                        <Toaster position="top-right" richColors />
+                    </BrandingProvider>
                 </AuthProvider>
             </body>
         </html>

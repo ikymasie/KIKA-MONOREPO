@@ -19,14 +19,14 @@ export default function LoginDialog({ isOpen, onClose }: LoginDialogProps) {
             title: 'SACCOS Admin',
             description: 'Complete management system for SACCOS operations and administration',
             icon: '🏢',
-            route: '/auth/signin?portal=admin',
+            route: '/auth/admin/signin',
             features: ['Member management', 'Loan processing', 'Financial reporting', 'Product configuration']
         },
         {
             title: 'Member Portal',
             description: 'Self-service portal for SACCOS members to manage their accounts',
             icon: '👤',
-            route: '/auth/signin?portal=member',
+            route: '/auth/signin',
             features: ['Account balances', 'Loan applications', 'Digital statements', 'Insurance coverage']
         }
     ];
