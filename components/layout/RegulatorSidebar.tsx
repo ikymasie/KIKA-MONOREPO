@@ -10,7 +10,8 @@ interface NavItem {
     icon: string;
 }
 
-const navItems: NavItem[] = [
+// DCD / General Regulator nav
+const dcdNavItems: NavItem[] = [
     { name: 'Dashboard', href: '/regulator/dashboard', icon: '📊' },
     { name: 'Registrar Workspace', href: '/regulator/registrar', icon: '⚖️' },
     { name: 'Official Registry', href: '/regulator/registry', icon: '📒' },
@@ -41,6 +42,43 @@ const navItems: NavItem[] = [
     { name: '  → Workflows', href: '/regulator/settings/workflows', icon: '🔄' },
 ];
 
+// BoB Prudential Supervisor — portfolio risk, financial soundness
+const bobPrudentialNav: NavItem[] = [
+    { name: 'Dashboard', href: '/regulator/dashboard', icon: '📊' },
+    { name: 'SACCO Directory', href: '/regulator/saccos', icon: '🏢' },
+    { name: 'Prudential Reports', href: '/regulator/reporting', icon: '📈' },
+    { name: 'Regulatory Alerts', href: '/regulator/alerts', icon: '⚠️' },
+    { name: 'Compliance Scores', href: '/regulator/compliance/scores', icon: '🏅' },
+    { name: 'Compliance Thresholds', href: '/regulator/compliance/thresholds', icon: '⚙️' },
+    { name: 'Insurance Disputes', href: '/regulator/insurance/disputes', icon: '⚖️' },
+];
+
+// BoB Financial Auditor — accounting, GL, financial statements
+const bobFinancialAuditorNav: NavItem[] = [
+    { name: 'Dashboard', href: '/regulator/dashboard', icon: '📊' },
+    { name: 'SACCO Directory', href: '/regulator/saccos', icon: '🏢' },
+    { name: 'Financial Reports', href: '/regulator/reporting', icon: '📈' },
+    { name: 'Compliance Issues', href: '/regulator/compliance/issues', icon: '📋' },
+    { name: 'Audit Schedule', href: '/regulator/compliance/audits', icon: '📅' },
+    { name: 'Regulatory Alerts', href: '/regulator/alerts', icon: '⚠️' },
+    { name: 'Broadcasts', href: '/regulator/broadcasts', icon: '📢' },
+];
+
+// BoB Compliance Officer — rules, KYC, compliance monitoring
+const bobComplianceNav: NavItem[] = [
+    { name: 'Dashboard', href: '/regulator/dashboard', icon: '📊' },
+    { name: 'SACCO Directory', href: '/regulator/saccos', icon: '🏢' },
+    { name: 'Compliance Monitoring', href: '/regulator/compliance', icon: '✅' },
+    { name: '  → Issues', href: '/regulator/compliance/issues', icon: '📋' },
+    { name: '  → KYC Verification', href: '/regulator/compliance/kyc', icon: '✓' },
+    { name: '  → Rules', href: '/regulator/compliance/rules', icon: '🤖' },
+    { name: '  → Scores', href: '/regulator/compliance/scores', icon: '📊' },
+    { name: 'Bye-laws', href: '/regulator/bylaws', icon: '📜' },
+    { name: 'Regulatory Alerts', href: '/regulator/alerts', icon: '⚠️' },
+    { name: 'Reports', href: '/regulator/reporting', icon: '📈' },
+    { name: 'Broadcasts', href: '/regulator/broadcasts', icon: '📢' },
+];
+
 const superRegulatorItems: NavItem[] = [
     { name: 'Platform Management', href: '/regulator/settings/system', icon: '🌐' },
     { name: '  → System Settings', href: '/regulator/settings/system', icon: '⚙️' },
@@ -48,9 +86,20 @@ const superRegulatorItems: NavItem[] = [
     { name: '  → Platform Logs', href: '/regulator/logs', icon: '📜' },
 ];
 
+// Map role → { navItems, label, color }
+const BOB_ROLE_CONFIG: Record<string, { nav: NavItem[]; label: string; color: string }> = {
+    BOB_PRUDENTIAL_SUPERVISOR: { nav: bobPrudentialNav, label: 'BoB — Prudential Supervisor', color: 'text-purple-700 bg-purple-50' },
+    BOB_FINANCIAL_AUDITOR: { nav: bobFinancialAuditorNav, label: 'BoB — Financial Auditor', color: 'text-blue-700 bg-blue-50' },
+    BOB_COMPLIANCE_OFFICER: { nav: bobComplianceNav, label: 'BoB — Compliance Officer', color: 'text-teal-700 bg-teal-50' },
+};
+
 export default function RegulatorSidebar() {
     const pathname = usePathname();
     const { user, signOut } = useAuth();
+
+    // Determine which nav to show based on BoB sub-role
+    const bobConfig = user?.role ? BOB_ROLE_CONFIG[user.role] : undefined;
+    const activeNav = bobConfig ? bobConfig.nav : dcdNavItems;
 
     return (
         <div className="flex flex-col h-full glass-panel overflow-hidden">
@@ -58,12 +107,17 @@ export default function RegulatorSidebar() {
             <div className="p-6 border-b border-white/20 bg-white/10 backdrop-blur-md">
                 <h1 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-secondary-600">KIKA Platform</h1>
                 <p className="text-xs text-gray-500 mt-1 font-bold uppercase tracking-wider">Regulatory Portal</p>
+                {bobConfig && (
+                    <span className={`mt-2 inline-block px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${bobConfig.color}`}>
+                        {bobConfig.label}
+                    </span>
+                )}
             </div>
 
             {/* Navigation */}
             <nav className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                 <ul className="space-y-1">
-                    {navItems.map((item) => {
+                    {activeNav.map((item) => {
                         const isActive = pathname === item.href;
                         return (
                             <li key={item.href}>

@@ -116,18 +116,72 @@ export default function CooperativeDashboard() {
                                 </Link>
                             </div>
 
-                            {/* Status Timeline Shorthand */}
+                            {/* Status Timeline — dynamically mapped to ApplicationStatus */}
                             <div className="relative pt-8 pb-4 px-2">
                                 <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2"></div>
                                 <div className="relative flex justify-between">
-                                    {[
-                                        { label: 'Draft', active: true },
-                                        { label: 'Review', active: activeApplication.status !== ApplicationStatus.DRAFT },
-                                        { label: 'Vetting', active: [ApplicationStatus.SECURITY_VETTING, ApplicationStatus.LEGAL_REVIEW, ApplicationStatus.APPROVED].includes(activeApplication.status) },
-                                        { label: 'Approved', active: activeApplication.status === ApplicationStatus.APPROVED }
-                                    ].map((step, i) => (
+                                    {([
+                                        {
+                                            label: 'Draft',
+                                            active: [
+                                                ApplicationStatus.DRAFT,
+                                                ApplicationStatus.SUBMITTED,
+                                                ApplicationStatus.UNDER_REVIEW,
+                                                ApplicationStatus.SECURITY_VETTING,
+                                                ApplicationStatus.LEGAL_REVIEW,
+                                                ApplicationStatus.PENDING_DECISION,
+                                                ApplicationStatus.APPROVED,
+                                            ].includes(activeApplication.status)
+                                        },
+                                        {
+                                            label: 'Submitted',
+                                            active: [
+                                                ApplicationStatus.SUBMITTED,
+                                                ApplicationStatus.UNDER_REVIEW,
+                                                ApplicationStatus.SECURITY_VETTING,
+                                                ApplicationStatus.LEGAL_REVIEW,
+                                                ApplicationStatus.PENDING_DECISION,
+                                                ApplicationStatus.APPROVED,
+                                            ].includes(activeApplication.status)
+                                        },
+                                        {
+                                            label: 'Review',
+                                            active: [
+                                                ApplicationStatus.UNDER_REVIEW,
+                                                ApplicationStatus.SECURITY_VETTING,
+                                                ApplicationStatus.LEGAL_REVIEW,
+                                                ApplicationStatus.PENDING_DECISION,
+                                                ApplicationStatus.APPROVED,
+                                            ].includes(activeApplication.status)
+                                        },
+                                        {
+                                            label: 'Vetting',
+                                            active: [
+                                                ApplicationStatus.SECURITY_VETTING,
+                                                ApplicationStatus.LEGAL_REVIEW,
+                                                ApplicationStatus.PENDING_DECISION,
+                                                ApplicationStatus.APPROVED,
+                                            ].includes(activeApplication.status)
+                                        },
+                                        {
+                                            label: 'Decision',
+                                            active: [
+                                                ApplicationStatus.PENDING_DECISION,
+                                                ApplicationStatus.APPROVED,
+                                            ].includes(activeApplication.status)
+                                        },
+                                        {
+                                            label: 'Approved',
+                                            active: activeApplication.status === ApplicationStatus.APPROVED
+                                        },
+                                    ] as { label: string; active: boolean }[]).map((step, i) => (
                                         <div key={i} className="flex flex-col items-center gap-3">
-                                            <div className={`relative z-10 w-6 h-6 rounded-full border-4 border-white shadow-md ${step.active ? 'bg-primary-500' : 'bg-slate-300'}`}></div>
+                                            <div className={`relative z-10 w-6 h-6 rounded-full border-4 border-white shadow-md transition-colors ${step.active
+                                                    ? 'bg-primary-500'
+                                                    : activeApplication.status === ApplicationStatus.REJECTED
+                                                        ? 'bg-red-300'
+                                                        : 'bg-slate-300'
+                                                }`}></div>
                                             <span className={`text-[10px] font-black uppercase tracking-tighter ${step.active ? 'text-primary-600' : 'text-slate-400'}`}>
                                                 {step.label}
                                             </span>

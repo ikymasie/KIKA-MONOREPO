@@ -26,13 +26,49 @@ interface Transaction {
 export default function AuditorRecordsPage() {
     const params = useParams();
     const router = useRouter();
-    const requestId = params.tenantId as string; // We use requestId as the param for simplicity in routing logic
+    const requestId = params.tenantId as string;
 
     const [accounts, setAccounts] = useState<Account[]>([]);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'accounts' | 'ledger'>('accounts');
     const [tenantInfo, setTenantInfo] = useState<{ name: string, tenantId: string } | null>(null);
+
+    const exportCSV = (filename: string, headers: string[], rows: string[][]) => {
+        const csvContent = [headers, ...rows]
+            .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${filename}-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    const exportAccounts = () => {
+        exportCSV(
+            `${tenantInfo?.name ?? 'sacco'}-chart-of-accounts`,
+            ['Account Code', 'Account Name', 'Type', 'Balance (BWP)'],
+            accounts.map(a => [a.code, a.name, a.accountType, Number(a.balance).toFixed(2)])
+        );
+    };
+
+    const exportLedger = () => {
+        exportCSV(
+            `${tenantInfo?.name ?? 'sacco'}-general-ledger`,
+            ['Date', 'Account Name', 'Account Code', 'Description', 'Debit (BWP)', 'Credit (BWP)'],
+            transactions.map(tx => [
+                new Date(tx.createdAt).toLocaleDateString('en-ZA'),
+                tx.account.name,
+                tx.account.code,
+                tx.description,
+                tx.entryType === 'debit' ? Number(tx.amount).toFixed(2) : '',
+                tx.entryType === 'credit' ? Number(tx.amount).toFixed(2) : '',
+            ])
+        );
+    };
 
     useEffect(() => {
         async function fetchData() {
@@ -79,6 +115,13 @@ export default function AuditorRecordsPage() {
                 <div className="flex gap-4">
                     <button onClick={() => router.push(`/auditor/${requestId}/working-papers`)} className="btn btn-outline border-emerald-200">
                         📁 Working Papers
+                    </button>
+                    <button
+                        onClick={activeTab === 'accounts' ? exportAccounts : exportLedger}
+                        disabled={activeTab === 'accounts' ? accounts.length === 0 : transactions.length === 0}
+                        className="btn bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        ⬇️ Export {activeTab === 'accounts' ? 'COA' : 'GL'} CSV
                     </button>
                     <button onClick={() => router.push(`/auditor/${requestId}/reports`)} className="btn btn-primary shadow-emerald-200">
                         📄 Submit Report
