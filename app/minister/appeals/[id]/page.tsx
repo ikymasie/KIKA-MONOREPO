@@ -1,0 +1,317 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+
+interface AppealDetail {
+    id: string;
+    proposedName: string;
+    applicationType: string;
+    primaryContactName: string;
+    primaryContactEmail: string;
+    primaryContactPhone: string;
+    physicalAddress: string;
+    status: string;
+    submittedAt: string;
+    updatedAt: string;
+    fileNumber?: string;
+    feeAmount: number;
+    rejectionReasons?: string;
+}
+
+interface HistoryEntry {
+    id: string;
+    fromStatus?: string;
+    toStatus: string;
+    action?: string;
+    notes?: string;
+    changedAt: string;
+    changedBy: {
+        id: string;
+        name: string;
+        email: string;
+    };
+}
+
+export default function MinisterAppealDetail({ params }: { params: { id: string } }) {
+    const [app, setApp] = useState<AppealDetail | null>(null);
+    const [history, setHistory] = useState<HistoryEntry[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [processing, setProcessing] = useState(false);
+    const [notes, setNotes] = useState('');
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        async function fetchData() {
+            try {
+                const [appRes, historyRes] = await Promise.all([
+                    fetch(`/api/registration/applications/${params.id}`),
+                    fetch(`/api/regulator/applications/${params.id}/history`).catch(() => null)
+                ]);
+
+                if (appRes.ok) {
+                    setApp(await appRes.json());
+                } else {
+                    setError('Appeal not found or access denied.');
+                }
+
+                if (historyRes && historyRes.ok) {
+                    setHistory(await historyRes.json());
+                }
+            } catch (e: any) {
+                setError(e.message || 'Failed to load appeal');
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchData();
+    }, [params.id]);
+
+    const handleDecision = async (decision: 'APPROVE' | 'REJECT') => {
+        if (!notes.trim()) {
+            alert('A ministerial decision on an appeal requires official notes. Please provide your ruling.');
+            return;
+        }
+        if (!confirm(`You are about to ${decision === 'APPROVE' ? 'UPHOLD THE APPEAL and approve' : 'DISMISS THE APPEAL and reject'} the registration of "${app?.proposedName}". This is a final ministerial ruling. Continue?`)) return;
+
+        setProcessing(true);
+        try {
+            const res = await fetch('/api/registration/minister/appeals', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ applicationId: params.id, decision, notes }),
+            });
+
+            if (res.ok) {
+                alert(`Appeal ${decision === 'APPROVE' ? 'upheld' : 'dismissed'} — ministerial ruling recorded.`);
+                const appRes = await fetch(`/api/registration/applications/${params.id}`);
+                if (appRes.ok) setApp(await appRes.json());
+                setNotes('');
+                const histRes = await fetch(`/api/regulator/applications/${params.id}/history`).catch(() => null);
+                if (histRes?.ok) setHistory(await histRes.json());
+            } else {
+                const err = await res.json();
+                alert(err.error || 'Failed to process appeal ruling.');
+            }
+        } catch (e: any) {
+            alert(e.message || 'An unexpected error occurred.');
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    const getStatusBadge = (status: string) => {
+        const colors: Record<string, string> = {
+            rejected: 'bg-red-100 text-red-800 border-red-300',
+            appeal_submitted: 'bg-amber-100 text-amber-800 border-amber-300',
+            appeal_approved: 'bg-green-100 text-green-800 border-green-300',
+            appeal_rejected: 'bg-rose-100 text-rose-800 border-rose-300',
+            under_review: 'bg-blue-100 text-blue-800 border-blue-300',
+        };
+        return colors[status.toLowerCase()] || 'bg-gray-100 text-gray-800 border-gray-300';
+    };
+
+    if (loading) return (
+        <div className="p-8 flex items-center justify-center min-h-screen">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                <p className="text-gray-500 font-medium">Loading appeal details...</p>
+            </div>
+        </div>
+    );
+
+    if (error || !app) return (
+        <div className="p-8 max-w-3xl mx-auto">
+            <div className="glass-panel p-8 bg-rose-50 text-rose-700 text-center rounded-3xl">
+                <p className="text-xl font-bold mb-4">{error || 'Appeal not found.'}</p>
+                <Link href="/minister/appeals" className="btn btn-primary">← Back to Appeals</Link>
+            </div>
+        </div>
+    );
+
+    const isDecided = ['appeal_approved', 'appeal_rejected'].includes(app.status.toLowerCase());
+
+    return (
+        <div className="p-8 max-w-5xl mx-auto space-y-8 animate-fade-in-up">
+            {/* Header */}
+            <div className="flex items-center gap-4">
+                <Link href="/minister/appeals" className="p-2 hover:bg-gray-100 rounded-xl transition-colors">
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                </Link>
+                <div className="flex-1">
+                    <div className="text-xs font-black text-amber-600 uppercase tracking-widest mb-1">⚖️ Ministerial Appeal — Adjudication Required</div>
+                    <h1 className="text-3xl font-black text-gray-900 tracking-tight">{app.proposedName}</h1>
+                    <div className="flex items-center gap-3 mt-1">
+                        {app.fileNumber && <span className="text-sm font-bold text-gray-500">File #{app.fileNumber}</span>}
+                        <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${getStatusBadge(app.status)}`}>
+                            {app.status.replace(/_/g, ' ')}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Context Banner */}
+            <div className="glass-panel p-5 bg-amber-50 border border-amber-200 rounded-2xl">
+                <div className="flex items-start gap-3">
+                    <span className="text-2xl">⚠️</span>
+                    <div>
+                        <p className="font-bold text-amber-900">What is this?</p>
+                        <p className="text-sm text-amber-800 mt-1">
+                            This society&apos;s registration was previously rejected. The applicant has formally appealed that decision.
+                            As Ministerial Delegate, you have the authority to <strong>uphold the appeal</strong> (approving registration) or <strong>dismiss the appeal</strong> (confirming the rejection).
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Society Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="glass-panel p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <span className="p-2 bg-indigo-100 text-indigo-700 rounded-lg text-sm">🏛️</span>
+                        Society Details
+                    </h3>
+                    <dl className="space-y-4">
+                        <div>
+                            <dt className="text-xs font-bold text-gray-500 uppercase tracking-wider">Application Type</dt>
+                            <dd className="mt-1 font-semibold text-gray-900 capitalize">{app.applicationType.replace(/_/g, ' ')}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-bold text-gray-500 uppercase tracking-wider">Physical Address</dt>
+                            <dd className="mt-1 font-semibold text-gray-900">{app.physicalAddress}</dd>
+                        </div>
+                        {app.rejectionReasons && (
+                            <div>
+                                <dt className="text-xs font-bold text-red-500 uppercase tracking-wider">Original Rejection Reason</dt>
+                                <dd className="mt-1 p-3 bg-red-50 rounded-xl text-sm text-red-800 font-medium border border-red-100">{app.rejectionReasons}</dd>
+                            </div>
+                        )}
+                    </dl>
+                </div>
+
+                <div className="glass-panel p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                        <span className="p-2 bg-purple-100 text-purple-700 rounded-lg text-sm">👤</span>
+                        Lead Appellant
+                    </h3>
+                    <dl className="space-y-4">
+                        <div>
+                            <dt className="text-xs font-bold text-gray-500 uppercase tracking-wider">Name</dt>
+                            <dd className="mt-1 font-semibold text-gray-900">{app.primaryContactName}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-bold text-gray-500 uppercase tracking-wider">Email</dt>
+                            <dd className="mt-1 font-semibold text-gray-900">{app.primaryContactEmail}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-bold text-gray-500 uppercase tracking-wider">Phone</dt>
+                            <dd className="mt-1 font-semibold text-gray-900">{app.primaryContactPhone}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-bold text-gray-500 uppercase tracking-wider">Appeal Submitted</dt>
+                            <dd className="mt-1 font-semibold text-gray-900">{new Date(app.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+
+            {/* Full Review Trail */}
+            {history.length > 0 && (
+                <div className="glass-panel p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-4">📋 Complete Case History</h3>
+                    <div className="space-y-4">
+                        {history.map((entry, idx) => (
+                            <div key={entry.id} className="flex gap-4 relative">
+                                {idx !== history.length - 1 && (
+                                    <div className="absolute left-4 top-8 bottom-0 w-0.5 bg-gray-100"></div>
+                                )}
+                                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-amber-100 border-2 border-amber-400 flex items-center justify-center z-10">
+                                    <div className="w-2 h-2 rounded-full bg-amber-600"></div>
+                                </div>
+                                <div className="flex-1 pb-4">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <div>
+                                            <span className="font-bold text-gray-900 capitalize">
+                                                {entry.action?.replace(/_/g, ' ') || 'Status Change'}
+                                            </span>
+                                            <span className="text-sm text-gray-500 ml-2">
+                                                {entry.fromStatus && `${entry.fromStatus} → `}{entry.toStatus}
+                                            </span>
+                                        </div>
+                                        <span className="text-xs text-gray-400">{new Date(entry.changedAt).toLocaleString()}</span>
+                                    </div>
+                                    <div className="text-sm text-gray-500">By: {entry.changedBy?.name}</div>
+                                    {entry.notes && (
+                                        <div className="mt-2 p-3 bg-gray-50 rounded-xl text-sm text-gray-700 border border-gray-100">{entry.notes}</div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Ministerial Ruling Panel */}
+            <div className="glass-panel p-8 bg-gradient-to-br from-indigo-950/5 to-amber-50/30 border-t-4 border-amber-500 relative overflow-hidden">
+                <div className="absolute -right-16 -bottom-16 w-64 h-64 bg-amber-100 rounded-full blur-3xl opacity-20"></div>
+                <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-2">
+                        <span className="text-3xl">⚖️</span>
+                        <h3 className="text-2xl font-black text-gray-900">Ministerial Ruling on Appeal</h3>
+                    </div>
+                    <p className="text-gray-500 text-sm mb-6">Your ruling is the final word. It supersedes all prior decisions and is binding.</p>
+
+                    {isDecided ? (
+                        <div className={`border-2 border-dashed rounded-2xl p-8 text-center ${app.status.toLowerCase() === 'appeal_approved' ? 'bg-green-50 border-green-400' : 'bg-red-50 border-red-300'}`}>
+                            <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-4xl shadow-xl ${app.status.toLowerCase() === 'appeal_approved' ? 'bg-green-600' : 'bg-red-500'}`}>
+                                {app.status.toLowerCase() === 'appeal_approved' ? '✓' : '✕'}
+                            </div>
+                            <h4 className={`text-2xl font-black mb-2 ${app.status.toLowerCase() === 'appeal_approved' ? 'text-green-800' : 'text-red-800'}`}>
+                                Appeal {app.status.toLowerCase() === 'appeal_approved' ? 'Upheld — Registration Approved' : 'Dismissed — Rejection Confirmed'}
+                            </h4>
+                            <p className={`font-medium ${app.status.toLowerCase() === 'appeal_approved' ? 'text-green-700' : 'text-red-700'}`}>
+                                The ministerial ruling has been recorded and is now part of the permanent record.
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="mb-6">
+                                <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wider">
+                                    Ministerial Ruling Statement <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    className="w-full rounded-2xl border border-gray-200 bg-white/70 p-4 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none h-32"
+                                    placeholder="State the ministerial ruling and rationale. Include grounds for upholding or dismissing the appeal. This will be permanently recorded..."
+                                    value={notes}
+                                    onChange={(e) => setNotes(e.target.value)}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => handleDecision('APPROVE')}
+                                    disabled={processing}
+                                    className="btn py-4 text-lg font-black bg-green-600 hover:bg-green-700 text-white shadow-xl shadow-green-100 disabled:opacity-40 disabled:cursor-not-allowed transition-all hover:-translate-y-0.5 active:scale-95"
+                                >
+                                    {processing ? 'Processing...' : '✅ Uphold Appeal (Approve Registration)'}
+                                </button>
+                                <button
+                                    onClick={() => handleDecision('REJECT')}
+                                    disabled={processing}
+                                    className="btn py-4 text-lg font-black bg-white border-2 border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                                >
+                                    ❌ Dismiss Appeal (Confirm Rejection)
+                                </button>
+                            </div>
+                            <p className="mt-4 text-center text-xs text-gray-400 italic">
+                                * Your ruling is the final administrative decision. The applicant will be notified of the outcome.
+                            </p>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}

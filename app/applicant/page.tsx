@@ -24,13 +24,11 @@ export default function ApplicantDashboard() {
     useEffect(() => {
         const fetchApplications = async () => {
             try {
-                // Fetch applications for this user
-                // For simplicity, we'll fetch from a generic list or a user-specific endpoint
-                const res = await fetch('/api/registration/applications');
+                // /api/applications/list filters by authenticated user.id server-side
+                const res = await fetch('/api/applications/list');
                 if (res.ok) {
                     const data = await res.json();
-                    // Filter for user's own if the API doesn't handle it
-                    setApplications(data.filter((app: any) => app.applicantUserId === user?.id));
+                    setApplications(data);
                 }
             } catch (error) {
                 console.error('Error fetching applications:', error);
@@ -173,8 +171,8 @@ export default function ApplicantDashboard() {
                                     return (
                                         <div key={idx} className="flex flex-col items-center gap-4 group">
                                             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${stage.status === 'completed' ? 'bg-green-100 text-green-600' :
-                                                    stage.status === 'current' ? 'bg-primary-600 text-white shadow-lg shadow-primary-200 scale-110' :
-                                                        'bg-gray-100 text-gray-400'
+                                                stage.status === 'current' ? 'bg-primary-600 text-white shadow-lg shadow-primary-200 scale-110' :
+                                                    'bg-gray-100 text-gray-400'
                                                 }`}>
                                                 <Icon size={24} />
                                             </div>

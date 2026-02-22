@@ -150,9 +150,21 @@ export default function MemberDashboard() {
                                 ({data.accounts.activeLoan?.daysUntilPayment || 'N/A'} days)
                             </div>
                             <div className="mt-3">
-                                <div className="text-xs text-gray-600 mb-1">Deducted from salary</div>
+                                <div className="flex justify-between text-xs text-gray-600 mb-1">
+                                    <span>Deducted from salary</span>
+                                    {data.accounts.activeLoan?.daysUntilPayment !== undefined && (
+                                        <span className="font-semibold">{data.accounts.activeLoan.daysUntilPayment}d remaining</span>
+                                    )}
+                                </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
-                                    <div className="bg-warning-500 h-2 rounded-full" style={{ width: '65%' }}></div>
+                                    <div
+                                        className="bg-warning-500 h-2 rounded-full transition-all duration-500"
+                                        style={{
+                                            width: data.accounts.activeLoan?.daysUntilPayment !== undefined
+                                                ? `${Math.min(100, Math.max(5, Math.round((30 - data.accounts.activeLoan.daysUntilPayment) / 30 * 100)))}%`
+                                                : '0%'
+                                        }}
+                                    ></div>
                                 </div>
                             </div>
                         </div>

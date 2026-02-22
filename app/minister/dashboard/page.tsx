@@ -10,12 +10,23 @@ interface MinisterStats {
     regulatoryAlerts: number;
 }
 
+interface SectorData {
+    complianceRate: number;
+    newApps: number;
+    revoked: number;
+}
+
 export default function MinisterDashboard() {
     const [stats, setStats] = useState<MinisterStats>({
         pendingAppeals: 0,
         pendingFinalApprovals: 0,
-        totalSocieties: 1248,
-        regulatoryAlerts: 3
+        totalSocieties: 0,
+        regulatoryAlerts: 0,
+    });
+    const [sector, setSector] = useState<SectorData>({
+        complianceRate: 0,
+        newApps: 0,
+        revoked: 0,
     });
     const [loading, setLoading] = useState(true);
     const [priorityItems, setPriorityItems] = useState<any[]>([]);
@@ -23,25 +34,62 @@ export default function MinisterDashboard() {
     useEffect(() => {
         async function fetchData() {
             try {
-                // Fetch appeals
-                const resAppeals = await fetch('/api/registration/minister/appeals');
-                const appeals = resAppeals.ok ? await resAppeals.json() : [];
+                // Fetch stats, appeals, and approvals in parallel
+                const [statsRes, resAppeals, resApprovals, regulatorRes] = await Promise.all([
+                    fetch('/api/registration/stats'),
+                    fetch('/api/registration/minister/appeals'),
+                    fetch('/api/registration/applications?status=pending_decision'),
+                    fetch('/api/regulator/dashboard'),
+                ]);
 
-                // Fetch applications pending decision (final authority)
-                const resApprovals = await fetch('/api/registration/applications?status=pending_decision');
+                const appeals = resAppeals.ok ? await resAppeals.json() : [];
                 const approvals = resApprovals.ok ? await resApprovals.json() : [];
 
-                setStats(prev => ({
-                    ...prev,
-                    pendingAppeals: appeals.length,
-                    pendingFinalApprovals: approvals.length,
-                }));
-
+                // Build priority queue
                 const combinedPriority = [
                     ...appeals.map((a: any) => ({ ...a, priorityType: 'Appeal' })),
                     ...approvals.slice(0, 3).map((a: any) => ({ ...a, priorityType: 'Final Approval' }))
                 ];
                 setPriorityItems(combinedPriority);
+
+                // Get total societies from registration stats
+                if (statsRes.ok) {
+                    const statsData = await statsRes.json();
+                    setStats(prev => ({
+                        ...prev,
+                        pendingAppeals: appeals.length,
+                        pendingFinalApprovals: approvals.length,
+                        totalSocieties: statsData.totalRegistered ?? 0,
+                    }));
+                } else {
+                    setStats(prev => ({
+                        ...prev,
+                        pendingAppeals: appeals.length,
+                        pendingFinalApprovals: approvals.length,
+                    }));
+                }
+
+                // Get sector intelligence from regulator dashboard
+                if (regulatorRes.ok) {
+                    const regulatorData = await regulatorRes.json();
+                    const metrics = regulatorData?.data?.metrics;
+                    if (metrics) {
+                        // Compute compliance rate from PAR (inverse relationship)
+                        const complianceRate = metrics.portfolioAtRisk !== undefined
+                            ? Math.max(0, parseFloat((100 - metrics.portfolioAtRisk).toFixed(1)))
+                            : 0;
+                        setSector({
+                            complianceRate,
+                            newApps: approvals.length,
+                            revoked: 0, // revoked count can be extended when a dedicated API is available
+                        });
+                        // Update regulatory alerts based on portfolio at risk
+                        setStats(prev => ({
+                            ...prev,
+                            regulatoryAlerts: metrics.portfolioAtRisk > 5 ? 1 : 0,
+                        }));
+                    }
+                }
 
             } catch (e) {
                 console.error(e);
@@ -163,19 +211,22 @@ export default function MinisterDashboard() {
                         <div className="space-y-4">
                             <div className="flex justify-between items-end">
                                 <span className="text-xs font-bold text-indigo-300">COMPLIANCE RATE</span>
-                                <span className="text-lg font-black italic">94.2%</span>
+                                <span className="text-lg font-black italic">{loading ? '—' : `${sector.complianceRate}%`}</span>
                             </div>
                             <div className="w-full h-2 bg-indigo-950 rounded-full overflow-hidden">
-                                <div className="h-full bg-gradient-to-r from-emerald-400 to-indigo-400 w-[94.2%]"></div>
+                                <div
+                                    className="h-full bg-gradient-to-r from-emerald-400 to-indigo-400 transition-all duration-1000"
+                                    style={{ width: loading ? '0%' : `${sector.complianceRate}%` }}
+                                ></div>
                             </div>
                             <div className="pt-4 grid grid-cols-2 gap-3">
                                 <div className="p-3 bg-white/10 rounded-xl">
-                                    <div className="text-[10px] text-indigo-300 font-bold">NEW APPS</div>
-                                    <div className="text-xl font-black">+12</div>
+                                    <div className="text-[10px] text-indigo-300 font-bold">PENDING APPS</div>
+                                    <div className="text-xl font-black">{loading ? '—' : `+${sector.newApps}`}</div>
                                 </div>
                                 <div className="p-3 bg-white/10 rounded-xl">
-                                    <div className="text-[10px] text-indigo-300 font-bold">REVOKED</div>
-                                    <div className="text-xl font-black">2</div>
+                                    <div className="text-[10px] text-indigo-300 font-bold">TOTAL SOCIETIES</div>
+                                    <div className="text-xl font-black">{loading ? '—' : stats.totalSocieties.toLocaleString()}</div>
                                 </div>
                             </div>
                         </div>

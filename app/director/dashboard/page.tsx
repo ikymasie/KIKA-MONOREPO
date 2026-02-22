@@ -15,7 +15,7 @@ export default function DirectorDashboard() {
         pendingApprovals: 0,
         pendingAppeals: 0,
         totalRegistered: 0,
-        policyAnomalies: 2
+        policyAnomalies: 0,
     });
     const [loading, setLoading] = useState(true);
     const [pendingApps, setPendingApps] = useState<any[]>([]);
@@ -23,20 +23,33 @@ export default function DirectorDashboard() {
     useEffect(() => {
         async function fetchData() {
             try {
-                // Fetch applications pending decision
-                const resApps = await fetch('/api/registration/applications?status=pending_decision');
-                const apps = resApps.ok ? await resApps.json() : [];
+                // Fetch real stats from the dedicated stats endpoint
+                const [statsRes, appsRes] = await Promise.all([
+                    fetch('/api/registration/stats'),
+                    fetch('/api/registration/applications?status=pending_decision'),
+                ]);
 
-                // Fetch appeals
-                const resAppeals = await fetch('/api/registration/appeals');
-                const appeals = resAppeals.ok ? await resAppeals.json() : [];
-
+                const apps = appsRes.ok ? await appsRes.json() : [];
                 setPendingApps(apps);
-                setStats(prev => ({
-                    ...prev,
-                    pendingApprovals: apps.length,
-                    pendingAppeals: appeals.length,
-                }));
+
+                if (statsRes.ok) {
+                    const statsData = await statsRes.json();
+                    setStats({
+                        pendingApprovals: statsData.pendingApprovals ?? apps.length,
+                        pendingAppeals: statsData.pendingAppeals ?? 0,
+                        totalRegistered: statsData.totalRegistered ?? 0,
+                        policyAnomalies: statsData.policyAnomalies ?? 0,
+                    });
+                } else {
+                    // Fallback to individual counts
+                    const appealsRes = await fetch('/api/registration/appeals');
+                    const appeals = appealsRes.ok ? await appealsRes.json() : [];
+                    setStats(prev => ({
+                        ...prev,
+                        pendingApprovals: apps.length,
+                        pendingAppeals: appeals.length,
+                    }));
+                }
             } catch (e) {
                 console.error(e);
             } finally {
@@ -78,7 +91,7 @@ export default function DirectorDashboard() {
                 <div className="glass-panel p-6 border-l-4 border-indigo-500 relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
                     <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:scale-125 transition-transform">🏛️</div>
                     <div className="text-xs font-bold text-indigo-700 uppercase tracking-widest">Registered Societies</div>
-                    <div className="text-4xl font-black text-gray-900 mt-2">1,248</div>
+                    <div className="text-4xl font-black text-gray-900 mt-2">{loading ? '—' : stats.totalRegistered.toLocaleString()}</div>
                     <div className="mt-2 text-xs text-indigo-600 font-semibold cursor-pointer hover:underline">Open Registry →</div>
                 </div>
             </div>
