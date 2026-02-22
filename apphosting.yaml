@@ -17,7 +17,7 @@ env:
   - variable: DATABASE_USERNAME
     value: kika-admin
   - variable: DATABASE_PASSWORD
-    secret: DATABASE_PASSWORD
+    value: Kika@2026
   - variable: DATABASE_NAME
     value: kikadb
   - variable: DATABASE_SSL
@@ -43,7 +43,7 @@ env:
   - variable: EMAIL_USER
     value: ""
   - variable: EMAIL_PASSWORD
-    secret: EMAIL_PASSWORD
+    value: ""
   - variable: EMAIL_FROM
     value: noreply@kika.bw
 
@@ -69,7 +69,7 @@ env:
 
   # Firebase Admin SDK Credentials
   - variable: FIREBASE_ADMIN_CREDENTIALS
-    secret: FIREBASE_ADMIN_CREDENTIALS
+    value: '{"type":"service_account","project_id":"kika-bw","private_key_id":"033f0486573e3114818331fd81cc570ce18f5393","private_key":"-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC0MLVy/BQQ+AAt\nPCqBZUDpPhl3Ega7dM5srXjtHQ95/bu9wznQE+CKcV/DPa7/7bUrop8uOr1LPzDp\nhP2DArPlC1hkv2VRdUN6r6AJ//Po3jLBqmVXq/N5LA/YmCPhaYruDGeeQfgrLsGk\nx6TdS0nP/AJzYNiok3NzBUqZzxAlLETvsAgLJIAW5pps5w8KDQQ3DtY7+IQrvMjS\n0EFaYuWe6PT6UXc5bXLmdSGftiIv0llEszPsPTzgUxRvgX5wVm4jFq4tWVbI0Uev\nfIiw37Rn3X2f9ZKNbt4XUPmO/eZlSAZx1R6/As6QVInuA9+yX69aUuc4gR5GuHGQ\niEWY8mj7AgMBAAECggEACRMU6EQKrKoYtC5+A4M6aCSw+p6lSSaCSNXZq7NVdrLR\nFCbzT+fYXJCGHpqKKChsAdUQSC88HkCB8Zi5fbISpjvSiUxcSWRq8BBNMoO54GXk\nT32J2gb2XYlbCPDsiasbjI6CX2V6Ho6dwPMu+dgTUQ6jfvUHJEI8w7OmBKX5ba29\nz0Lz073RgPRBb9W7o8pIZtMuGLjzq/tZc4YFlypeeNWEvWGcPa8YZfUT1U5+8Lp3\nnHodGJPcqGgAEoXm9h0W/5rTdq7MggY3lLUFNYUWaaVZs4yLdDa9x4sOB6vIF42k\n0Gktfc5SpgBKNz4iS/tNLaKerj+e+9kjC0qlcVUX8QKBgQDvB/0qrdr3oq7wzaaD\nsYuwkHWCmIgI0jWYCgeH5AG8PVMasgjlbehcbYTUteF5m4Yb3qLKxwUsagyO9Xpp\nAUgzPUVSDksBfIrZLfRO0KCg3lm7cZWLdx7RdfCopA5EStJMUCSpbwgNYiCXGfze\n/O1g3mMzOBdXMJ1a6XnS8P6UsQKBgQDA+2Eu1JHDzt6gqArfOroC3AjA5RfzYpn3\nW6dTBk19Dpe1XqIva8ehnj+0FR/qTCG1WxJEP7Xa2DARelcDv3xI4gfhzVxZCOSx\nXz2xjdm0lKnasv2PWNjzSJ35SqonfMrxAP8njkcespIYLDqyNH0dRlEFfijqiRXI\noPPxDFszawKBgA9cwBSiH9SSjBPF49HK82NhpWvDSdrnR7KB0oIVUVc7yb+JebDl\nI23tTAAvwFIEgNYBtQy7RcXY+v2lITzmbDF+2pmveXqa+oGCxpTaK7irEbFOV4Ij\nIcPshI8SHCifdmyZKgIJtMbHa7jKXsomD0uOf2mnTTi5UyOopb+85V/BAoGAQunm\n9Jn4QPDF+ObLfkOao8svrdLBzz5tLHu3NO6Gh8o7iEPb8J1qhvucExEQE+l59qwx\nVUDSCaPUZvsImOAYdB0LppvSXXzb7zSa66nHxvmVO6O8j6u67gBL5lihTzfSFmbG\nEi0fM+GvDnqnj4rrpu7uwPzRqyEFUJ+edgJWzSkCgYEA3DSkxTdo4REHy7Jd/jiV\nhXjdqFQPojs+Riqwd9aUKz5oJ0ebhFGkU/DNqq/E6fdwTPaD6uO4qEepI9PDdVpx\nIAaeJgAYdtmjtVHkeD9/5RMcNAWyIcpuvSE1HccKeeYw42bEMN+j4s+EnNoqk1+n\n1Z4qpP/6DYIbKJKBobpN9t0=\n-----END PRIVATE KEY-----\n","client_email":"firebase-adminsdk-fbsvc@kika-bw.iam.gserviceaccount.com","client_id":"113319993222893006881","auth_uri":"https://accounts.google.com/o/oauth2/auth","token_uri":"https://oauth2.googleapis.com/token","auth_provider_x509_cert_url":"https://www.googleapis.com/oauth2/v1/certs","client_x509_cert_url":"https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40kika-bw.iam.gserviceaccount.com","universe_domain":"googleapis.com"}'
 
   # Firebase Client-Side Configuration (public)
   - variable: NEXT_PUBLIC_FIREBASE_API_KEY
@@ -89,9 +89,9 @@ env:
 
   # SMS Portal Configuration
   - variable: SMS_PORTAL_CLIENT_ID
-    secret: SMS_PORTAL_CLIENT_ID
+    value: 1463fda2-2835-4cc2-a443-1954ddfc965b
   - variable: SMS_PORTAL_API_SECRET
-    secret: SMS_PORTAL_API_SECRET
+    value: c97d097d-b755-47ba-b8c0-8fe3fe4b53a2
   - variable: SMS_PORTAL_API_URL
     value: https://rest.smsportal.com/v1
 
@@ -103,6 +103,6 @@ env:
   - variable: SMTP_USER
     value: a21b4b001@smtp-brevo.com
   - variable: SMTP_PASS
-    secret: SMTP_PASS
+    value: xsmtpsib-4bfdc6d64bc5e41c18aa3281369d38e24c3e07fb3c2665d58cc3bffb582229f9-gAUhTkmqmKDt2Wco
   - variable: SMTP_FROM
     value: admin@dl-africa.com
