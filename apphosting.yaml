@@ -33,7 +33,7 @@ env:
   - variable: APP_NAME
     value: KIKA Platform
   - variable: APP_URL
-    value: https://kika-bw.web.app
+    value: https://kika--kika-bw.us-central1.hosted.app
 
   # Email Configuration
   - variable: EMAIL_HOST
