@@ -1,5 +1,3 @@
-import { UserRole, UserStatus } from '../entities/User';
-import { SocietyApplication, ApplicationStatus } from '../entities/SocietyApplication';
 import { query } from '../db/query';
 import { sendEmail, generateWorkflowNotificationEmail } from '../../lib/email';
 
@@ -8,8 +6,8 @@ export class NotificationService {
      * Send notification to responsible users when application moves to a new stage
      */
     static async notifyWorkflowStage(
-        application: SocietyApplication,
-        newStatus: ApplicationStatus
+        application: any,
+        newStatus: string
     ): Promise<void> {
         try {
             const [[settings]] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
@@ -35,7 +33,7 @@ export class NotificationService {
 
             const responsibleUsers = await query(
                 'SELECT * FROM users WHERE role = ? AND status = ?',
-                [responsibleRole, UserStatus.ACTIVE]
+                [responsibleRole, 'active']
             ) as any[];
 
             if (responsibleUsers.length === 0) {
@@ -74,48 +72,46 @@ export class NotificationService {
     /**
      * Map ApplicationStatus to workflow config key
      */
-    private static getStageKey(status: ApplicationStatus): string | null {
-        const mapping: Record<ApplicationStatus, string | null> = {
-            [ApplicationStatus.DRAFT]: null,
-            [ApplicationStatus.SUBMITTED]: 'initial_review',
-            [ApplicationStatus.INCOMPLETE]: null,
-            [ApplicationStatus.UNDER_REVIEW]: 'under_review',
-            [ApplicationStatus.SECURITY_VETTING]: 'security_vetting',
-            [ApplicationStatus.SECURITY_FAILED]: null,
-            [ApplicationStatus.LEGAL_REVIEW]: 'legal_review',
-            [ApplicationStatus.LEGAL_REJECTED]: null,
-            [ApplicationStatus.PENDING_DECISION]: 'final_decision',
-            [ApplicationStatus.APPROVED]: null,
-            [ApplicationStatus.REJECTED]: null,
-            [ApplicationStatus.APPEAL_LODGED]: 'appeal_review',
-            [ApplicationStatus.APPEAL_APPROVED]: null,
-            [ApplicationStatus.APPEAL_REJECTED]: null,
-        };
-
-        return mapping[status] || null;
+    private static getStageKey(status: string): string | null {
+        switch (status) {
+            case 'draft': return null;
+            case 'submitted': return 'initial_review';
+            case 'incomplete': return null;
+            case 'under_review': return 'under_review';
+            case 'security_vetting': return 'security_vetting';
+            case 'security_failed': return null;
+            case 'legal_review': return 'legal_review';
+            case 'legal_rejected': return null;
+            case 'pending_decision': return 'final_decision';
+            case 'approved': return null;
+            case 'rejected': return null;
+            case 'appeal_lodged': return 'appeal_review';
+            case 'appeal_approved': return null;
+            case 'appeal_rejected': return null;
+            default: return null;
+        }
     }
 
     /**
      * Get human-readable stage name
      */
-    private static getStageName(status: ApplicationStatus): string {
-        const names: Record<ApplicationStatus, string> = {
-            [ApplicationStatus.DRAFT]: 'Draft',
-            [ApplicationStatus.SUBMITTED]: 'Initial Review',
-            [ApplicationStatus.INCOMPLETE]: 'Incomplete',
-            [ApplicationStatus.UNDER_REVIEW]: 'Under Review',
-            [ApplicationStatus.SECURITY_VETTING]: 'Security Vetting',
-            [ApplicationStatus.SECURITY_FAILED]: 'Security Failed',
-            [ApplicationStatus.LEGAL_REVIEW]: 'Legal Review',
-            [ApplicationStatus.LEGAL_REJECTED]: 'Legal Rejected',
-            [ApplicationStatus.PENDING_DECISION]: 'Final Decision',
-            [ApplicationStatus.APPROVED]: 'Approved',
-            [ApplicationStatus.REJECTED]: 'Rejected',
-            [ApplicationStatus.APPEAL_LODGED]: 'Appeal Review',
-            [ApplicationStatus.APPEAL_APPROVED]: 'Appeal Approved',
-            [ApplicationStatus.APPEAL_REJECTED]: 'Appeal Rejected',
-        };
-
-        return names[status] || status;
+    private static getStageName(status: string): string {
+        switch (status) {
+            case 'draft': return 'Draft';
+            case 'submitted': return 'Initial Review';
+            case 'incomplete': return 'Incomplete';
+            case 'under_review': return 'Under Review';
+            case 'security_vetting': return 'Security Vetting';
+            case 'security_failed': return 'Security Failed';
+            case 'legal_review': return 'Legal Review';
+            case 'legal_rejected': return 'Legal Rejected';
+            case 'pending_decision': return 'Final Decision';
+            case 'approved': return 'Approved';
+            case 'rejected': return 'Rejected';
+            case 'appeal_lodged': return 'Appeal Review';
+            case 'appeal_approved': return 'Appeal Approved';
+            case 'appeal_rejected': return 'Appeal Rejected';
+            default: return status;
+        }
     }
 }

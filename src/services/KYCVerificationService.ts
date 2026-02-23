@@ -1,5 +1,3 @@
-import { KYC } from '../entities/KYC';
-import { Member } from '../entities/Member';
 import { query, execute } from '../db/query';
 
 export interface KYCVerificationRequest {
@@ -49,7 +47,7 @@ export class KYCVerificationService {
     /**
      * Verify a specific KYC document
      */
-    static async verifyKYCDocument(request: KYCVerificationRequest): Promise<KYC> {
+    static async verifyKYCDocument(request: KYCVerificationRequest): Promise<any> {
         const [[kyc]] = await query('SELECT * FROM kyc WHERE id = ? LIMIT 1', [request.kycId]) as any;
 
         if (!kyc) {
@@ -90,7 +88,7 @@ export class KYCVerificationService {
 
         const [[updatedKyc]] = await query('SELECT * FROM kyc WHERE id = ? LIMIT 1', [request.kycId]) as any;
 
-        return updatedKyc as KYC;
+        return updatedKyc;
     }
 
     /**
@@ -120,7 +118,7 @@ export class KYCVerificationService {
     /**
      * Get KYC details by ID
      */
-    static async getKYCById(kycId: string): Promise<KYC | null> {
+    static async getKYCById(kycId: string): Promise<any | null> {
         const [[kyc]] = await query(`
             SELECT k.*, m.firstName, m.lastName, t.name as tenantName 
             FROM kyc k
@@ -140,7 +138,7 @@ export class KYCVerificationService {
                 lastName: kyc.lastName,
                 tenant: kyc.tenantName ? { name: kyc.tenantName } : undefined
             } : undefined
-        } as KYC;
+        } as any;
     }
 
     /**

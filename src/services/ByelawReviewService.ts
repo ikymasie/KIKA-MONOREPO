@@ -1,11 +1,9 @@
-import { ByelawReview, ByelawReviewStatus } from '@/src/entities/ByelawReview';
-import { Tenant } from '@/src/entities/Tenant';
 import { query, queryOne, execute } from '@/src/db/query';
 import { RowDataPacket } from 'mysql2/promise';
 
 export interface ByelawReviewSubmission {
     reviewId: string;
-    status: ByelawReviewStatus;
+    status: string;
     notes: string;
     reviewedBy: string;
 }
@@ -14,7 +12,7 @@ export class ByelawReviewService {
     /**
      * Get all pending bye-laws reviews
      */
-    static async getPendingReviews(limit: number = 50): Promise<ByelawReview[]> {
+    static async getPendingReviews(limit: number = 50): Promise<any[]> {
         const results = await query(
             `SELECT r.*, t.name as tenantName 
              FROM byelaw_reviews r 
@@ -22,19 +20,19 @@ export class ByelawReviewService {
              WHERE r.status IN (?, ?) 
              ORDER BY r.submittedAt ASC 
              LIMIT ?`,
-            [ByelawReviewStatus.PENDING, ByelawReviewStatus.UNDER_REVIEW, limit]
+            ['pending', 'under_review', limit]
         );
 
         return results.map((r: any) => ({
             ...r,
             tenant: r.tenantId ? { id: r.tenantId, name: r.tenantName } : undefined
-        })) as ByelawReview[];
+        })) as any[];
     }
 
     /**
      * Get bye-law review by ID
      */
-    static async getReviewById(reviewId: string): Promise<ByelawReview | null> {
+    static async getReviewById(reviewId: string): Promise<any | null> {
         const [[review]] = await query(`
             SELECT r.*, t.name as tenantName, u.firstName as reviewerFirstName, u.lastName as reviewerLastName 
             FROM byelaw_reviews r 
@@ -49,13 +47,13 @@ export class ByelawReviewService {
             ...review,
             tenant: review.tenantId ? { id: review.tenantId, name: review.tenantName } : undefined,
             reviewer: review.reviewedBy ? { id: review.reviewedBy, firstName: review.reviewerFirstName, lastName: review.reviewerLastName } : undefined
-        } as ByelawReview;
+        } as any;
     }
 
     /**
      * Submit a bye-laws review
      */
-    static async submitReview(submission: ByelawReviewSubmission): Promise<ByelawReview> {
+    static async submitReview(submission: ByelawReviewSubmission): Promise<any> {
         const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [submission.reviewId]) as any;
 
         if (!review) {
@@ -77,7 +75,7 @@ export class ByelawReviewService {
         reviewId: string,
         userId: string,
         notes?: string
-    ): Promise<ByelawReview> {
+    ): Promise<any> {
         const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
 
         if (!review) {
@@ -86,7 +84,7 @@ export class ByelawReviewService {
 
         await execute(
             'UPDATE byelaw_reviews SET status = ?, reviewedBy = ?, reviewNotes = COALESCE(?, reviewNotes), reviewedAt = NOW(), approvalDate = NOW(), updatedAt = NOW() WHERE id = ?',
-            [ByelawReviewStatus.APPROVED, userId, notes || null, reviewId]
+            ['approved', userId, notes || null, reviewId]
         );
 
         return (await this.getReviewById(reviewId))!;
@@ -99,7 +97,7 @@ export class ByelawReviewService {
         reviewId: string,
         userId: string,
         reason: string
-    ): Promise<ByelawReview> {
+    ): Promise<any> {
         const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
 
         if (!review) {
@@ -108,7 +106,7 @@ export class ByelawReviewService {
 
         await execute(
             'UPDATE byelaw_reviews SET status = ?, reviewedBy = ?, rejectionReason = ?, reviewedAt = NOW(), updatedAt = NOW() WHERE id = ?',
-            [ByelawReviewStatus.REJECTED, userId, reason, reviewId]
+            ['rejected', userId, reason, reviewId]
         );
 
         return (await this.getReviewById(reviewId))!;
@@ -121,7 +119,7 @@ export class ByelawReviewService {
         reviewId: string,
         userId: string,
         notes: string
-    ): Promise<ByelawReview> {
+    ): Promise<any> {
         const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
 
         if (!review) {
@@ -130,7 +128,7 @@ export class ByelawReviewService {
 
         await execute(
             'UPDATE byelaw_reviews SET status = ?, reviewedBy = ?, reviewNotes = ?, reviewedAt = NOW(), updatedAt = NOW() WHERE id = ?',
-            [ByelawReviewStatus.REVISION_REQUIRED, userId, notes, reviewId]
+            ['revision_required', userId, notes, reviewId]
         );
 
         return (await this.getReviewById(reviewId))!;
@@ -139,7 +137,7 @@ export class ByelawReviewService {
     /**
      * Get bye-laws review history for a SACCO
      */
-    static async getReviewHistory(tenantId: string): Promise<ByelawReview[]> {
+    static async getReviewHistory(tenantId: string): Promise<any[]> {
         const results = await query(`
             SELECT r.*, u.firstName as reviewerFirstName, u.lastName as reviewerLastName 
             FROM byelaw_reviews r 
@@ -151,7 +149,7 @@ export class ByelawReviewService {
         return results.map((r: any) => ({
             ...r,
             reviewer: r.reviewedBy ? { id: r.reviewedBy, firstName: r.reviewerFirstName, lastName: r.reviewerLastName } : undefined
-        })) as ByelawReview[];
+        })) as any[];
     }
 
     /**
@@ -161,19 +159,19 @@ export class ByelawReviewService {
         const [[totalResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews') as any;
         const totalReviews = Number(totalResult?.count || 0);
 
-        const [[pendingResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', [ByelawReviewStatus.PENDING]) as any;
+        const [[pendingResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['pending']) as any;
         const pending = Number(pendingResult?.count || 0);
 
-        const [[underReviewResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', [ByelawReviewStatus.UNDER_REVIEW]) as any;
+        const [[underReviewResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['under_review']) as any;
         const underReview = Number(underReviewResult?.count || 0);
 
-        const [[approvedResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', [ByelawReviewStatus.APPROVED]) as any;
+        const [[approvedResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['approved']) as any;
         const approved = Number(approvedResult?.count || 0);
 
-        const [[rejectedResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', [ByelawReviewStatus.REJECTED]) as any;
+        const [[rejectedResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['rejected']) as any;
         const rejected = Number(rejectedResult?.count || 0);
 
-        const [[revisionResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', [ByelawReviewStatus.REVISION_REQUIRED]) as any;
+        const [[revisionResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['revision_required']) as any;
         const revisionRequired = Number(revisionResult?.count || 0);
 
         return {

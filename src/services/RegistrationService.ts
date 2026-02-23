@@ -1,6 +1,3 @@
-import { SocietyApplication, ApplicationStatus, ApplicationType } from '../entities/SocietyApplication';
-import { Certificate, CertificateType } from '../entities/Certificate';
-import { AuditAction } from '../entities/AuditLog';
 import { query, execute, withTransaction } from '../db/query';
 import { v4 as uuidv4 } from 'uuid';
 import { RowDataPacket } from 'mysql2/promise';
@@ -9,7 +6,7 @@ export class RegistrationService {
     /**
      * Get applications pending final decision
      */
-    static async getPendingDecisions(): Promise<SocietyApplication[]> {
+    static async getPendingDecisions(): Promise<any[]> {
         const results = await query(`
             SELECT a.*, 
                    u_app.firstName as applicantFirstName, u_app.lastName as applicantLastName,
@@ -23,7 +20,7 @@ export class RegistrationService {
             LEFT JOIN users u_intel ON u_intel.id = a.intelligenceLiaisonId
             WHERE a.status = ?
             ORDER BY a.updatedAt DESC
-        `, [ApplicationStatus.PENDING_DECISION]) as any[];
+        `, ['pending_decision']) as any[];
 
         return results.map(r => ({
             ...r,
@@ -31,7 +28,7 @@ export class RegistrationService {
             registryClerk: r.registryClerkId ? { id: r.registryClerkId, firstName: r.clerkFirstName, lastName: r.clerkLastName } : undefined,
             legalOfficer: r.legalOfficerId ? { id: r.legalOfficerId, firstName: r.legalFirstName, lastName: r.legalLastName } : undefined,
             intelligenceLiaison: r.intelligenceLiaisonId ? { id: r.intelligenceLiaisonId, firstName: r.intelFirstName, lastName: r.intelLastName } : undefined,
-        })) as SocietyApplication[];
+        })) as any[];
     }
 
     /**
@@ -41,12 +38,12 @@ export class RegistrationService {
         applicationId: string,
         registrarId: string,
         notes?: string
-    ): Promise<SocietyApplication> {
+    ): Promise<any> {
         return await withTransaction(async (conn) => {
             const [[application]] = await conn.query('SELECT * FROM society_applications WHERE id = ? LIMIT 1', [applicationId]) as any;
 
             if (!application) throw new Error('Application not found');
-            if (application.status !== ApplicationStatus.PENDING_DECISION) {
+            if (application.status !== 'pending_decision') {
                 throw new Error(`Application in status ${application.status} cannot be approved`);
             }
 
@@ -67,7 +64,7 @@ export class RegistrationService {
                 `UPDATE society_applications 
                  SET status = ?, finalDecisionMakerId = ?, finalDecisionAt = ?, certificateNumber = ?, updatedAt = NOW()
                  WHERE id = ?`,
-                [ApplicationStatus.APPROVED, registrarId, finalDecisionAt, certificateNumber, applicationId]
+                ['approved', registrarId, finalDecisionAt, certificateNumber, applicationId]
             );
 
             // Fetch the freshly updated application
@@ -83,19 +80,19 @@ export class RegistrationService {
             await conn.execute(
                 `INSERT INTO application_workflow_logs (id, applicationId, fromStatus, toStatus, performedBy, notes, metadata, createdAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [workflowLogId, application.id, fromStatus, ApplicationStatus.APPROVED, registrarId, notes || 'Final approval granted.', JSON.stringify(workflowMetadata)]
+                [workflowLogId, application.id, fromStatus, 'approved', registrarId, notes || 'Final approval granted.', JSON.stringify(workflowMetadata)]
             );
 
             // Log audit
             const auditLogId = uuidv4();
-            const auditNewValues = { status: ApplicationStatus.APPROVED, registrationNumber: certificateNumber };
+            const auditNewValues = { status: 'approved', registrationNumber: certificateNumber };
             await conn.execute(
                 `INSERT INTO audit_logs (id, userId, userEmail, action, entityType, entityId, description, newValues, createdAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [auditLogId, registrarId, registrar.email, AuditAction.APPROVE, 'SocietyApplication', application.id, `Registrar approved society application: ${application.proposedName}`, JSON.stringify(auditNewValues)]
+                [auditLogId, registrarId, registrar.email, 'APPROVE', 'SocietyApplication', application.id, `Registrar approved society application: ${application.proposedName}`, JSON.stringify(auditNewValues)]
             );
 
-            return savedApp as SocietyApplication;
+            return savedApp;
         });
     }
 
@@ -105,12 +102,12 @@ export class RegistrationService {
     static async issueCertificate(
         applicationId: string,
         issuerId: string
-    ): Promise<Certificate> {
+    ): Promise<any> {
         return await withTransaction(async (conn) => {
             const [[application]] = await conn.query('SELECT * FROM society_applications WHERE id = ? LIMIT 1', [applicationId]) as any;
 
             if (!application) throw new Error('Application not found');
-            if (application.status !== ApplicationStatus.APPROVED && application.status !== ApplicationStatus.APPEAL_APPROVED) {
+            if (application.status !== 'approved' && application.status !== 'appeal_approved') {
                 throw new Error('Application must be approved before issuing certificate');
             }
 
@@ -123,7 +120,7 @@ export class RegistrationService {
 
             // Check if certificate already exists
             const [[existingCert]] = await conn.query('SELECT * FROM certificates WHERE certificateNumber = ? LIMIT 1', [application.certificateNumber]) as any;
-            if (existingCert) return existingCert as Certificate;
+            if (existingCert) return existingCert;
 
             // Create certificate
             const certificateId = uuidv4();
@@ -139,7 +136,7 @@ export class RegistrationService {
             await conn.execute(
                 `INSERT INTO certificates (id, tenantId, certificateNumber, certificateType, issuedDate, issuedBy, metadata, createdAt, updatedAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-                [certificateId, application.id, application.certificateNumber, CertificateType.REGISTRATION, now, issuerId, JSON.stringify(metadata)]
+                [certificateId, application.id, application.certificateNumber, 'registration', now, issuerId, JSON.stringify(metadata)]
             );
 
             const [[savedCert]] = await conn.query('SELECT * FROM certificates WHERE id = ? LIMIT 1', [certificateId]) as any;
@@ -155,20 +152,20 @@ export class RegistrationService {
             await conn.execute(
                 `INSERT INTO audit_logs (id, userId, userEmail, action, entityType, entityId, description, createdAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [auditLogId, issuerId, issuer.email, AuditAction.CREATE, 'Certificate', savedCert.id, `Certificate issued for ${application.proposedName} (Reg: ${application.certificateNumber})`]
+                [auditLogId, issuerId, issuer.email, 'CREATE', 'Certificate', savedCert.id, `Certificate issued for ${application.proposedName} (Reg: ${application.certificateNumber})`]
             );
 
-            return savedCert as Certificate;
+            return savedCert;
         });
     }
 
     /**
      * Generate a unique registration number based on type and year
      */
-    private static async generateRegistrationNumber(type: ApplicationType, conn?: any): Promise<string> {
-        const prefix = type === ApplicationType.SACCOS ? 'SACCOS' :
-            type === ApplicationType.BURIAL_SOCIETY ? 'BUR' :
-                type === ApplicationType.RELIGIOUS_SOCIETY ? 'REL' : 'GS';
+    private static async generateRegistrationNumber(type: string, conn?: any): Promise<string> {
+        const prefix = type === 'saccos' ? 'SACCOS' :
+            type === 'burial_society' ? 'BUR' :
+                type === 'religious_society' ? 'REL' : 'GS';
 
         const year = new Date().getFullYear();
         const pattern = `${prefix}-${year}-%`;
@@ -188,7 +185,7 @@ export class RegistrationService {
     /**
      * Get applications currently under appeal
      */
-    static async getPendingAppeals(): Promise<SocietyApplication[]> {
+    static async getPendingAppeals(): Promise<any[]> {
         const results = await query(`
             SELECT a.*, 
                    u_app.firstName as applicantFirstName, u_app.lastName as applicantLastName,
@@ -198,13 +195,13 @@ export class RegistrationService {
             LEFT JOIN users u_dec ON u_dec.id = a.finalDecisionMakerId
             WHERE a.status = ?
             ORDER BY a.appealLodgedAt DESC
-        `, [ApplicationStatus.APPEAL_LODGED]) as any[];
+        `, ['appeal_lodged']) as any[];
 
         return results.map(r => ({
             ...r,
             applicant: r.applicantId ? { id: r.applicantId, firstName: r.applicantFirstName, lastName: r.applicantLastName } : undefined,
             finalDecisionMaker: r.finalDecisionMakerId ? { id: r.finalDecisionMakerId, firstName: r.finalDecisionMakerFirstName, lastName: r.finalDecisionMakerLastName } : undefined,
-        })) as SocietyApplication[];
+        })) as any[];
     }
 
     /**
@@ -215,12 +212,12 @@ export class RegistrationService {
         decisionMakerId: string,
         decision: 'APPROVE' | 'REJECT',
         notes: string
-    ): Promise<SocietyApplication> {
+    ): Promise<any> {
         return await withTransaction(async (conn) => {
             const [[application]] = await conn.query('SELECT * FROM society_applications WHERE id = ? LIMIT 1', [applicationId]) as any;
 
             if (!application) throw new Error('Application not found');
-            if (application.status !== ApplicationStatus.APPEAL_LODGED) {
+            if (application.status !== 'appeal_lodged') {
                 throw new Error('Application is not under appeal');
             }
 
@@ -228,7 +225,7 @@ export class RegistrationService {
             if (!decisionMaker) throw new Error('Decision maker not found');
 
             const fromStatus = application.status;
-            const toStatus = decision === 'APPROVE' ? ApplicationStatus.APPEAL_APPROVED : ApplicationStatus.APPEAL_REJECTED;
+            const toStatus = decision === 'APPROVE' ? 'appeal_approved' : 'appeal_rejected';
 
             const appealDecisionAt = new Date();
             let certificateNumber = application.certificateNumber;
@@ -266,21 +263,21 @@ export class RegistrationService {
             await conn.execute(
                 `INSERT INTO audit_logs (id, userId, userEmail, action, entityType, entityId, description, newValues, createdAt)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-                [auditLogId, decisionMakerId, decisionMaker.email, decision === 'APPROVE' ? AuditAction.APPROVE : AuditAction.REJECT, 'SocietyApplication', application.id, `Appeal ${decision.toLowerCase()}d for ${application.proposedName}`, JSON.stringify(auditNewValues)]
+                [auditLogId, decisionMakerId, decisionMaker.email, decision === 'APPROVE' ? 'APPROVE' : 'REJECT', 'SocietyApplication', application.id, `Appeal ${decision.toLowerCase()}d for ${application.proposedName}`, JSON.stringify(auditNewValues)]
             );
 
-            return savedApp as SocietyApplication;
+            return savedApp;
         });
     }
 
     /**
      * Get all registered societies (Official Registry)
      */
-    static async getOfficialRegistry(): Promise<SocietyApplication[]> {
+    static async getOfficialRegistry(): Promise<any[]> {
         return await query(`
             SELECT * FROM society_applications
             WHERE status IN (?, ?)
             ORDER BY certificateIssuedAt DESC
-        `, [ApplicationStatus.APPROVED, ApplicationStatus.APPEAL_APPROVED]) as SocietyApplication[];
+        `, ['approved', 'appeal_approved']) as any[];
     }
 }

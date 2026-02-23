@@ -1,7 +1,4 @@
-import { FieldVisit, FieldVisitStatus } from '../entities/FieldVisit';
-import { Investigation, InvestigationStatus, InvestigationSeverity } from '../entities/Investigation';
-import { FieldReport } from '../entities/FieldReport';
-import { Tenant } from '../entities/Tenant';
+
 import { query, execute } from '../db/query';
 import { v4 as uuidv4 } from 'uuid';
 import { RowDataPacket } from 'mysql2/promise';
@@ -16,16 +13,16 @@ export class FieldOfficerService {
         scheduledDate: Date;
         purpose: string;
         notes?: string;
-    }): Promise<FieldVisit> {
+    }): Promise<any> {
         const id = uuidv4();
         await execute(
             `INSERT INTO field_visits (id, tenantId, officerId, scheduledDate, purpose, notes, status, createdAt, updatedAt) 
              VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-            [id, data.tenantId, data.officerId, data.scheduledDate, data.purpose, data.notes || null, FieldVisitStatus.SCHEDULED]
+            [id, data.tenantId, data.officerId, data.scheduledDate, data.purpose, data.notes || null, 'scheduled']
         );
 
         const [[visit]] = await query('SELECT * FROM field_visits WHERE id = ? LIMIT 1', [id]) as any;
-        return visit as FieldVisit;
+        return visit;
     }
 
     /**
@@ -34,8 +31,8 @@ export class FieldOfficerService {
     static async getVisits(filters: {
         officerId?: string;
         tenantId?: string;
-        status?: FieldVisitStatus;
-    }): Promise<FieldVisit[]> {
+        status?: string;
+    }): Promise<any[]> {
         let sql = `
             SELECT v.*, t.name as tenantName, u.firstName as officerFirstName, u.lastName as officerLastName
             FROM field_visits v
@@ -69,13 +66,13 @@ export class FieldOfficerService {
             ...v,
             tenant: v.tenantId ? { id: v.tenantId, name: v.tenantName } : undefined,
             officer: v.officerId ? { id: v.officerId, firstName: v.officerFirstName, lastName: v.officerLastName } : undefined,
-        })) as FieldVisit[];
+        })) as any[];
     }
 
     /**
      * Update visit status
      */
-    static async updateVisitStatus(visitId: string, status: FieldVisitStatus, actualDate?: Date): Promise<FieldVisit> {
+    static async updateVisitStatus(visitId: string, status: string, actualDate?: Date): Promise<any> {
         if (actualDate) {
             await execute(
                 'UPDATE field_visits SET status = ?, actualDate = ?, updatedAt = NOW() WHERE id = ?',
@@ -89,7 +86,7 @@ export class FieldOfficerService {
         }
 
         const [[visit]] = await query('SELECT * FROM field_visits WHERE id = ? LIMIT 1', [visitId]) as any;
-        return visit as FieldVisit;
+        return visit;
     }
 
     /**
@@ -104,7 +101,7 @@ export class FieldOfficerService {
         generalFindings: string;
         recommendations: string;
         attachments?: string[];
-    }): Promise<FieldReport> {
+    }): Promise<any> {
         const id = uuidv4();
         await execute(
             `INSERT INTO field_reports 
@@ -121,10 +118,9 @@ export class FieldOfficerService {
 
         const [[savedReport]] = await query('SELECT * FROM field_reports WHERE id = ? LIMIT 1', [id]) as any;
 
-        // Update visit status to completed
-        await this.updateVisitStatus(data.visitId, FieldVisitStatus.COMPLETED, new Date());
+        await this.updateVisitStatus(data.visitId, 'completed', new Date());
 
-        return savedReport as FieldReport;
+        return savedReport;
     }
 
     /**
@@ -135,17 +131,17 @@ export class FieldOfficerService {
         officerId: string;
         subject: string;
         description: string;
-        severity: InvestigationSeverity;
-    }): Promise<Investigation> {
+        severity: string;
+    }): Promise<any> {
         const id = uuidv4();
         await execute(
             `INSERT INTO investigations (id, tenantId, officerId, subject, description, severity, status, createdAt, updatedAt)
              VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-            [id, data.tenantId, data.officerId, data.subject, data.description, data.severity, InvestigationStatus.OPEN]
+            [id, data.tenantId, data.officerId, data.subject, data.description, data.severity, 'open']
         );
 
         const [[investigation]] = await query('SELECT * FROM investigations WHERE id = ? LIMIT 1', [id]) as any;
-        return investigation as Investigation;
+        return investigation;
     }
 
     /**
@@ -154,8 +150,8 @@ export class FieldOfficerService {
     static async updateInvestigation(investigationId: string, data: {
         findings?: string;
         recommendations?: string;
-        status?: InvestigationStatus;
-    }): Promise<Investigation> {
+        status?: string;
+    }): Promise<any> {
         let setClauses = [];
         let params = [];
 
@@ -170,7 +166,7 @@ export class FieldOfficerService {
         if (data.status !== undefined) {
             setClauses.push('status = ?');
             params.push(data.status);
-            if (data.status === InvestigationStatus.COMPLETED || data.status === InvestigationStatus.CLOSED) {
+            if (data.status === 'completed' || data.status === 'closed') {
                 setClauses.push('completedAt = NOW()');
             }
         }
@@ -185,7 +181,7 @@ export class FieldOfficerService {
         }
 
         const [[investigation]] = await query('SELECT * FROM investigations WHERE id = ? LIMIT 1', [investigationId]) as any;
-        return investigation as Investigation;
+        return investigation;
     }
 
     /**
@@ -194,8 +190,8 @@ export class FieldOfficerService {
     static async getInvestigations(filters: {
         officerId?: string;
         tenantId?: string;
-        status?: InvestigationStatus;
-    }): Promise<Investigation[]> {
+        status?: string;
+    }): Promise<any[]> {
         let sql = `
             SELECT i.*, t.name as tenantName, u.firstName as officerFirstName, u.lastName as officerLastName
             FROM investigations i
@@ -226,20 +222,20 @@ export class FieldOfficerService {
             ...i,
             tenant: i.tenantId ? { id: i.tenantId, name: i.tenantName } : undefined,
             officer: i.officerId ? { id: i.officerId, firstName: i.officerFirstName, lastName: i.officerLastName } : undefined,
-        })) as Investigation[];
+        })) as any[];
     }
 
     /**
      * Log GPS coordinates for a field visit
      */
-    static async logGeolocation(visitId: string, latitude: number, longitude: number): Promise<FieldVisit> {
+    static async logGeolocation(visitId: string, latitude: number, longitude: number): Promise<any> {
         await execute(
             'UPDATE field_visits SET latitude = ?, longitude = ?, geoLoggedAt = NOW() WHERE id = ?',
             [latitude, longitude, visitId]
         );
 
         const [[visit]] = await query('SELECT * FROM field_visits WHERE id = ? LIMIT 1', [visitId]) as any;
-        return visit as FieldVisit;
+        return visit;
     }
 
     /**
@@ -250,7 +246,7 @@ export class FieldOfficerService {
         tenantId?: string;
         startDate: Date;
         endDate: Date;
-    }): Promise<FieldVisit[]> {
+    }): Promise<any[]> {
         let sql = `
             SELECT v.*, t.name as tenantName, u.firstName as officerFirstName, u.lastName as officerLastName
             FROM field_visits v
@@ -276,6 +272,6 @@ export class FieldOfficerService {
             ...v,
             tenant: v.tenantId ? { id: v.tenantId, name: v.tenantName } : undefined,
             officer: v.officerId ? { id: v.officerId, firstName: v.officerFirstName, lastName: v.officerLastName } : undefined,
-        })) as FieldVisit[];
+        })) as any[];
     }
 }

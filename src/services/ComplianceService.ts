@@ -1,14 +1,4 @@
-import { ComplianceScore, ComplianceRating } from '@/src/entities/ComplianceScore';
-import { ComplianceIssue, ComplianceIssueStatus } from '@/src/entities/ComplianceIssue';
-import { RegulatoryAlert } from '@/src/entities/RegulatoryAlert';
-import { KYC } from '@/src/entities/KYC';
-import { Member } from '@/src/entities/Member';
-import { ByelawReview, ByelawReviewStatus } from '@/src/entities/ByelawReview';
-import { Tenant } from '@/src/entities/Tenant';
-import { RegulatorSettings } from '@/src/entities/RegulatorSettings';
-import { ComplianceRule, ComplianceMetric, ComparisonOperator } from '@/src/entities/ComplianceRule';
-import { ComplianceAudit, AuditStatus } from '@/src/entities/ComplianceAudit';
-import { AlertType, AlertSeverity } from '@/src/entities/RegulatoryAlert';
+
 import { query, execute } from '@/src/db/query';
 import { v4 as uuidv4 } from 'uuid';
 import { RowDataPacket } from 'mysql2/promise';
@@ -26,7 +16,7 @@ export class ComplianceService {
     static async calculateComplianceScore(
         tenantId: string,
         calculatedBy: string
-    ): Promise<ComplianceScore> {
+    ): Promise<any> {
         // Calculate component scores
         const kycScore = await this.calculateKYCScore(tenantId);
         const reportingScore = await this.calculateReportingScore(tenantId);
@@ -51,11 +41,11 @@ export class ComplianceService {
             issueScore * 0.2 +
             alertScore * 0.1;
 
-        let rating = ComplianceRating.CRITICAL;
-        if (overallScore >= thresholds.excellent) rating = ComplianceRating.EXCELLENT;
-        else if (overallScore >= thresholds.good) rating = ComplianceRating.GOOD;
-        else if (overallScore >= thresholds.fair) rating = ComplianceRating.FAIR;
-        else if (overallScore >= thresholds.poor) rating = ComplianceRating.POOR;
+        let rating = 'critical';
+        if (overallScore >= thresholds.excellent) rating = 'excellent';
+        else if (overallScore >= thresholds.good) rating = 'good';
+        else if (overallScore >= thresholds.fair) rating = 'fair';
+        else if (overallScore >= thresholds.poor) rating = 'poor';
 
         // Create new compliance score record
         const scoreId = uuidv4();
@@ -74,7 +64,7 @@ export class ComplianceService {
             [overallScore, rating, tenantId]
         );
 
-        return complianceScore as ComplianceScore;
+        return complianceScore;
     }
 
     /**
@@ -121,7 +111,7 @@ export class ComplianceService {
 
         if (!latestReview) return 50; // No bye-laws submitted = medium score
 
-        if (latestReview.status === ByelawReviewStatus.APPROVED) {
+        if (latestReview.status === 'approved') {
             // Check if approval is recent (within 2 years)
             const twoYearsAgo = new Date();
             twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
@@ -133,12 +123,12 @@ export class ComplianceService {
             return 80; // Approved but old
         }
 
-        if (latestReview.status === ByelawReviewStatus.PENDING ||
-            latestReview.status === ByelawReviewStatus.UNDER_REVIEW) {
+        if (latestReview.status === 'pending' ||
+            latestReview.status === 'under_review') {
             return 70; // Pending review
         }
 
-        if (latestReview.status === ByelawReviewStatus.REVISION_REQUIRED) {
+        if (latestReview.status === 'revision_required') {
             return 60; // Needs revision
         }
 
@@ -152,7 +142,7 @@ export class ComplianceService {
     private static async calculateIssueScore(tenantId: string): Promise<number> {
         const openIssues = await query(
             'SELECT severity FROM compliance_issues WHERE tenantId = ? AND status = ?',
-            [tenantId, ComplianceIssueStatus.OPEN]
+            [tenantId, 'open']
         ) as any[];
 
         if (openIssues.length === 0) return 100;
@@ -202,7 +192,7 @@ export class ComplianceService {
     static async getComplianceScoreHistory(
         tenantId: string,
         limit: number = 10
-    ): Promise<ComplianceScore[]> {
+    ): Promise<any[]> {
         const results = await query(`
             SELECT s.*, t.name as tenantName, u.firstName as calculatorFirstName, u.lastName as calculatorLastName 
             FROM compliance_scores s 
@@ -216,13 +206,13 @@ export class ComplianceService {
             ...s,
             tenant: s.tenantId ? { id: s.tenantId, name: s.tenantName } : undefined,
             calculator: s.calculatedBy ? { id: s.calculatedBy, firstName: s.calculatorFirstName, lastName: s.calculatorLastName } : undefined
-        })) as ComplianceScore[];
+        })) as any[];
     }
 
     /**
      * Get all compliance scores for all SACCOs
      */
-    static async getAllComplianceScores(): Promise<ComplianceScore[]> {
+    static async getAllComplianceScores(): Promise<any[]> {
         const results = await query(`
             SELECT score.*, t.name as tenantName, u.firstName as calculatorFirstName, u.lastName as calculatorLastName
             FROM compliance_scores score
@@ -240,7 +230,7 @@ export class ComplianceService {
             ...s,
             tenant: s.tenantId ? { id: s.tenantId, name: s.tenantName } : undefined,
             calculator: s.calculatedBy ? { id: s.calculatedBy, firstName: s.calculatorFirstName, lastName: s.calculatorLastName } : undefined
-        })) as ComplianceScore[];
+        })) as any[];
     }
 
     /**
@@ -256,7 +246,7 @@ export class ComplianceService {
             ORDER BY s.calculatedAt DESC LIMIT 1
         `, [tenantId]) as any;
 
-        const [[openIssuesResult]] = await query('SELECT COUNT(*) as count FROM compliance_issues WHERE tenantId = ? AND status = ?', [tenantId, ComplianceIssueStatus.OPEN]) as any;
+        const [[openIssuesResult]] = await query('SELECT COUNT(*) as count FROM compliance_issues WHERE tenantId = ? AND status = ?', [tenantId, 'open']) as any;
         const openIssuesCount = Number(openIssuesResult?.count || 0);
 
         const [[pendingKycResult]] = await query(`
@@ -300,21 +290,21 @@ export class ComplianceService {
         for (const rule of activeRules) {
             let metricValue = 0;
             switch (rule.metric) {
-                case ComplianceMetric.KYC_RATE: metricValue = kycScore; break;
-                case ComplianceMetric.FINANCIAL_TIMELINESS: metricValue = reportingScore; break;
-                case ComplianceMetric.BYLAW_ADHERENCE: metricValue = bylawScore; break;
-                case ComplianceMetric.OPEN_ISSUES: metricValue = issueScore; break;
-                case ComplianceMetric.COMPLIANCE_SCORE: metricValue = overallScore; break;
+                case 'kyc_rate': metricValue = kycScore; break;
+                case 'financial_timeliness': metricValue = reportingScore; break;
+                case 'bylaw_adherence': metricValue = bylawScore; break;
+                case 'open_issues': metricValue = issueScore; break;
+                case 'compliance_score': metricValue = overallScore; break;
             }
 
             let triggered = false;
             const threshold = Number(rule.threshold || 0);
             switch (rule.operator) {
-                case ComparisonOperator.LESS_THAN: triggered = metricValue < threshold; break;
-                case ComparisonOperator.GREATER_THAN: triggered = metricValue > threshold; break;
-                case ComparisonOperator.EQUALS: triggered = metricValue === threshold; break;
-                case ComparisonOperator.LESS_THAN_OR_EQUAL: triggered = metricValue <= threshold; break;
-                case ComparisonOperator.GREATER_THAN_OR_EQUAL: triggered = metricValue >= threshold; break;
+                case '<': triggered = metricValue < threshold; break;
+                case '>': triggered = metricValue > threshold; break;
+                case '=': triggered = metricValue === threshold; break;
+                case '<=': triggered = metricValue <= threshold; break;
+                case '>=': triggered = metricValue >= threshold; break;
             }
 
             if (triggered) {
@@ -322,7 +312,7 @@ export class ComplianceService {
                 const title = `Automated Alert: ${rule.name}`;
                 const [[existingAlert]] = await query(
                     'SELECT * FROM regulatory_alerts WHERE tenantId = ? AND type = ? AND title = ? AND isResolved = false LIMIT 1',
-                    [tenantId, AlertType.COMPLIANCE_ISSUE, title]
+                    [tenantId, 'compliance_issue', title]
                 ) as any;
 
                 if (!existingAlert) {
@@ -330,7 +320,7 @@ export class ComplianceService {
                     const metadata = { ruleId: rule.id, metric: rule.metric, value: metricValue };
                     await execute(
                         'INSERT INTO regulatory_alerts (id, tenantId, type, severity, title, description, metadata, isResolved, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
-                        [id, tenantId, AlertType.COMPLIANCE_ISSUE, rule.severity, title, `Rule "${rule.name}" triggered. Metric ${rule.metric} is ${metricValue}, which is ${rule.operator} ${rule.threshold}.`, JSON.stringify(metadata), false]
+                        [id, tenantId, 'compliance_issue', rule.severity, title, `Rule "${rule.name}" triggered. Metric ${rule.metric} is ${metricValue}, which is ${rule.operator} ${rule.threshold}.`, JSON.stringify(metadata), false]
                     );
                 }
             }
@@ -340,21 +330,21 @@ export class ComplianceService {
     /**
      * Audit Scheduler: Schedule a new audit
      */
-    static async scheduleAudit(tenantId: string, auditorId: string, scheduledDate: Date): Promise<ComplianceAudit> {
+    static async scheduleAudit(tenantId: string, auditorId: string, scheduledDate: Date): Promise<any> {
         const id = uuidv4();
         await execute(
             'INSERT INTO compliance_audits (id, tenantId, auditorId, scheduledDate, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
-            [id, tenantId, auditorId, scheduledDate, AuditStatus.PENDING]
+            [id, tenantId, auditorId, scheduledDate, 'pending']
         );
 
         const [[audit]] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [id]) as any;
-        return audit as ComplianceAudit;
+        return audit;
     }
 
     /**
      * Audit Scheduler: Complete an audit
      */
-    static async completeAudit(auditId: string, findings: string): Promise<ComplianceAudit> {
+    static async completeAudit(auditId: string, findings: string): Promise<any> {
         const [[audit]] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [auditId]) as any;
 
         if (!audit) throw new Error('Audit not found');
@@ -366,17 +356,17 @@ export class ComplianceService {
 
         await execute(
             'UPDATE compliance_audits SET status = ?, completedDate = NOW(), findings = ?, complianceScoreAtTime = ?, updatedAt = NOW() WHERE id = ?',
-            [AuditStatus.COMPLETED, findings, complianceScoreAtTime, auditId]
+            ['completed', findings, complianceScoreAtTime, auditId]
         );
 
         const [[updatedAudit]] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [auditId]) as any;
-        return updatedAudit as ComplianceAudit;
+        return updatedAudit;
     }
 
     /**
      * Rule Management
      */
-    static async saveRule(ruleData: Partial<ComplianceRule>): Promise<ComplianceRule> {
+    static async saveRule(ruleData: any): Promise<any> {
         let id = ruleData.id;
         if (id) {
             await execute(
@@ -392,10 +382,10 @@ export class ComplianceService {
         }
 
         const [[rule]] = await query('SELECT * FROM compliance_rules WHERE id = ? LIMIT 1', [id]) as any;
-        return rule as ComplianceRule;
+        return rule;
     }
 
-    static async getRules(): Promise<ComplianceRule[]> {
-        return await query('SELECT * FROM compliance_rules') as ComplianceRule[];
+    static async getRules(): Promise<any[]> {
+        return await query('SELECT * FROM compliance_rules') as any[];
     }
 }

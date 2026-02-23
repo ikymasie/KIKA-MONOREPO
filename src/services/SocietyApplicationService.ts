@@ -1,8 +1,3 @@
-import { SocietyApplication, ApplicationType, ApplicationStatus } from '../entities/SocietyApplication';
-import { User } from '../entities/User';
-import { SecurityScreening, ScreeningStatus, RiskLevel } from '../entities/SecurityScreening';
-import { RiskFlagType } from '../entities/RiskFlag';
-import { CommunicationType, CommunicationDirection } from '../entities/ApplicationCommunication';
 import { query, execute, withTransaction } from '../db/query';
 import { v4 as uuidv4 } from 'uuid';
 import { RowDataPacket } from 'mysql2/promise';
@@ -10,9 +5,9 @@ import { RowDataPacket } from 'mysql2/promise';
 export class SocietyApplicationService {
 
     static async createApplication(
-        data: Partial<SocietyApplication>,
-        user: User
-    ): Promise<SocietyApplication> {
+        data: any,
+        user: any
+    ): Promise<any> {
         // Ensure settings exist and get current fees
         let [[settings]] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
 
@@ -30,19 +25,19 @@ export class SocietyApplicationService {
         // Determine fee based on application type
         let feeAmount = 0;
         switch (data.applicationType) {
-            case ApplicationType.SACCOS:
+            case 'saccos':
                 feeAmount = settings.saccosApplicationFee!;
                 break;
-            case ApplicationType.RELIGIOUS_SOCIETY:
+            case 'religious_society':
                 feeAmount = settings.religiousSocietyApplicationFee!;
                 break;
-            case ApplicationType.GENERAL_SOCIETY:
+            case 'general_society':
                 feeAmount = settings.generalSocietyApplicationFee!;
                 break;
-            case ApplicationType.BURIAL_SOCIETY:
+            case 'burial_society':
                 feeAmount = settings.burialSocietyApplicationFee!;
                 break;
-            case ApplicationType.COOPERATIVE:
+            case 'cooperative':
                 feeAmount = settings.cooperativeApplicationFee!;
                 break;
             default:
@@ -55,45 +50,45 @@ export class SocietyApplicationService {
             physicalAddress, primaryContactName, primaryContactEmail, primaryContactPhone, createdAt, updatedAt)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
             [
-                id, data.proposedName, data.applicationType, user.id, ApplicationStatus.DRAFT, feeAmount,
+                id, data.proposedName, data.applicationType, user.id, 'draft', feeAmount,
                 data.physicalAddress || '', data.primaryContactName || '', data.primaryContactEmail || '', data.primaryContactPhone || ''
             ]
         );
 
         const [[savedApplication]] = await query('SELECT * FROM society_applications WHERE id = ?', [id]) as any;
-        return savedApplication as SocietyApplication;
+        return savedApplication;
     }
 
     /**
      * Refreshes the fee for a draft application from current settings.
      * Useful if fees changed while application was in draft.
      */
-    static async refreshApplicationFee(applicationId: string): Promise<SocietyApplication | null> {
+    static async refreshApplicationFee(applicationId: string): Promise<any | null> {
         const [[application]] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
 
-        if (!application || application.status !== ApplicationStatus.DRAFT) {
-            return application as SocietyApplication | null;
+        if (!application || application.status !== 'draft') {
+            return application;
         }
 
         const [[settings]] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
 
-        if (!settings) return application as SocietyApplication;
+        if (!settings) return application;
 
         let feeAmount = 0;
         switch (application.applicationType) {
-            case ApplicationType.SACCOS:
+            case 'saccos':
                 feeAmount = settings.saccosApplicationFee!;
                 break;
-            case ApplicationType.RELIGIOUS_SOCIETY:
+            case 'religious_society':
                 feeAmount = settings.religiousSocietyApplicationFee!;
                 break;
-            case ApplicationType.GENERAL_SOCIETY:
+            case 'general_society':
                 feeAmount = settings.generalSocietyApplicationFee!;
                 break;
-            case ApplicationType.BURIAL_SOCIETY:
+            case 'burial_society':
                 feeAmount = settings.burialSocietyApplicationFee!;
                 break;
-            case ApplicationType.COOPERATIVE:
+            case 'cooperative':
                 feeAmount = settings.cooperativeApplicationFee!;
                 break;
             default:
@@ -102,17 +97,17 @@ export class SocietyApplicationService {
 
         await execute('UPDATE society_applications SET feeAmount = ?, updatedAt = NOW() WHERE id = ?', [feeAmount, applicationId]);
         const [[updatedApplication]] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
-        return updatedApplication as SocietyApplication;
+        return updatedApplication;
     }
 
     /**
      * Get applications for Registry Clerk view
      */
     static async getApplicationsForRegistry(filters?: {
-        status?: ApplicationStatus;
-        type?: ApplicationType;
+        status?: string;
+        type?: string;
         search?: string;
-    }): Promise<SocietyApplication[]> {
+    }): Promise<any[]> {
         let sql = `
             SELECT app.*, 
                    u.firstName as applicantFirstName, u.lastName as applicantLastName, u.email as applicantEmail
@@ -121,12 +116,12 @@ export class SocietyApplicationService {
             WHERE app.status IN (?, ?, ?, ?, ?, ?)
         `;
         const params: any[] = [
-            ApplicationStatus.SUBMITTED,
-            ApplicationStatus.INCOMPLETE,
-            ApplicationStatus.UNDER_REVIEW,
-            ApplicationStatus.SECURITY_VETTING,
-            ApplicationStatus.LEGAL_REVIEW,
-            ApplicationStatus.PENDING_DECISION
+            'submitted',
+            'incomplete',
+            'under_review',
+            'security_vetting',
+            'legal_review',
+            'pending_decision'
         ];
 
         if (filters?.status) {
@@ -151,7 +146,7 @@ export class SocietyApplicationService {
         return results.map(r => ({
             ...r,
             applicant: r.applicantUserId ? { id: r.applicantUserId, firstName: r.applicantFirstName, lastName: r.applicantLastName, email: r.applicantEmail } : undefined
-        })) as SocietyApplication[];
+        })) as any[];
     }
 
     /**
@@ -184,7 +179,7 @@ export class SocietyApplicationService {
         clerkId: string,
         isIncomplete: boolean,
         notes?: string
-    ): Promise<SocietyApplication> {
+    ): Promise<any> {
         const [[application]] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
         if (!application) throw new Error('Application not found');
 
@@ -195,16 +190,16 @@ export class SocietyApplicationService {
         let assignedFileNumberAt = application.assignedFileNumberAt;
 
         if (isIncomplete) {
-            status = ApplicationStatus.INCOMPLETE;
+            status = 'incomplete';
             rejectionReasons = notes;
         } else {
-            status = ApplicationStatus.UNDER_REVIEW;
+            status = 'under_review';
             registryClerkId = clerkId;
             assignedFileNumberAt = new Date();
 
             // Generate file number if not present (simple generator)
             if (!fileNumber) {
-                const prefix = application.applicationType === ApplicationType.SACCOS ? 'SACCOS' : 'SOC';
+                const prefix = application.applicationType === 'saccos' ? 'SACCOS' : 'SOC';
                 const year = new Date().getFullYear();
                 const [[countResult]] = await query('SELECT COUNT(*) as count FROM society_applications') as any;
                 const count = Number(countResult?.count || 0);
@@ -220,7 +215,7 @@ export class SocietyApplicationService {
         );
 
         const [[updatedApplication]] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
-        return updatedApplication as SocietyApplication;
+        return updatedApplication;
     }
 
     /**
@@ -232,7 +227,7 @@ export class SocietyApplicationService {
         targetRole: 'intelligence' | 'legal',
         performerId?: string,
         notes?: string
-    ): Promise<SocietyApplication> {
+    ): Promise<any> {
         return await withTransaction(async (conn) => {
             const [[application]] = await conn.query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
             if (!application) throw new Error('Application not found');
@@ -243,10 +238,10 @@ export class SocietyApplicationService {
             let legalOfficerId = application.legalOfficerId;
 
             if (targetRole === 'intelligence') {
-                status = ApplicationStatus.SECURITY_VETTING;
+                status = 'security_vetting';
                 intelligenceLiaisonId = officerId;
             } else {
-                status = ApplicationStatus.LEGAL_REVIEW;
+                status = 'legal_review';
                 legalOfficerId = officerId;
             }
 
@@ -277,7 +272,7 @@ export class SocietyApplicationService {
                 savedApplication.applicant = { id: applicant.id, firstName: applicant.firstName, lastName: applicant.lastName, email: applicant.email };
             }
 
-            return savedApplication as SocietyApplication;
+            return savedApplication;
         });
     }
 
@@ -290,8 +285,8 @@ export class SocietyApplicationService {
         targetRole: 'intelligence' | 'legal',
         performerId: string,
         notes?: string
-    ): Promise<SocietyApplication[]> {
-        const results: SocietyApplication[] = [];
+    ): Promise<any[]> {
+        const results: any[] = [];
         for (const id of applicationIds) {
             const app = await this.assignToWorkflow(id, officerId, targetRole, performerId, notes);
             results.push(app);
@@ -305,8 +300,8 @@ export class SocietyApplicationService {
     static async logCommunication(
         applicationId: string,
         data: {
-            type: CommunicationType,
-            direction: CommunicationDirection,
+            type: string,
+            direction: string,
             subject?: string,
             content: string,
             recordedById: string
@@ -343,19 +338,19 @@ export class SocietyApplicationService {
     /**
      * Get applications for Security Vetting view
      */
-    static async getApplicationsForVetting(officerId: string): Promise<SocietyApplication[]> {
+    static async getApplicationsForVetting(officerId: string): Promise<any[]> {
         const results = await query(`
             SELECT a.*, u.firstName as applicantFirstName, u.lastName as applicantLastName
             FROM society_applications a
             LEFT JOIN users u ON u.id = a.applicantUserId
             WHERE a.status = ? AND a.intelligenceLiaisonId = ?
             ORDER BY a.updatedAt DESC
-        `, [ApplicationStatus.SECURITY_VETTING, officerId]) as any[];
+        `, ['security_vetting', officerId]) as any[];
 
         return results.map(r => ({
             ...r,
             applicant: r.applicantUserId ? { id: r.applicantUserId, firstName: r.applicantFirstName, lastName: r.applicantLastName } : undefined
-        })) as SocietyApplication[];
+        })) as any[];
     }
 
     /**
@@ -366,8 +361,8 @@ export class SocietyApplicationService {
         officerId: string,
         isCleared: boolean,
         notes: string,
-        riskLevel: RiskLevel = RiskLevel.LOW
-    ): Promise<SocietyApplication> {
+        riskLevel: string = 'low'
+    ): Promise<any> {
         return await withTransaction(async (conn) => {
             const [[application]] = await conn.query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
             if (!application) throw new Error('Application not found');
@@ -375,7 +370,7 @@ export class SocietyApplicationService {
             // Update or create screening record
             const [[screening]] = await conn.query('SELECT * FROM security_screenings WHERE applicationId = ? LIMIT 1', [applicationId]) as any;
 
-            const screeningStatus = isCleared ? ScreeningStatus.CLEARED : ScreeningStatus.FAILED;
+            const screeningStatus = isCleared ? 'cleared' : 'failed';
 
             if (!screening) {
                 const screeningId = uuidv4();
@@ -401,7 +396,7 @@ export class SocietyApplicationService {
                 );
             }
 
-            const appStatus = isCleared ? ApplicationStatus.LEGAL_REVIEW : ApplicationStatus.SECURITY_FAILED;
+            const appStatus = isCleared ? 'legal_review' : 'security_failed';
             const securityClearedAt = isCleared ? new Date() : null;
 
             await conn.execute(
@@ -412,7 +407,7 @@ export class SocietyApplicationService {
             );
 
             const [[updatedApp]] = await conn.query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
-            return updatedApp as SocietyApplication;
+            return updatedApp;
         });
     }
 
@@ -439,7 +434,7 @@ export class SocietyApplicationService {
      */
     static async addRiskFlag(
         screeningId: string,
-        data: { type: RiskFlagType; description: string }
+        data: { type: string; description: string }
     ): Promise<any> {
         const id = uuidv4();
         await execute(
@@ -471,25 +466,25 @@ export class SocietyApplicationService {
     /**
      * Get applications pending security vetting
      */
-    static async getApplicationsPendingVetting(): Promise<SocietyApplication[]> {
+    static async getApplicationsPendingVetting(): Promise<any[]> {
         const results = await query(`
             SELECT a.*, u.firstName as applicantFirstName, u.lastName as applicantLastName
             FROM society_applications a
             LEFT JOIN users u ON u.id = a.applicantUserId
             WHERE a.status = ?
             ORDER BY a.updatedAt DESC
-        `, [ApplicationStatus.SECURITY_VETTING]) as any[];
+        `, ['security_vetting']) as any[];
 
         return results.map(r => ({
             ...r,
             applicant: r.applicantUserId ? { id: r.applicantUserId, firstName: r.applicantFirstName, lastName: r.applicantLastName } : undefined
-        })) as SocietyApplication[];
+        })) as any[];
     }
 
     /**
      * Get a specific application by ID
      */
-    static async getApplicationById(id: string): Promise<SocietyApplication | null> {
+    static async getApplicationById(id: string): Promise<any | null> {
         const [[application]] = await query(`
             SELECT a.*, 
                    u.firstName as applicantFirstName, u.lastName as applicantLastName, u.email as applicantEmail,
@@ -517,20 +512,20 @@ export class SocietyApplicationService {
         delete application.ilFirstName; delete application.ilLastName;
         delete application.loFirstName; delete application.loLastName;
 
-        return application as SocietyApplication;
+        return application;
     }
 
     /**
      * Get all applications for a specific applicant
      */
-    static async getApplicantApplications(userId: string): Promise<SocietyApplication[]> {
-        return await query(`SELECT * FROM society_applications WHERE applicantUserId = ? ORDER BY createdAt DESC`, [userId]) as SocietyApplication[];
+    static async getApplicantApplications(userId: string): Promise<any[]> {
+        return await query(`SELECT * FROM society_applications WHERE applicantUserId = ? ORDER BY createdAt DESC`, [userId]) as any[];
     }
 
     /**
      * Get application by ID ensuring it belongs to the applicant
      */
-    static async getApplicantApplication(id: string, userId: string): Promise<SocietyApplication | null> {
+    static async getApplicantApplication(id: string, userId: string): Promise<any | null> {
         const [[application]] = await query(`
             SELECT a.*, u.firstName as applicantFirstName, u.lastName as applicantLastName, u.email as applicantEmail
             FROM society_applications a
@@ -544,7 +539,7 @@ export class SocietyApplicationService {
 
         delete application.applicantFirstName; delete application.applicantLastName; delete application.applicantEmail;
 
-        return application as SocietyApplication;
+        return application;
     }
 
     /**
@@ -552,17 +547,16 @@ export class SocietyApplicationService {
      */
     static async updateApplication(
         id: string,
-        data: Partial<SocietyApplication>,
+        data: any,
         userId?: string
-    ): Promise<SocietyApplication> {
+    ): Promise<any> {
         const application = userId
             ? await this.getApplicantApplication(id, userId)
             : await this.getApplicationById(id);
 
         if (!application) throw new Error('Application not found or unauthorized');
 
-        // Only allow updating in certain statuses if it's the applicant
-        if (userId && ![ApplicationStatus.DRAFT, ApplicationStatus.INCOMPLETE].includes(application.status as ApplicationStatus)) {
+        if (userId && !['draft', 'incomplete'].includes(application.status)) {
             throw new Error('Application cannot be updated in its current status');
         }
 
@@ -581,7 +575,7 @@ export class SocietyApplicationService {
             await execute(`UPDATE society_applications SET ${updates.join(', ')}, updatedAt = NOW() WHERE id = ?`, params);
         }
 
-        return await this.getApplicationById(id) as SocietyApplication;
+        return await this.getApplicationById(id);
     }
 
     // --- Document Management ---
@@ -691,17 +685,17 @@ export class SocietyApplicationService {
         applicationId: string,
         userId: string,
         notes: string
-    ): Promise<SocietyApplication> {
+    ): Promise<any> {
         const application = await this.getApplicantApplication(applicationId, userId);
         if (!application) throw new Error('Application not found or unauthorized');
 
         // Logic check for canAppeal based on status that was on entity
-        const canAppeal = application.status === ApplicationStatus.REJECTED;
+        const canAppeal = application.status === 'rejected';
         if (!canAppeal) {
             throw new Error('Application is not eligible for appeal');
         }
 
-        const status = ApplicationStatus.APPEAL_LODGED;
+        const status = 'appeal_lodged';
         const appealLodgedAt = new Date();
         const appealOutcome = notes; // Using appealOutcome to store the applicant's reasoning
 
@@ -712,6 +706,6 @@ export class SocietyApplicationService {
             [status, appealLodgedAt, appealOutcome, applicationId]
         );
 
-        return await this.getApplicationById(applicationId) as SocietyApplication;
+        return await this.getApplicationById(applicationId);
     }
 }
