@@ -3,6 +3,8 @@ import { getUserFromRequest } from '@/lib/auth-server';
 import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError } from '@/lib/errors';
 import { listLoans, getLoanPortfolioSummary } from '@/src/db/services/LoanService';
 import { LoanStatus } from '@/src/interfaces/ILoan';
+import { query } from '@/src/db/query';
+import { RowDataPacket } from 'mysql2/promise';
 
 export const dynamic = 'force-dynamic';
 export const GET = asyncHandler(async (request: NextRequest) => {
@@ -24,39 +26,68 @@ export const GET = asyncHandler(async (request: NextRequest) => {
     const { loans, total } = await listLoans(user.tenantId, filters, { page, limit });
     const summary = await getLoanPortfolioSummary(user.tenantId);
 
-    const formattedLoans = loans.map(loan => ({
-        id: loan.id,
-        loanNumber: loan.loanNumber,
-        memberId: loan.memberId,
-        productId: loan.productId,
-        principalAmount: loan.principalAmount,
-        interestRate: loan.interestRate,
-        termMonths: loan.termMonths,
-        monthlyInstallment: loan.monthlyInstallment,
-        totalAmountDue: loan.totalAmountDue,
-        outstandingBalance: loan.outstandingBalance,
-        amountPaid: loan.amountPaid,
-        status: loan.status,
-        applicationDate: loan.applicationDate,
-        approvalDate: loan.approvalDate,
-        disbursementDate: loan.disbursementDate,
-        maturityDate: loan.maturityDate,
-        purpose: loan.purpose,
-    }));
+    const memberMap = new Map();
+    const productMap = new Map();
+
+    if (loans.length > 0) {
+        const memberIds = [...new Set(loans.map(l => l.memberId))];
+        const productIds = [...new Set(loans.map(l => l.productId))];
+
+        const [members, products] = await Promise.all([
+            query<RowDataPacket>(`SELECT id, memberNumber, firstName, lastName, email, phone FROM members WHERE id IN (?)`, [memberIds]),
+            query<RowDataPacket>(`SELECT id, name, code FROM loan_products WHERE id IN (?)`, [productIds])
+        ]);
+
+        members.forEach(m => memberMap.set(m.id, m));
+        products.forEach(p => productMap.set(p.id, p));
+    }
+
+    const formattedLoans = loans.map(loan => {
+        const member = memberMap.get(loan.memberId) || {};
+        const product = productMap.get(loan.productId) || {};
+
+        return {
+            id: loan.id,
+            loanNumber: loan.loanNumber,
+            member: {
+                id: loan.memberId,
+                memberNumber: member.memberNumber || 'Unknown',
+                fullName: `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown Member',
+            },
+            product: {
+                name: product.name || 'Unknown',
+                code: product.code || '',
+            },
+            principalAmount: loan.principalAmount,
+            interestRate: loan.interestRate,
+            termMonths: loan.termMonths,
+            monthlyInstallment: loan.monthlyInstallment,
+            totalAmountDue: loan.totalAmountDue,
+            outstandingBalance: loan.outstandingBalance,
+            amountPaid: loan.amountPaid,
+            status: loan.status,
+            applicationDate: loan.applicationDate,
+            approvalDate: loan.approvalDate,
+            disbursementDate: loan.disbursementDate,
+            maturityDate: loan.maturityDate,
+            purpose: loan.purpose,
+            isPastDue: loan.status === 'active' && loan.maturityDate && new Date(loan.maturityDate) < new Date(),
+        };
+    });
 
     return NextResponse.json({
-        success: true,
-        data: {
-            loans: formattedLoans,
-            stats: {
-                total: summary.total,
-                active: summary.active,
-                disbursed: summary.disbursed,
-                defaulted: summary.defaulted,
-                totalPrincipal: summary.totalPrincipal,
-                totalOutstanding: summary.totalOutstanding,
-            },
-            pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+        loans: formattedLoans,
+        stats: {
+            total: summary.total,
+            pending: summary.pending,
+            approved: summary.approved,
+            active: summary.active,
+            disbursed: summary.disbursed,
+            rejected: summary.rejected,
+            defaulted: summary.defaulted,
+            totalPrincipal: summary.totalPrincipal,
+            totalOutstanding: summary.totalOutstanding,
         },
+        pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
 });

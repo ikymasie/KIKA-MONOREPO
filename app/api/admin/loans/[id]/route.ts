@@ -32,17 +32,27 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         return NextResponse.json({
             ...loan,
             member: member ? {
-                id: member.id, memberNumber: member.memberNumber,
-                firstName: member.firstName, lastName: member.lastName,
-                fullName: `${member.firstName} ${member.lastName}`,
-                email: member.email, phone: member.phone,
-                nationalId: member.nationalId, employer: member.employer,
-            } : null,
+                id: member.id, memberNumber: member.memberNumber || 'Unknown',
+                firstName: member.firstName || '', lastName: member.lastName || '',
+                fullName: `${member.firstName || ''} ${member.lastName || ''}`.trim() || 'Unknown Member',
+                email: member.email || '', phone: member.phone || '',
+                nationalId: member.nationalId || '', employer: member.employer || '',
+            } : {
+                id: '', memberNumber: 'Unknown',
+                firstName: '', lastName: '',
+                fullName: 'Unknown Member',
+                email: '', phone: '',
+                nationalId: '', employer: '',
+            },
             product: product ? {
-                id: product.id, name: product.name, code: product.code,
-                interestRate: Number(product.interestRate),
-                savingsMultiplier: Number(product.savingsMultiplier),
-            } : null,
+                id: product.id, name: product.name || 'Unknown', code: product.code || '',
+                interestRate: Number(product.interestRate || 0),
+                savingsMultiplier: Number(product.savingsMultiplier || 0),
+            } : {
+                id: '', name: 'Unknown', code: '',
+                interestRate: 0,
+                savingsMultiplier: 0,
+            },
             guarantors: guarantors.map(g => ({
                 id: g.id,
                 guarantorMember: g.gmId ? {

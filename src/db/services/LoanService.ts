@@ -154,15 +154,19 @@ export async function getLoansPendingCommittee(tenantId: string): Promise<ILoan[
 
 /** Portfolio summary: totals by status. */
 export async function getLoanPortfolioSummary(tenantId: string): Promise<{
-    total: number; active: number; disbursed: number; defaulted: number;
+    total: number; pending: number; approved: number; active: number;
+    disbursed: number; defaulted: number; rejected: number;
     totalPrincipal: number; totalOutstanding: number;
 }> {
     const rows = await query<RowDataPacket>(
         `SELECT
              COUNT(*)                                          AS total,
+             SUM(status = 'pending')                          AS pending,
+             SUM(status = 'approved')                         AS approved,
              SUM(status = 'active')                           AS active,
              SUM(status = 'disbursed')                        AS disbursed,
              SUM(status = 'defaulted')                        AS defaulted,
+             SUM(status = 'rejected')                         AS rejected,
              COALESCE(SUM(principalAmount),0)                 AS totalPrincipal,
              COALESCE(SUM(outstandingBalance),0)              AS totalOutstanding
          FROM loans WHERE tenantId = ?`,
@@ -171,9 +175,12 @@ export async function getLoanPortfolioSummary(tenantId: string): Promise<{
     const r = rows[0] || {};
     return {
         total: Number(r.total ?? 0),
+        pending: Number(r.pending ?? 0),
+        approved: Number(r.approved ?? 0),
         active: Number(r.active ?? 0),
         disbursed: Number(r.disbursed ?? 0),
         defaulted: Number(r.defaulted ?? 0),
+        rejected: Number(r.rejected ?? 0),
         totalPrincipal: Number(r.totalPrincipal ?? 0),
         totalOutstanding: Number(r.totalOutstanding ?? 0),
     };
