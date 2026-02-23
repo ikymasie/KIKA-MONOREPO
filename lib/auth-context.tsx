@@ -40,16 +40,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setFirebaseUser(firebaseUser);
 
             if (firebaseUser) {
-                // For now, just set basic Firebase user info
-                // Role will be fetched from backend when needed
-                setUser({
-                    id: firebaseUser.uid,
-                    email: firebaseUser.email || '',
-                    name: firebaseUser.displayName || firebaseUser.email || 'User',
-                    role: 'member', // Default role, will be updated after signin
-                    tenantId: undefined,
-                    firebaseUid: firebaseUser.uid,
-                });
+                try {
+                    // Fetch real user profile (role, name, tenantId) from backend session
+                    const res = await fetch('/api/auth/session');
+                    if (res.ok) {
+                        const { user: sessionUser } = await res.json();
+                        if (sessionUser) {
+                            setUser({
+                                id: sessionUser.id || firebaseUser.uid,
+                                email: sessionUser.email || firebaseUser.email || '',
+                                name: sessionUser.name || firebaseUser.displayName || firebaseUser.email || 'User',
+                                role: sessionUser.role || 'member',
+                                tenantId: sessionUser.tenantId,
+                                firebaseUid: firebaseUser.uid,
+                            });
+                        } else {
+                            // Session cookie not yet set (race condition during sign-in); use Firebase info only
+                            setUser({
+                                id: firebaseUser.uid,
+                                email: firebaseUser.email || '',
+                                name: firebaseUser.displayName || firebaseUser.email || 'User',
+                                role: 'member',
+                                tenantId: undefined,
+                                firebaseUid: firebaseUser.uid,
+                            });
+                        }
+                    }
+                } catch {
+                    // Fallback to basic Firebase user info on network error
+                    setUser({
+                        id: firebaseUser.uid,
+                        email: firebaseUser.email || '',
+                        name: firebaseUser.displayName || firebaseUser.email || 'User',
+                        role: 'member',
+                        tenantId: undefined,
+                        firebaseUid: firebaseUser.uid,
+                    });
+                }
             } else {
                 setUser(null);
             }

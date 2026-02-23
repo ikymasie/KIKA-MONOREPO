@@ -17,7 +17,21 @@ function MemberSignInForm() {
 
     const router = useRouter();
     const searchParams = useSearchParams();
-    const callbackUrl = searchParams.get('callbackUrl');
+    const rawCallbackUrl = searchParams.get('callbackUrl');
+    // Validate callbackUrl: only allow internal page routes (not API routes or external URLs)
+    const callbackUrl = (() => {
+        if (!rawCallbackUrl) return null;
+        try {
+            // Reject external URLs
+            const url = new URL(rawCallbackUrl, 'http://localhost');
+            const pathname = url.pathname;
+            // Reject API routes and Next.js internal routes
+            if (pathname.startsWith('/api/') || pathname.startsWith('/_next/')) return null;
+            return pathname;
+        } catch {
+            return null;
+        }
+    })();
 
     const handleSendOtp = async (e: FormEvent) => {
         e.preventDefault();

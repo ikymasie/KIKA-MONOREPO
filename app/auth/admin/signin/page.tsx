@@ -17,7 +17,19 @@ function AdminSignInForm() {
     const searchParams = useSearchParams();
     const { signIn } = useAuth();
 
-    const callbackUrl = searchParams.get('callbackUrl');
+    const rawCallbackUrl = searchParams.get('callbackUrl');
+    // Validate callbackUrl: only allow internal page routes (not API routes or external URLs)
+    const callbackUrl = (() => {
+        if (!rawCallbackUrl) return null;
+        try {
+            const url = new URL(rawCallbackUrl, 'http://localhost');
+            const pathname = url.pathname;
+            if (pathname.startsWith('/api/') || pathname.startsWith('/_next/')) return null;
+            return pathname;
+        } catch {
+            return null;
+        }
+    })();
 
     const handleEmailSignIn = async (e: FormEvent) => {
         e.preventDefault();
