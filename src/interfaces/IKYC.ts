@@ -1,7 +1,7 @@
 /**
  * src/interfaces/IKYC.ts
  *
- * Plain TypeScript interface for the `kycs` table row.
+ * Plain TypeScript interface for the `kyc` table row.
  * Used by KYCService and any code that works with raw SQL results.
  */
 

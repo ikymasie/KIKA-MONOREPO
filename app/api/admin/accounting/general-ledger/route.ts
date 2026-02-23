@@ -18,7 +18,14 @@ export async function GET(request: NextRequest) {
         const startDate = startDateParam ? new Date(startDateParam).toISOString().slice(0, 19).replace('T', ' ') : undefined;
         const endDate = endDateParam ? new Date(endDateParam).toISOString().slice(0, 19).replace('T', ' ') : undefined;
 
-        const entries = await getGeneralLedger(user.tenantId, startDate, endDate, accountId);
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '50', 10);
+
+        const entries = await getGeneralLedger(
+            user.tenantId,
+            { startDate, endDate, accountId },
+            { page, limit }
+        );
         return NextResponse.json(entries);
     } catch (error: any) {
         console.error('Error fetching GL:', error);

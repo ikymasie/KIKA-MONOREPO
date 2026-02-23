@@ -14,9 +14,16 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status') as OrderStatus | null;
         const memberId = searchParams.get('memberId') || undefined;
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '50', 10);
 
-        const orders = await listMerchandiseOrders(user.tenantId, status || undefined, memberId);
-        return NextResponse.json(orders);
+        const data = await listMerchandiseOrders(
+            user.tenantId,
+            status || undefined,
+            memberId,
+            { page, limit }
+        );
+        return NextResponse.json(data);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

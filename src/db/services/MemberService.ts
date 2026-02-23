@@ -136,7 +136,7 @@ export async function getMemberProfile(
              COALESCE(SUM(DISTINCT CASE WHEN l.status NOT IN ('settled','written_off') THEN l.outstandingBalance END), 0) AS totalLoanBalance
          FROM members m
          LEFT JOIN users u ON u.id = m.userId
-         LEFT JOIN kycs k ON k.memberId = m.id
+         LEFT JOIN kyc k ON k.memberId = m.id
          LEFT JOIN member_savings ms ON ms.memberId = m.id
          LEFT JOIN loans l ON l.memberId = m.id
          WHERE m.id = ? AND m.tenantId = ?

@@ -1,6 +1,7 @@
-import { AppDataSource } from '@/src/config/database';
 import { ByelawReview, ByelawReviewStatus } from '@/src/entities/ByelawReview';
 import { Tenant } from '@/src/entities/Tenant';
+import { query, queryOne, execute } from '@/src/db/query';
+import { RowDataPacket } from 'mysql2/promise';
 
 export interface ByelawReviewSubmission {
     reviewId: string;
@@ -14,65 +15,59 @@ export class ByelawReviewService {
      * Get all pending bye-laws reviews
      */
     static async getPendingReviews(limit: number = 50): Promise<ByelawReview[]> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const results = await query(
+            `SELECT r.*, t.name as tenantName 
+             FROM byelaw_reviews r 
+             LEFT JOIN tenants t ON t.id = r.tenantId 
+             WHERE r.status IN (?, ?) 
+             ORDER BY r.submittedAt ASC 
+             LIMIT ?`,
+            [ByelawReviewStatus.PENDING, ByelawReviewStatus.UNDER_REVIEW, limit]
+        );
 
-        const reviewRepo = AppDataSource.getRepository(ByelawReview);
-
-        return await reviewRepo.find({
-            where: [
-                { status: ByelawReviewStatus.PENDING },
-                { status: ByelawReviewStatus.UNDER_REVIEW },
-            ],
-            relations: ['tenant'],
-            order: { submittedAt: 'ASC' },
-            take: limit,
-        });
+        return results.map((r: any) => ({
+            ...r,
+            tenant: r.tenantId ? { id: r.tenantId, name: r.tenantName } : undefined
+        })) as ByelawReview[];
     }
 
     /**
      * Get bye-law review by ID
      */
     static async getReviewById(reviewId: string): Promise<ByelawReview | null> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const [[review]] = await query(`
+            SELECT r.*, t.name as tenantName, u.firstName as reviewerFirstName, u.lastName as reviewerLastName 
+            FROM byelaw_reviews r 
+            LEFT JOIN tenants t ON t.id = r.tenantId 
+            LEFT JOIN users u ON u.id = r.reviewedBy 
+            WHERE r.id = ? LIMIT 1
+        `, [reviewId]) as any;
 
-        const reviewRepo = AppDataSource.getRepository(ByelawReview);
+        if (!review) return null;
 
-        return await reviewRepo.findOne({
-            where: { id: reviewId },
-            relations: ['tenant', 'reviewer'],
-        });
+        return {
+            ...review,
+            tenant: review.tenantId ? { id: review.tenantId, name: review.tenantName } : undefined,
+            reviewer: review.reviewedBy ? { id: review.reviewedBy, firstName: review.reviewerFirstName, lastName: review.reviewerLastName } : undefined
+        } as ByelawReview;
     }
 
     /**
      * Submit a bye-laws review
      */
     static async submitReview(submission: ByelawReviewSubmission): Promise<ByelawReview> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const reviewRepo = AppDataSource.getRepository(ByelawReview);
-
-        const review = await reviewRepo.findOne({
-            where: { id: submission.reviewId },
-        });
+        const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [submission.reviewId]) as any;
 
         if (!review) {
             throw new Error('Bye-law review not found');
         }
 
-        review.status = submission.status;
-        review.reviewNotes = submission.notes;
-        review.reviewedBy = submission.reviewedBy;
-        review.reviewedAt = new Date();
+        await execute(
+            'UPDATE byelaw_reviews SET status = ?, reviewNotes = ?, reviewedBy = ?, reviewedAt = NOW(), updatedAt = NOW() WHERE id = ?',
+            [submission.status, submission.notes, submission.reviewedBy, submission.reviewId]
+        );
 
-        await reviewRepo.save(review);
-
-        return review;
+        return (await this.getReviewById(submission.reviewId))!;
     }
 
     /**
@@ -83,36 +78,18 @@ export class ByelawReviewService {
         userId: string,
         notes?: string
     ): Promise<ByelawReview> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const reviewRepo = AppDataSource.getRepository(ByelawReview);
-        const tenantRepo = AppDataSource.getRepository(Tenant);
-
-        const review = await reviewRepo.findOne({
-            where: { id: reviewId },
-        });
+        const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
 
         if (!review) {
             throw new Error('Bye-law review not found');
         }
 
-        review.status = ByelawReviewStatus.APPROVED;
-        review.reviewedBy = userId;
-        review.reviewedAt = new Date();
-        review.approvalDate = new Date();
+        await execute(
+            'UPDATE byelaw_reviews SET status = ?, reviewedBy = ?, reviewNotes = COALESCE(?, reviewNotes), reviewedAt = NOW(), approvalDate = NOW(), updatedAt = NOW() WHERE id = ?',
+            [ByelawReviewStatus.APPROVED, userId, notes || null, reviewId]
+        );
 
-        if (notes) {
-            review.reviewNotes = notes;
-        }
-
-        await reviewRepo.save(review);
-
-        // Note: Tenant entity doesn't have bylaws field yet
-        // This can be added in future if needed
-
-        return review;
+        return (await this.getReviewById(reviewId))!;
     }
 
     /**
@@ -123,28 +100,18 @@ export class ByelawReviewService {
         userId: string,
         reason: string
     ): Promise<ByelawReview> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const reviewRepo = AppDataSource.getRepository(ByelawReview);
-
-        const review = await reviewRepo.findOne({
-            where: { id: reviewId },
-        });
+        const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
 
         if (!review) {
             throw new Error('Bye-law review not found');
         }
 
-        review.status = ByelawReviewStatus.REJECTED;
-        review.reviewedBy = userId;
-        review.reviewedAt = new Date();
-        review.rejectionReason = reason;
+        await execute(
+            'UPDATE byelaw_reviews SET status = ?, reviewedBy = ?, rejectionReason = ?, reviewedAt = NOW(), updatedAt = NOW() WHERE id = ?',
+            [ByelawReviewStatus.REJECTED, userId, reason, reviewId]
+        );
 
-        await reviewRepo.save(review);
-
-        return review;
+        return (await this.getReviewById(reviewId))!;
     }
 
     /**
@@ -155,73 +122,59 @@ export class ByelawReviewService {
         userId: string,
         notes: string
     ): Promise<ByelawReview> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const reviewRepo = AppDataSource.getRepository(ByelawReview);
-
-        const review = await reviewRepo.findOne({
-            where: { id: reviewId },
-        });
+        const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
 
         if (!review) {
             throw new Error('Bye-law review not found');
         }
 
-        review.status = ByelawReviewStatus.REVISION_REQUIRED;
-        review.reviewedBy = userId;
-        review.reviewedAt = new Date();
-        review.reviewNotes = notes;
+        await execute(
+            'UPDATE byelaw_reviews SET status = ?, reviewedBy = ?, reviewNotes = ?, reviewedAt = NOW(), updatedAt = NOW() WHERE id = ?',
+            [ByelawReviewStatus.REVISION_REQUIRED, userId, notes, reviewId]
+        );
 
-        await reviewRepo.save(review);
-
-        return review;
+        return (await this.getReviewById(reviewId))!;
     }
 
     /**
      * Get bye-laws review history for a SACCO
      */
     static async getReviewHistory(tenantId: string): Promise<ByelawReview[]> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const results = await query(`
+            SELECT r.*, u.firstName as reviewerFirstName, u.lastName as reviewerLastName 
+            FROM byelaw_reviews r 
+            LEFT JOIN users u ON u.id = r.reviewedBy 
+            WHERE r.tenantId = ? 
+            ORDER BY r.submittedAt DESC
+        `, [tenantId]);
 
-        const reviewRepo = AppDataSource.getRepository(ByelawReview);
-
-        return await reviewRepo.find({
-            where: { tenantId },
-            relations: ['reviewer'],
-            order: { submittedAt: 'DESC' },
-        });
+        return results.map((r: any) => ({
+            ...r,
+            reviewer: r.reviewedBy ? { id: r.reviewedBy, firstName: r.reviewerFirstName, lastName: r.reviewerLastName } : undefined
+        })) as ByelawReview[];
     }
 
     /**
      * Get bye-laws review statistics
      */
     static async getReviewStatistics() {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const [[totalResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews') as any;
+        const totalReviews = Number(totalResult?.count || 0);
 
-        const reviewRepo = AppDataSource.getRepository(ByelawReview);
+        const [[pendingResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', [ByelawReviewStatus.PENDING]) as any;
+        const pending = Number(pendingResult?.count || 0);
 
-        const totalReviews = await reviewRepo.count();
-        const pending = await reviewRepo.count({
-            where: { status: ByelawReviewStatus.PENDING },
-        });
-        const underReview = await reviewRepo.count({
-            where: { status: ByelawReviewStatus.UNDER_REVIEW },
-        });
-        const approved = await reviewRepo.count({
-            where: { status: ByelawReviewStatus.APPROVED },
-        });
-        const rejected = await reviewRepo.count({
-            where: { status: ByelawReviewStatus.REJECTED },
-        });
-        const revisionRequired = await reviewRepo.count({
-            where: { status: ByelawReviewStatus.REVISION_REQUIRED },
-        });
+        const [[underReviewResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', [ByelawReviewStatus.UNDER_REVIEW]) as any;
+        const underReview = Number(underReviewResult?.count || 0);
+
+        const [[approvedResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', [ByelawReviewStatus.APPROVED]) as any;
+        const approved = Number(approvedResult?.count || 0);
+
+        const [[rejectedResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', [ByelawReviewStatus.REJECTED]) as any;
+        const rejected = Number(rejectedResult?.count || 0);
+
+        const [[revisionResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', [ByelawReviewStatus.REVISION_REQUIRED]) as any;
+        const revisionRequired = Number(revisionResult?.count || 0);
 
         return {
             totalReviews,

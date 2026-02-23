@@ -12,14 +12,17 @@ export async function GET(request: NextRequest) {
 
         const { searchParams } = new URL(request.url);
         const status = searchParams.get('status') || undefined;
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '50', 10);
 
-        let claims = await listClaims(user.tenantId);
+        const data = await listClaims(
+            user.tenantId,
+            undefined,
+            { status },
+            { page, limit }
+        );
 
-        if (status) {
-            claims = claims.filter(c => c.status === status);
-        }
-
-        return NextResponse.json(claims);
+        return NextResponse.json(data);
     } catch (error: any) {
         console.error('Error fetching claims:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

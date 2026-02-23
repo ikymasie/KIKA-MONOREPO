@@ -1,4 +1,3 @@
-import { AppDataSource } from '@/src/config/database';
 import { ComplianceScore, ComplianceRating } from '@/src/entities/ComplianceScore';
 import { ComplianceIssue, ComplianceIssueStatus } from '@/src/entities/ComplianceIssue';
 import { RegulatoryAlert } from '@/src/entities/RegulatoryAlert';
@@ -10,6 +9,9 @@ import { RegulatorSettings } from '@/src/entities/RegulatorSettings';
 import { ComplianceRule, ComplianceMetric, ComparisonOperator } from '@/src/entities/ComplianceRule';
 import { ComplianceAudit, AuditStatus } from '@/src/entities/ComplianceAudit';
 import { AlertType, AlertSeverity } from '@/src/entities/RegulatoryAlert';
+import { query, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
+import { RowDataPacket } from 'mysql2/promise';
 
 export class ComplianceService {
     /**
@@ -25,13 +27,6 @@ export class ComplianceService {
         tenantId: string,
         calculatedBy: string
     ): Promise<ComplianceScore> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const complianceScoreRepo = AppDataSource.getRepository(ComplianceScore);
-        const tenantRepo = AppDataSource.getRepository(Tenant);
-
         // Calculate component scores
         const kycScore = await this.calculateKYCScore(tenantId);
         const reportingScore = await this.calculateReportingScore(tenantId);
@@ -40,14 +35,13 @@ export class ComplianceService {
         const alertScore = await this.calculateAlertScore(tenantId);
 
         // Fetch thresholds from settings or use defaults
-        const settingsRepo = AppDataSource.getRepository(RegulatorSettings);
-        const settings = await settingsRepo.findOne({ order: { updatedAt: 'DESC' } });
+        const [[settings]] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
 
         const thresholds = {
-            excellent: settings?.excellentThreshold || 90,
-            good: settings?.goodThreshold || 75,
-            fair: settings?.fairThreshold || 60,
-            poor: settings?.poorThreshold || 40,
+            excellent: Number(settings?.excellentThreshold || 90),
+            good: Number(settings?.goodThreshold || 75),
+            fair: Number(settings?.fairThreshold || 60),
+            poor: Number(settings?.poorThreshold || 40),
         };
 
         const overallScore =
@@ -64,29 +58,23 @@ export class ComplianceService {
         else if (overallScore >= thresholds.poor) rating = ComplianceRating.POOR;
 
         // Create new compliance score record
-        const complianceScore = complianceScoreRepo.create({
-            tenantId,
-            overallScore,
-            kycScore,
-            reportingScore,
-            bylawScore,
-            issueScore,
-            alertScore,
-            rating,
-            calculatedAt: new Date(),
-            calculatedBy,
-        });
+        const scoreId = uuidv4();
+        await execute(
+            `INSERT INTO compliance_scores 
+             (id, tenantId, overallScore, kycScore, reportingScore, bylawScore, issueScore, alertScore, rating, calculatedAt, calculatedBy, createdAt) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, NOW())`,
+            [scoreId, tenantId, overallScore, kycScore, reportingScore, bylawScore, issueScore, alertScore, rating, calculatedBy]
+        );
 
-        await complianceScoreRepo.save(complianceScore);
+        const [[complianceScore]] = await query('SELECT * FROM compliance_scores WHERE id = ?', [scoreId]) as any;
 
         // Update tenant with latest score
-        await tenantRepo.update(tenantId, {
-            currentComplianceScore: overallScore,
-            complianceRating: rating,
-            lastComplianceReviewDate: new Date(),
-        });
+        await execute(
+            'UPDATE tenants SET currentComplianceScore = ?, complianceRating = ?, lastComplianceReviewDate = NOW(), updatedAt = NOW() WHERE id = ?',
+            [overallScore, rating, tenantId]
+        );
 
-        return complianceScore;
+        return complianceScore as ComplianceScore;
     }
 
     /**
@@ -94,20 +82,19 @@ export class ComplianceService {
      * Based on percentage of members with fully verified KYC
      */
     private static async calculateKYCScore(tenantId: string): Promise<number> {
-        const memberRepo = AppDataSource.getRepository(Member);
-        const kycRepo = AppDataSource.getRepository(KYC);
+        const [[totalMembersResult]] = await query('SELECT COUNT(*) as count FROM members WHERE tenantId = ?', [tenantId]) as any;
+        const totalMembers = Number(totalMembersResult?.count || 0);
 
-        const totalMembers = await memberRepo.count({ where: { tenantId } });
         if (totalMembers === 0) return 100; // No members = perfect score
 
-        const verifiedKYCs = await kycRepo
-            .createQueryBuilder('kyc')
-            .innerJoin('kyc.member', 'member')
-            .where('member.tenantId = :tenantId', { tenantId })
-            .andWhere('kyc.identityVerified = :verified', { verified: true })
-            .andWhere('kyc.residenceVerified = :verified', { verified: true })
-            .andWhere('kyc.incomeVerified = :verified', { verified: true })
-            .getCount();
+        const [[verifiedKYCResult]] = await query(`
+            SELECT COUNT(*) as count 
+            FROM kyc 
+            INNER JOIN members m ON m.id = kyc.memberId 
+            WHERE m.tenantId = ? AND kyc.identityVerified = true AND kyc.residenceVerified = true AND kyc.incomeVerified = true
+        `, [tenantId]) as any;
+
+        const verifiedKYCs = Number(verifiedKYCResult?.count || 0);
 
         return (verifiedKYCs / totalMembers) * 100;
     }
@@ -127,12 +114,10 @@ export class ComplianceService {
      * Based on approved bye-laws and compliance
      */
     private static async calculateBylawScore(tenantId: string): Promise<number> {
-        const bylawRepo = AppDataSource.getRepository(ByelawReview);
-
-        const latestReview = await bylawRepo.findOne({
-            where: { tenantId },
-            order: { submittedAt: 'DESC' },
-        });
+        const [[latestReview]] = await query(
+            'SELECT * FROM byelaw_reviews WHERE tenantId = ? ORDER BY submittedAt DESC LIMIT 1',
+            [tenantId]
+        ) as any;
 
         if (!latestReview) return 50; // No bye-laws submitted = medium score
 
@@ -141,7 +126,8 @@ export class ComplianceService {
             const twoYearsAgo = new Date();
             twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
-            if (latestReview.approvalDate && latestReview.approvalDate > twoYearsAgo) {
+            const approvalDate = latestReview.approvalDate ? new Date(latestReview.approvalDate) : null;
+            if (approvalDate && approvalDate > twoYearsAgo) {
                 return 100;
             }
             return 80; // Approved but old
@@ -164,14 +150,10 @@ export class ComplianceService {
      * Based on number and severity of open compliance issues
      */
     private static async calculateIssueScore(tenantId: string): Promise<number> {
-        const issueRepo = AppDataSource.getRepository(ComplianceIssue);
-
-        const openIssues = await issueRepo.find({
-            where: {
-                tenantId,
-                status: ComplianceIssueStatus.OPEN,
-            },
-        });
+        const openIssues = await query(
+            'SELECT severity FROM compliance_issues WHERE tenantId = ? AND status = ?',
+            [tenantId, ComplianceIssueStatus.OPEN]
+        ) as any[];
 
         if (openIssues.length === 0) return 100;
 
@@ -203,14 +185,13 @@ export class ComplianceService {
      * Based on percentage of resolved regulatory alerts
      */
     private static async calculateAlertScore(tenantId: string): Promise<number> {
-        const alertRepo = AppDataSource.getRepository(RegulatoryAlert);
+        const [[totalAlertsResult]] = await query('SELECT COUNT(*) as count FROM regulatory_alerts WHERE tenantId = ?', [tenantId]) as any;
+        const totalAlerts = Number(totalAlertsResult?.count || 0);
 
-        const totalAlerts = await alertRepo.count({ where: { tenantId } });
         if (totalAlerts === 0) return 100; // No alerts = perfect score
 
-        const resolvedAlerts = await alertRepo.count({
-            where: { tenantId, isResolved: true },
-        });
+        const [[resolvedAlertsResult]] = await query('SELECT COUNT(*) as count FROM regulatory_alerts WHERE tenantId = ? AND isResolved = true', [tenantId]) as any;
+        const resolvedAlerts = Number(resolvedAlertsResult?.count || 0);
 
         return (resolvedAlerts / totalAlerts) * 100;
     }
@@ -222,83 +203,78 @@ export class ComplianceService {
         tenantId: string,
         limit: number = 10
     ): Promise<ComplianceScore[]> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const results = await query(`
+            SELECT s.*, t.name as tenantName, u.firstName as calculatorFirstName, u.lastName as calculatorLastName 
+            FROM compliance_scores s 
+            LEFT JOIN tenants t ON t.id = s.tenantId 
+            LEFT JOIN users u ON u.id = s.calculatedBy 
+            WHERE s.tenantId = ? 
+            ORDER BY s.calculatedAt DESC LIMIT ?
+        `, [tenantId, limit]);
 
-        const complianceScoreRepo = AppDataSource.getRepository(ComplianceScore);
-
-        return await complianceScoreRepo.find({
-            where: { tenantId },
-            order: { calculatedAt: 'DESC' },
-            take: limit,
-            relations: ['tenant', 'calculator'],
-        });
+        return results.map((s: any) => ({
+            ...s,
+            tenant: s.tenantId ? { id: s.tenantId, name: s.tenantName } : undefined,
+            calculator: s.calculatedBy ? { id: s.calculatedBy, firstName: s.calculatorFirstName, lastName: s.calculatorLastName } : undefined
+        })) as ComplianceScore[];
     }
 
     /**
      * Get all compliance scores for all SACCOs
      */
     static async getAllComplianceScores(): Promise<ComplianceScore[]> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const results = await query(`
+            SELECT score.*, t.name as tenantName, u.firstName as calculatorFirstName, u.lastName as calculatorLastName
+            FROM compliance_scores score
+            LEFT JOIN tenants t ON t.id = score.tenantId
+            LEFT JOIN users u ON u.id = score.calculatedBy
+            WHERE score.calculatedAt = (
+                SELECT MAX(s.calculatedAt) 
+                FROM compliance_scores s 
+                WHERE s.tenantId = score.tenantId
+            )
+            ORDER BY score.overallScore ASC
+        `);
 
-        const complianceScoreRepo = AppDataSource.getRepository(ComplianceScore);
-
-        // Get latest score for each tenant
-        const scores = await complianceScoreRepo
-            .createQueryBuilder('score')
-            .leftJoinAndSelect('score.tenant', 'tenant')
-            .leftJoinAndSelect('score.calculator', 'calculator')
-            .where((qb) => {
-                const subQuery = qb
-                    .subQuery()
-                    .select('MAX(s.calculatedAt)')
-                    .from(ComplianceScore, 's')
-                    .where('s.tenantId = score.tenantId')
-                    .getQuery();
-                return 'score.calculatedAt = ' + subQuery;
-            })
-            .orderBy('score.overallScore', 'ASC')
-            .getMany();
-
-        return scores;
+        return results.map((s: any) => ({
+            ...s,
+            tenant: s.tenantId ? { id: s.tenantId, name: s.tenantName } : undefined,
+            calculator: s.calculatedBy ? { id: s.calculatedBy, firstName: s.calculatorFirstName, lastName: s.calculatorLastName } : undefined
+        })) as ComplianceScore[];
     }
 
     /**
      * Get detailed compliance metrics for a SACCO
      */
     static async getComplianceMetrics(tenantId: string) {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const [[latestScore]] = await query(`
+            SELECT s.*, t.name as tenantName, u.firstName as calculatorFirstName, u.lastName as calculatorLastName 
+            FROM compliance_scores s 
+            LEFT JOIN tenants t ON t.id = s.tenantId 
+            LEFT JOIN users u ON u.id = s.calculatedBy 
+            WHERE s.tenantId = ? 
+            ORDER BY s.calculatedAt DESC LIMIT 1
+        `, [tenantId]) as any;
 
-        const latestScore = await AppDataSource.getRepository(ComplianceScore).findOne({
-            where: { tenantId },
-            order: { calculatedAt: 'DESC' },
-            relations: ['tenant', 'calculator'],
-        });
+        const [[openIssuesResult]] = await query('SELECT COUNT(*) as count FROM compliance_issues WHERE tenantId = ? AND status = ?', [tenantId, ComplianceIssueStatus.OPEN]) as any;
+        const openIssuesCount = Number(openIssuesResult?.count || 0);
 
-        const openIssuesCount = await AppDataSource.getRepository(ComplianceIssue).count({
-            where: { tenantId, status: ComplianceIssueStatus.OPEN },
-        });
+        const [[pendingKycResult]] = await query(`
+            SELECT COUNT(*) as count 
+            FROM kyc 
+            INNER JOIN members m ON m.id = kyc.memberId 
+            WHERE m.tenantId = ? AND (kyc.identityVerified = false OR kyc.residenceVerified = false OR kyc.incomeVerified = false)
+        `, [tenantId]) as any;
+        const pendingKYCCount = Number(pendingKycResult?.count || 0);
 
-        const pendingKYCCount = await AppDataSource.getRepository(KYC)
-            .createQueryBuilder('kyc')
-            .innerJoin('kyc.member', 'member')
-            .where('member.tenantId = :tenantId', { tenantId })
-            .andWhere('(kyc.identityVerified = :notVerified OR kyc.residenceVerified = :notVerified OR kyc.incomeVerified = :notVerified)',
-                { notVerified: false })
-            .getCount();
-
-        const bylawReview = await AppDataSource.getRepository(ByelawReview).findOne({
-            where: { tenantId },
-            order: { submittedAt: 'DESC' },
-        });
+        const [[bylawReview]] = await query('SELECT * FROM byelaw_reviews WHERE tenantId = ? ORDER BY submittedAt DESC LIMIT 1', [tenantId]) as any;
 
         return {
-            latestScore,
+            latestScore: latestScore ? {
+                ...latestScore,
+                tenant: latestScore.tenantId ? { id: latestScore.tenantId, name: latestScore.tenantName } : undefined,
+                calculator: latestScore.calculatedBy ? { id: latestScore.calculatedBy, firstName: latestScore.calculatorFirstName, lastName: latestScore.calculatorLastName } : undefined
+            } : null,
             openIssuesCount,
             pendingKYCCount,
             bylawReview,
@@ -309,13 +285,7 @@ export class ComplianceService {
      * Rule Engine: Evaluate all active rules for a tenant
      */
     static async evaluateRules(tenantId: string): Promise<void> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const ruleRepo = AppDataSource.getRepository(ComplianceRule);
-        const alertRepo = AppDataSource.getRepository(RegulatoryAlert);
-        const activeRules = await ruleRepo.find({ where: { isActive: true } });
+        const activeRules = await query('SELECT * FROM compliance_rules WHERE isActive = true') as any[];
 
         if (activeRules.length === 0) return;
 
@@ -338,35 +308,30 @@ export class ComplianceService {
             }
 
             let triggered = false;
+            const threshold = Number(rule.threshold || 0);
             switch (rule.operator) {
-                case ComparisonOperator.LESS_THAN: triggered = metricValue < rule.threshold!; break;
-                case ComparisonOperator.GREATER_THAN: triggered = metricValue > rule.threshold!; break;
-                case ComparisonOperator.EQUALS: triggered = metricValue === rule.threshold!; break;
-                case ComparisonOperator.LESS_THAN_OR_EQUAL: triggered = metricValue <= rule.threshold!; break;
-                case ComparisonOperator.GREATER_THAN_OR_EQUAL: triggered = metricValue >= rule.threshold!; break;
+                case ComparisonOperator.LESS_THAN: triggered = metricValue < threshold; break;
+                case ComparisonOperator.GREATER_THAN: triggered = metricValue > threshold; break;
+                case ComparisonOperator.EQUALS: triggered = metricValue === threshold; break;
+                case ComparisonOperator.LESS_THAN_OR_EQUAL: triggered = metricValue <= threshold; break;
+                case ComparisonOperator.GREATER_THAN_OR_EQUAL: triggered = metricValue >= threshold; break;
             }
 
             if (triggered) {
                 // Check if a similar unresolved alert already exists
-                const existingAlert = await alertRepo.findOne({
-                    where: {
-                        tenantId,
-                        type: AlertType.COMPLIANCE_ISSUE,
-                        title: `Automated Alert: ${rule.name}`,
-                        isResolved: false
-                    }
-                });
+                const title = `Automated Alert: ${rule.name}`;
+                const [[existingAlert]] = await query(
+                    'SELECT * FROM regulatory_alerts WHERE tenantId = ? AND type = ? AND title = ? AND isResolved = false LIMIT 1',
+                    [tenantId, AlertType.COMPLIANCE_ISSUE, title]
+                ) as any;
 
                 if (!existingAlert) {
-                    const alert = alertRepo.create({
-                        tenantId,
-                        type: AlertType.COMPLIANCE_ISSUE,
-                        severity: rule.severity,
-                        title: `Automated Alert: ${rule.name}`,
-                        description: `Rule "${rule.name}" triggered. Metric ${rule.metric} is ${metricValue}, which is ${rule.operator} ${rule.threshold}.`,
-                        metadata: { ruleId: rule.id, metric: rule.metric, value: metricValue }
-                    });
-                    await alertRepo.save(alert);
+                    const id = uuidv4();
+                    const metadata = { ruleId: rule.id, metric: rule.metric, value: metricValue };
+                    await execute(
+                        'INSERT INTO regulatory_alerts (id, tenantId, type, severity, title, description, metadata, isResolved, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+                        [id, tenantId, AlertType.COMPLIANCE_ISSUE, rule.severity, title, `Rule "${rule.name}" triggered. Metric ${rule.metric} is ${metricValue}, which is ${rule.operator} ${rule.threshold}.`, JSON.stringify(metadata), false]
+                    );
                 }
             }
         }
@@ -376,61 +341,61 @@ export class ComplianceService {
      * Audit Scheduler: Schedule a new audit
      */
     static async scheduleAudit(tenantId: string, auditorId: string, scheduledDate: Date): Promise<ComplianceAudit> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const id = uuidv4();
+        await execute(
+            'INSERT INTO compliance_audits (id, tenantId, auditorId, scheduledDate, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, NOW(), NOW())',
+            [id, tenantId, auditorId, scheduledDate, AuditStatus.PENDING]
+        );
 
-        const auditRepo = AppDataSource.getRepository(ComplianceAudit);
-        const audit = auditRepo.create({
-            tenantId,
-            auditorId,
-            scheduledDate,
-            status: AuditStatus.PENDING
-        });
-
-        return await auditRepo.save(audit);
+        const [[audit]] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [id]) as any;
+        return audit as ComplianceAudit;
     }
 
     /**
      * Audit Scheduler: Complete an audit
      */
     static async completeAudit(auditId: string, findings: string): Promise<ComplianceAudit> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const auditRepo = AppDataSource.getRepository(ComplianceAudit);
-        const audit = await auditRepo.findOne({ where: { id: auditId }, relations: ['tenant'] });
+        const [[audit]] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [auditId]) as any;
 
         if (!audit) throw new Error('Audit not found');
 
         // Capture current score
-        const latestMetrics = await this.getComplianceMetrics(audit.tenantId!);
+        const latestMetrics = await this.getComplianceMetrics(audit.tenantId);
 
-        audit.status = AuditStatus.COMPLETED;
-        audit.completedDate = new Date();
-        audit.findings = findings;
-        audit.complianceScoreAtTime = latestMetrics.latestScore?.overallScore || 0;
+        const complianceScoreAtTime = latestMetrics.latestScore?.overallScore || 0;
 
-        return await auditRepo.save(audit);
+        await execute(
+            'UPDATE compliance_audits SET status = ?, completedDate = NOW(), findings = ?, complianceScoreAtTime = ?, updatedAt = NOW() WHERE id = ?',
+            [AuditStatus.COMPLETED, findings, complianceScoreAtTime, auditId]
+        );
+
+        const [[updatedAudit]] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [auditId]) as any;
+        return updatedAudit as ComplianceAudit;
     }
 
     /**
      * Rule Management
      */
     static async saveRule(ruleData: Partial<ComplianceRule>): Promise<ComplianceRule> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
+        let id = ruleData.id;
+        if (id) {
+            await execute(
+                'UPDATE compliance_rules SET name = ?, metric = ?, operator = ?, threshold = ?, severity = ?, isActive = ?, description = ?, updatedAt = NOW() WHERE id = ?',
+                [ruleData.name, ruleData.metric, ruleData.operator, ruleData.threshold, ruleData.severity, ruleData.isActive ?? true, ruleData.description, id]
+            );
+        } else {
+            id = uuidv4();
+            await execute(
+                'INSERT INTO compliance_rules (id, name, metric, operator, threshold, severity, isActive, description, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())',
+                [id, ruleData.name, ruleData.metric, ruleData.operator, ruleData.threshold, ruleData.severity, ruleData.isActive ?? true, ruleData.description]
+            );
         }
-        const ruleRepo = AppDataSource.getRepository(ComplianceRule);
-        const rule = ruleRepo.create(ruleData);
-        return await ruleRepo.save(rule);
+
+        const [[rule]] = await query('SELECT * FROM compliance_rules WHERE id = ? LIMIT 1', [id]) as any;
+        return rule as ComplianceRule;
     }
 
     static async getRules(): Promise<ComplianceRule[]> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-        return await AppDataSource.getRepository(ComplianceRule).find();
+        return await query('SELECT * FROM compliance_rules') as ComplianceRule[];
     }
 }

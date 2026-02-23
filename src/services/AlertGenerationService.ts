@@ -1,4 +1,3 @@
-import { AppDataSource } from '@/lib/db';
 import { RegulatoryAlert, AlertType, AlertSeverity } from '@/entities/RegulatoryAlert';
 import { Tenant, TenantStatus } from '@/entities/Tenant';
 import { Account } from '@/entities/Account';
@@ -7,28 +6,28 @@ import { ComplianceScore } from '@/entities/ComplianceScore';
 import { ByelawReview, ByelawReviewStatus } from '@/entities/ByelawReview';
 import { ComplianceIssue, ComplianceIssueStatus, ComplianceIssueSeverity } from '@/entities/ComplianceIssue';
 import { KYC } from '@/entities/KYC';
+import { query, execute } from '@/src/db/query';
+import { RowDataPacket } from 'mysql2/promise';
+import { v4 as uuidv4 } from 'uuid';
 
 export class AlertGenerationService {
     /**
      * Generate alerts for all SACCOs based on current metrics
      */
     static async generateAlerts(): Promise<void> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const tenants = await AppDataSource.getRepository(Tenant).find({
-            where: { status: TenantStatus.ACTIVE }
-        });
+        const tenants = await query<RowDataPacket & Tenant>(
+            'SELECT * FROM tenants WHERE status = ?',
+            [TenantStatus.ACTIVE]
+        );
 
         for (const tenant of tenants) {
-            await this.checkLiquidityBreach(tenant);
-            await this.checkHighRisk(tenant);
-            await this.checkCapitalAdequacy(tenant);
-            await this.checkComplianceScore(tenant);
-            await this.checkPendingKYC(tenant);
-            await this.checkByelawReview(tenant);
-            await this.checkCriticalIssues(tenant);
+            await this.checkLiquidityBreach(tenant as Tenant);
+            await this.checkHighRisk(tenant as Tenant);
+            await this.checkCapitalAdequacy(tenant as Tenant);
+            await this.checkComplianceScore(tenant as Tenant);
+            await this.checkPendingKYC(tenant as Tenant);
+            await this.checkByelawReview(tenant as Tenant);
+            await this.checkCriticalIssues(tenant as Tenant);
         }
     }
 
@@ -36,17 +35,8 @@ export class AlertGenerationService {
      * Check for liquidity ratio breaches
      */
     private static async checkLiquidityBreach(tenant: Tenant): Promise<void> {
-        const assets = await AppDataSource.getRepository(Account)
-            .createQueryBuilder('account')
-            .select('SUM(account.balance)', 'total')
-            .where('account.tenantId = :tenantId', { tenantId: tenant.id })
-            .getRawOne();
-
-        const loans = await AppDataSource.getRepository(Loan)
-            .createQueryBuilder('loan')
-            .select('SUM(loan.outstandingBalance)', 'outstanding')
-            .where('loan.tenantId = :tenantId', { tenantId: tenant.id })
-            .getRawOne();
+        const [[assets]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [tenant.id]) as any;
+        const [[loans]] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [tenant.id]) as any;
 
         const totalAssets = parseFloat(assets?.total || '0');
         const outstanding = parseFloat(loans?.outstanding || '0');
@@ -85,17 +75,8 @@ export class AlertGenerationService {
      * Check for high-risk ratings
      */
     private static async checkHighRisk(tenant: Tenant): Promise<void> {
-        const assets = await AppDataSource.getRepository(Account)
-            .createQueryBuilder('account')
-            .select('SUM(account.balance)', 'total')
-            .where('account.tenantId = :tenantId', { tenantId: tenant.id })
-            .getRawOne();
-
-        const loans = await AppDataSource.getRepository(Loan)
-            .createQueryBuilder('loan')
-            .select('SUM(loan.outstandingBalance)', 'outstanding')
-            .where('loan.tenantId = :tenantId', { tenantId: tenant.id })
-            .getRawOne();
+        const [[assets]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [tenant.id]) as any;
+        const [[loans]] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [tenant.id]) as any;
 
         const totalAssets = parseFloat(assets?.total || '0');
         const outstanding = parseFloat(loans?.outstanding || '0');
@@ -116,17 +97,8 @@ export class AlertGenerationService {
      * Check capital adequacy
      */
     private static async checkCapitalAdequacy(tenant: Tenant): Promise<void> {
-        const assets = await AppDataSource.getRepository(Account)
-            .createQueryBuilder('account')
-            .select('SUM(account.balance)', 'total')
-            .where('account.tenantId = :tenantId', { tenantId: tenant.id })
-            .getRawOne();
-
-        const loans = await AppDataSource.getRepository(Loan)
-            .createQueryBuilder('loan')
-            .select('SUM(loan.outstandingBalance)', 'outstanding')
-            .where('loan.tenantId = :tenantId', { tenantId: tenant.id })
-            .getRawOne();
+        const [[assets]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [tenant.id]) as any;
+        const [[loans]] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [tenant.id]) as any;
 
         const totalAssets = parseFloat(assets?.total || '0');
         const totalLoans = parseFloat(loans?.outstanding || '0');
@@ -184,16 +156,14 @@ export class AlertGenerationService {
      * Check for pending KYC verifications
      */
     private static async checkPendingKYC(tenant: Tenant): Promise<void> {
-        const kycRepo = AppDataSource.getRepository(KYC);
+        const [[result]] = await query(`
+            SELECT COUNT(*) as count 
+            FROM kyc
+            INNER JOIN members m ON m.id = kyc.memberId
+            WHERE m.tenantId = ? AND (kyc.identityVerified = false OR kyc.residenceVerified = false OR kyc.incomeVerified = false)
+        `, [tenant.id]) as any;
 
-        // Count unverified KYC records for this tenant
-        // Note: Assuming KYC has tenantId or link to Member which has tenantId
-        // From previous context, KYCVerificationService uses query builder for this
-        const pendingCount = await kycRepo.createQueryBuilder('kyc')
-            .innerJoin('members', 'm', 'm.id = kyc.memberId')
-            .where('m.tenantId = :tenantId', { tenantId: tenant.id })
-            .andWhere('(kyc.identityVerified = false OR kyc.residenceVerified = false OR kyc.incomeVerified = false)')
-            .getCount();
+        const pendingCount = Number(result?.count || 0);
 
         if (pendingCount > 50) {
             await this.createAlert(tenant.id, {
@@ -210,17 +180,12 @@ export class AlertGenerationService {
      * Check for overdue bye-laws reviews
      */
     private static async checkByelawReview(tenant: Tenant): Promise<void> {
-        const byelawRepo = AppDataSource.getRepository(ByelawReview);
+        const [[overdueReview]] = await query(
+            'SELECT * FROM byelaw_reviews WHERE tenantId = ? AND status = ? ORDER BY submittedAt ASC LIMIT 1',
+            [tenant.id, ByelawReviewStatus.PENDING]
+        ) as any;
 
-        const overdueReview = await byelawRepo.findOne({
-            where: {
-                tenantId: tenant.id,
-                status: ByelawReviewStatus.PENDING
-            },
-            order: { submittedAt: 'ASC' }
-        });
-
-        const submittedAt = overdueReview?.submittedAt;
+        const submittedAt = overdueReview?.submittedAt ? new Date(overdueReview.submittedAt) : undefined;
         if (overdueReview && submittedAt) {
             const daysPending = Math.floor((new Date().getTime() - submittedAt.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -240,15 +205,12 @@ export class AlertGenerationService {
      * Check for critical compliance issues
      */
     private static async checkCriticalIssues(tenant: Tenant): Promise<void> {
-        const issueRepo = AppDataSource.getRepository(ComplianceIssue);
+        const [[result]] = await query(
+            'SELECT COUNT(*) as count FROM compliance_issues WHERE tenantId = ? AND status = ? AND severity = ?',
+            [tenant.id, ComplianceIssueStatus.OPEN, ComplianceIssueSeverity.CRITICAL]
+        ) as any;
 
-        const criticalCount = await issueRepo.count({
-            where: {
-                tenantId: tenant.id,
-                status: ComplianceIssueStatus.OPEN,
-                severity: ComplianceIssueSeverity.CRITICAL
-            }
-        });
+        const criticalCount = Number(result?.count || 0);
 
         if (criticalCount > 0) {
             await this.createAlert(tenant.id, {
@@ -276,23 +238,18 @@ export class AlertGenerationService {
     ): Promise<void> {
         if (!tenantId) return;
 
-        const alertRepo = AppDataSource.getRepository(RegulatoryAlert);
-
         // Check if similar unresolved alert exists
-        const existing = await alertRepo.findOne({
-            where: {
-                tenantId,
-                type: alertData.type,
-                isResolved: false
-            }
-        });
+        const [[existing]] = await query(
+            'SELECT * FROM regulatory_alerts WHERE tenantId = ? AND type = ? AND isResolved = false LIMIT 1',
+            [tenantId, alertData.type]
+        ) as any;
 
         if (!existing) {
-            const alert = alertRepo.create({
-                tenantId,
-                ...alertData
-            });
-            await alertRepo.save(alert);
+            const id = uuidv4();
+            await execute(
+                'INSERT INTO regulatory_alerts (id, tenantId, type, severity, title, description, metadata, isResolved, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())',
+                [id, tenantId, alertData.type, alertData.severity, alertData.title, alertData.description, alertData.metadata ? JSON.stringify(alertData.metadata) : null, false]
+            );
         }
     }
 }

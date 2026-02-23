@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import Link from 'next/link';
+import Pagination from '@/components/ui/Pagination';
 
 interface Order {
     id: string;
@@ -27,28 +28,40 @@ export default function OrdersPage() {
     const [orders, setOrders] = useState<Order[]>([]);
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState('');
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchOrders();
-    }, [statusFilter]);
+    }, [statusFilter, page]);
 
     const fetchOrders = async () => {
         try {
             setLoading(true);
             setError(null);
-            const url = statusFilter
-                ? `/api/admin/merchandise/orders?status=${statusFilter}`
-                : '/api/admin/merchandise/orders';
+
+            const queryParams = new URLSearchParams({
+                page: page.toString(),
+                limit: '50'
+            });
+            if (statusFilter) {
+                queryParams.append('status', statusFilter);
+            }
+
+            const url = `/api/admin/merchandise/orders?${queryParams.toString()}`;
             const response = await fetch(url);
             const data = await response.json();
+
             if (!response.ok) {
                 const msg = data?.error?.message || data?.error || 'Failed to load orders';
                 setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
                 setOrders([]);
                 return;
             }
-            setOrders(Array.isArray(data) ? data : []);
+
+            setOrders(data.orders || []);
+            setPagination(data.pagination);
         } catch (err) {
             console.error('Failed to fetch orders:', err);
             setError('Network error — could not load orders.');
@@ -85,7 +98,7 @@ export default function OrdersPage() {
                     {['', 'pending', 'approved', 'delivered', 'cancelled'].map((status) => (
                         <button
                             key={status}
-                            onClick={() => setStatusFilter(status)}
+                            onClick={() => { setStatusFilter(status); setPage(1); }}
                             className={`px-6 py-2 rounded-xl text-sm font-bold border-2 transition-all whitespace-nowrap ${statusFilter === status
                                 ? 'bg-primary-600 border-primary-600 text-white shadow-lg shadow-primary-200'
                                 : 'bg-white border-gray-100 text-gray-500 hover:border-gray-200'
@@ -164,6 +177,18 @@ export default function OrdersPage() {
                                 <p className="text-gray-500">There are no orders matching your current filter.</p>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {pagination && pagination.totalPages > 1 && (
+                    <div className="mt-8">
+                        <Pagination
+                            currentPage={pagination.page}
+                            totalPages={pagination.totalPages}
+                            totalItems={pagination.total}
+                            itemsPerPage={pagination.limit}
+                            onPageChange={setPage}
+                        />
                     </div>
                 )}
             </div>

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const [policies, availableProducts, claims] = await Promise.all([
+        const [policies, availableProducts, claimsData] = await Promise.all([
             listPolicies(user.tenantId, user.id),
             listInsuranceProducts(user.tenantId, true),
             listClaims(user.tenantId, user.id)
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             policies,
             availableProducts,
-            claims
+            claims: claimsData.claims
         });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

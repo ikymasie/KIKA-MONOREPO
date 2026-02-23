@@ -82,30 +82,64 @@ export async function createPolicy(tenantId: string, data: Partial<IInsurancePol
     return policy;
 }
 
-export async function listClaims(tenantId: string, memberId?: string): Promise<IInsuranceClaim[]> {
-    let sql = `
+export async function listClaims(
+    tenantId: string,
+    memberId?: string,
+    filter?: { status?: string },
+    pagination?: { page?: number; limit?: number }
+) {
+    const page = Math.max(1, pagination?.page ?? 1);
+    const limit = pagination?.limit ? Math.min(10000, Math.max(1, pagination.limit)) : 10000;
+    const offset = (page - 1) * limit;
+
+    let baseWhere = `WHERE ic.tenantId = ?`;
+    const params: any[] = [tenantId];
+
+    if (memberId) {
+        baseWhere += ` AND ip.memberId = ?`;
+        params.push(memberId);
+    }
+    if (filter?.status) {
+        baseWhere += ` AND ic.status = ?`;
+        params.push(filter.status);
+    }
+
+    const countRow = await queryOne<RowDataPacket & { total: string }>(
+        `SELECT COUNT(*) as total 
+         FROM insurance_claims ic
+         INNER JOIN insurance_policies ip ON ip.id = ic.policyId
+         ${baseWhere}`,
+        params
+    );
+    const total = parseInt(countRow?.total ?? '0', 10);
+
+    const sql = `
         SELECT ic.*, ip.policyNumber, CONCAT(m.firstName, ' ', m.lastName) AS memberFullName
         FROM insurance_claims ic
         INNER JOIN insurance_policies ip ON ip.id = ic.policyId
         INNER JOIN members m ON m.id = ip.memberId
-        WHERE ic.tenantId = ?
+        ${baseWhere}
+        ORDER BY ic.createdAt DESC
+        LIMIT ? OFFSET ?
     `;
-    const params: any[] = [tenantId];
 
-    if (memberId) {
-        sql += ` AND ip.memberId = ?`;
-        params.push(memberId);
-    }
-    sql += ` ORDER BY ic.createdAt DESC`;
+    const rows = await query<RowDataPacket & IInsuranceClaim>(sql, [...params, limit, offset]);
 
-    const rows = await query<RowDataPacket & IInsuranceClaim>(sql, params);
-
-    // Parse JSON docs
-    return rows.map(r => ({
+    const claims = rows.map(r => ({
         ...r,
         supportingDocuments: typeof r.supportingDocuments === 'string' ? JSON.parse(r.supportingDocuments) : r.supportingDocuments,
         disputeEvidenceUrls: typeof r.disputeEvidenceUrls === 'string' ? JSON.parse(r.disputeEvidenceUrls) : r.disputeEvidenceUrls
     }));
+
+    return {
+        claims,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
 }
 
 export async function getClaim(id: string, tenantId: string): Promise<IInsuranceClaim | null> {

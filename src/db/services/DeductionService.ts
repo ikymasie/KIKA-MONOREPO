@@ -23,54 +23,93 @@ export async function listDeductionItems(requestId: string): Promise<IDeductionI
     );
 }
 
-export async function getMembersDeductionSummary(tenantId: string) {
-    const rows = await query<RowDataPacket>(`
+export async function getMembersDeductionSummary(tenantId: string, pagination: { page?: number; limit?: number } = {}) {
+    const page = Math.max(1, pagination.page ?? 1);
+    // If no limit passed, default to a high number or we can handle it via the caller
+    const limit = pagination.limit ? Math.min(10000, Math.max(1, pagination.limit)) : 10000;
+    const offset = (page - 1) * limit;
+
+    // 1. Calculate global metrics cleanly in SQL
+    const metricsRow = await queryOne<RowDataPacket>(`
         SELECT 
-            m.id, m.memberNumber, m.firstName, m.lastName, m.status,
-            COALESCE(s.monthlyContribution, 0) AS savingsTotal,
-            COALESCE(l.monthlyInstallment, 0) AS loansTotal,
-            COALESCE(p.monthlyPremium, 0) AS insuranceTotal
+            COUNT(m.id) as totalMembers,
+            SUM(IF((COALESCE(s.amount, 0) + COALESCE(l.amount, 0) + COALESCE(p.amount, 0)) > 0, 1, 0)) as deductingMembers,
+            SUM(COALESCE(s.amount, 0) + COALESCE(l.amount, 0) + COALESCE(p.amount, 0)) as totalDeductions,
+            SUM(IF((COALESCE(s.amount, 0) + COALESCE(l.amount, 0) + COALESCE(p.amount, 0)) > 0, COALESCE(s.amount, 0), 0)) as savingsTotal,
+            SUM(IF((COALESCE(s.amount, 0) + COALESCE(l.amount, 0) + COALESCE(p.amount, 0)) > 0, COALESCE(l.amount, 0), 0)) as loansTotal,
+            SUM(IF((COALESCE(s.amount, 0) + COALESCE(l.amount, 0) + COALESCE(p.amount, 0)) > 0, COALESCE(p.amount, 0), 0)) as insuranceTotal
         FROM members m
         LEFT JOIN (
-            SELECT memberId, SUM(monthlyContribution) as monthlyContribution 
+            SELECT memberId, SUM(monthlyContribution) as amount 
             FROM member_savings WHERE isActive = 1 GROUP BY memberId
         ) s ON s.memberId = m.id
         LEFT JOIN (
-            SELECT memberId, SUM(monthlyInstallment) as monthlyInstallment 
+            SELECT memberId, SUM(monthlyInstallment) as amount 
             FROM loans WHERE status IN ('active', 'disbursed') GROUP BY memberId
         ) l ON l.memberId = m.id
         LEFT JOIN (
-            SELECT memberId, SUM(monthlyPremium) as monthlyPremium 
+            SELECT memberId, SUM(monthlyPremium) as amount 
             FROM insurance_policies WHERE status = 'active' GROUP BY memberId
         ) p ON p.memberId = m.id
         WHERE m.tenantId = ? AND m.status = 'active'
     `, [tenantId]);
 
-    const deductions = rows.map(r => {
-        const savings = Number(r.savingsTotal);
-        const loans = Number(r.loansTotal);
-        const insurance = Number(r.insuranceTotal);
-        return {
-            id: r.id,
-            memberNumber: r.memberNumber,
-            name: `${r.firstName} ${r.lastName}`,
-            savings,
-            loans,
-            insurance,
-            total: savings + loans + insurance
-        };
-    }).filter(d => d.total > 0);
+    // 2. Fetch paginated records filtering by total > 0
+    const rows = await query<RowDataPacket>(`
+        SELECT 
+            m.id, m.memberNumber, m.firstName, m.lastName, m.status,
+            COALESCE(s.amount, 0) AS savings,
+            COALESCE(l.amount, 0) AS loans,
+            COALESCE(p.amount, 0) AS insurance,
+            (COALESCE(s.amount, 0) + COALESCE(l.amount, 0) + COALESCE(p.amount, 0)) as total
+        FROM members m
+        LEFT JOIN (
+            SELECT memberId, SUM(monthlyContribution) as amount 
+            FROM member_savings WHERE isActive = 1 GROUP BY memberId
+        ) s ON s.memberId = m.id
+        LEFT JOIN (
+            SELECT memberId, SUM(monthlyInstallment) as amount 
+            FROM loans WHERE status IN ('active', 'disbursed') GROUP BY memberId
+        ) l ON l.memberId = m.id
+        LEFT JOIN (
+            SELECT memberId, SUM(monthlyPremium) as amount 
+            FROM insurance_policies WHERE status = 'active' GROUP BY memberId
+        ) p ON p.memberId = m.id
+        WHERE m.tenantId = ? AND m.status = 'active'
+        HAVING total > 0
+        ORDER BY m.memberNumber ASC
+        LIMIT ? OFFSET ?
+    `, [tenantId, limit, offset]);
+
+    const deductions = rows.map(r => ({
+        id: r.id,
+        memberNumber: r.memberNumber,
+        name: `${r.firstName} ${r.lastName}`,
+        savings: Number(r.savings),
+        loans: Number(r.loans),
+        insurance: Number(r.insurance),
+        total: Number(r.total)
+    }));
 
     const metrics = {
-        totalMembers: rows.length,
-        deductingMembers: deductions.length,
-        totalDeductions: deductions.reduce((sum, d) => sum + d.total, 0),
-        savingsTotal: deductions.reduce((sum, d) => sum + d.savings, 0),
-        loansTotal: deductions.reduce((sum, d) => sum + d.loans, 0),
-        insuranceTotal: deductions.reduce((sum, d) => sum + d.insurance, 0),
+        totalMembers: Number(metricsRow?.totalMembers || 0),
+        deductingMembers: Number(metricsRow?.deductingMembers || 0),
+        totalDeductions: Number(metricsRow?.totalDeductions || 0),
+        savingsTotal: Number(metricsRow?.savingsTotal || 0),
+        loansTotal: Number(metricsRow?.loansTotal || 0),
+        insuranceTotal: Number(metricsRow?.insuranceTotal || 0),
     };
 
-    return { metrics, deductions };
+    return {
+        metrics,
+        deductions,
+        pagination: {
+            page,
+            limit,
+            total: metrics.deductingMembers,
+            totalPages: Math.ceil(metrics.deductingMembers / limit)
+        }
+    };
 }
 
 export async function generateDeductionRequest(tenantId: string, month: number, year: number) {

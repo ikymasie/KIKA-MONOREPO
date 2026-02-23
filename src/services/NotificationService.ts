@@ -1,7 +1,6 @@
-import { AppDataSource } from '../config/database';
-import { User, UserRole, UserStatus } from '../entities/User';
+import { UserRole, UserStatus } from '../entities/User';
 import { SocietyApplication, ApplicationStatus } from '../entities/SocietyApplication';
-import { RegulatorSettings } from '../entities/RegulatorSettings';
+import { query } from '../db/query';
 import { sendEmail, generateWorkflowNotificationEmail } from '../../lib/email';
 
 export class NotificationService {
@@ -13,12 +12,7 @@ export class NotificationService {
         newStatus: ApplicationStatus
     ): Promise<void> {
         try {
-            // Get workflow configuration
-            const settingsRepo = AppDataSource.getRepository(RegulatorSettings);
-            const settings = await settingsRepo.findOne({
-                where: {},
-                order: { updatedAt: 'DESC' }
-            });
+            const [[settings]] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
 
             if (!settings?.workflowConfig) {
                 console.log('No workflow configuration found, skipping notification');
@@ -39,11 +33,10 @@ export class NotificationService {
                 return;
             }
 
-            // Find all users with this role
-            const userRepo = AppDataSource.getRepository(User);
-            const responsibleUsers = await userRepo.find({
-                where: { role: responsibleRole as UserRole, status: UserStatus.ACTIVE }
-            });
+            const responsibleUsers = await query(
+                'SELECT * FROM users WHERE role = ? AND status = ?',
+                [responsibleRole, UserStatus.ACTIVE]
+            ) as any[];
 
             if (responsibleUsers.length === 0) {
                 console.log(`No active users found with role: ${responsibleRole}`);

@@ -49,30 +49,61 @@ export async function deleteMerchandiseProduct(id: string, tenantId: string): Pr
 }
 
 // Orders
-export async function listMerchandiseOrders(tenantId: string, status?: OrderStatus, memberId?: string): Promise<IMerchandiseOrder[]> {
-    let sql = `
+export async function listMerchandiseOrders(
+    tenantId: string,
+    status?: OrderStatus,
+    memberId?: string,
+    pagination?: { page?: number; limit?: number }
+) {
+    const page = Math.max(1, pagination?.page ?? 1);
+    const limit = pagination?.limit ? Math.min(10000, Math.max(1, pagination.limit)) : 10000;
+    const offset = (page - 1) * limit;
+
+    let baseWhere = `WHERE o.tenantId = ?`;
+    const params: any[] = [tenantId];
+
+    if (status) {
+        baseWhere += ' AND o.status = ?';
+        params.push(status);
+    }
+    if (memberId) {
+        baseWhere += ' AND o.memberId = ?';
+        params.push(memberId);
+    }
+
+    const countRow = await queryOne<RowDataPacket & { total: string }>(
+        `SELECT COUNT(*) as total 
+         FROM merchandise_orders o
+         LEFT JOIN members m ON m.id = o.memberId
+         LEFT JOIN merchandise_products p ON p.id = o.productId
+         ${baseWhere}`,
+        params
+    );
+    const total = parseInt(countRow?.total ?? '0', 10);
+
+    const sql = `
         SELECT o.*, 
                m.firstName, m.lastName, m.memberNumber,
                p.name AS productName, p.sku
         FROM merchandise_orders o
         LEFT JOIN members m ON m.id = o.memberId
         LEFT JOIN merchandise_products p ON p.id = o.productId
-        WHERE o.tenantId = ?
+        ${baseWhere}
+        ORDER BY o.createdAt DESC
+        LIMIT ? OFFSET ?
     `;
-    const params: any[] = [tenantId];
 
-    if (status) {
-        sql += ' AND o.status = ?';
-        params.push(status);
-    }
-    if (memberId) {
-        sql += ' AND o.memberId = ?';
-        params.push(memberId);
-    }
+    const orders = await query<RowDataPacket & IMerchandiseOrder>(sql, [...params, limit, offset]);
 
-    sql += ' ORDER BY o.createdAt DESC';
-
-    return await query<RowDataPacket & IMerchandiseOrder>(sql, params);
+    return {
+        orders,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
 }
 
 export async function getMerchandiseOrder(id: string, tenantId: string): Promise<IMerchandiseOrder | null> {

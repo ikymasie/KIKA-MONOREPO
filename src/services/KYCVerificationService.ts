@@ -1,6 +1,6 @@
-import { AppDataSource } from '@/src/config/database';
-import { KYC } from '@/src/entities/KYC';
-import { Member } from '@/src/entities/Member';
+import { KYC } from '../entities/KYC';
+import { Member } from '../entities/Member';
+import { query, execute } from '../db/query';
 
 export interface KYCVerificationRequest {
     kycId: string;
@@ -15,106 +15,104 @@ export class KYCVerificationService {
      * Get all pending KYC verifications across all SACCOs
      */
     static async getPendingVerifications(tenantId?: string, limit: number = 50) {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const kycRepo = AppDataSource.getRepository(KYC);
-
-        let query = kycRepo
-            .createQueryBuilder('kyc')
-            .leftJoinAndSelect('kyc.member', 'member')
-            .leftJoinAndSelect('member.tenant', 'tenant')
-            .where(
-                '(kyc.identityVerified = :notVerified OR kyc.residenceVerified = :notVerified OR kyc.incomeVerified = :notVerified)',
-                { notVerified: false }
-            );
+        let sql = `
+            SELECT k.*, m.firstName, m.lastName, m.omangNumber as memberOmang, t.name as tenantName
+            FROM kyc k
+            LEFT JOIN members m ON m.id = k.memberId
+            LEFT JOIN tenants t ON t.id = m.tenantId
+            WHERE (k.identityVerified = false OR k.residenceVerified = false OR k.incomeVerified = false)
+        `;
+        const params: any[] = [];
 
         if (tenantId) {
-            query = query.andWhere('member.tenantId = :tenantId', { tenantId });
+            sql += ' AND m.tenantId = ?';
+            params.push(tenantId);
         }
 
-        const pendingKYCs = await query
-            .orderBy('kyc.createdAt', 'ASC')
-            .take(limit)
-            .getMany();
+        sql += ' ORDER BY k.createdAt ASC LIMIT ?';
+        params.push(limit);
 
-        return pendingKYCs;
+        const pendingKYCs = await query(sql, params) as any[];
+
+        return pendingKYCs.map(k => ({
+            ...k,
+            member: k.memberId ? {
+                id: k.memberId,
+                firstName: k.firstName,
+                lastName: k.lastName,
+                omangNumber: k.memberOmang,
+                tenant: k.tenantName ? { name: k.tenantName } : undefined
+            } : undefined
+        }));
     }
 
     /**
      * Verify a specific KYC document
      */
     static async verifyKYCDocument(request: KYCVerificationRequest): Promise<KYC> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const kycRepo = AppDataSource.getRepository(KYC);
-
-        const kyc = await kycRepo.findOne({
-            where: { id: request.kycId },
-            relations: ['member'],
-        });
+        const [[kyc]] = await query('SELECT * FROM kyc WHERE id = ? LIMIT 1', [request.kycId]) as any;
 
         if (!kyc) {
             throw new Error('KYC record not found');
         }
 
-        // Update the appropriate verification field and its metadata
         const now = new Date();
+        let updateSql = 'UPDATE kyc SET ';
+        const params: any[] = [];
+
         switch (request.documentType) {
             case 'identity':
-                kyc.identityVerified = request.verified;
-                kyc.identityVerifiedBy = request.verified ? request.verifiedBy : undefined;
-                kyc.identityVerifiedAt = request.verified ? now : undefined;
+                updateSql += 'identityVerified = ?, identityVerifiedBy = ?, identityVerifiedAt = ?';
+                params.push(request.verified, request.verified ? request.verifiedBy : null, request.verified ? now : null);
                 break;
             case 'residence':
-                kyc.residenceVerified = request.verified;
-                kyc.residenceVerifiedBy = request.verified ? request.verifiedBy : undefined;
-                kyc.residenceVerifiedAt = request.verified ? now : undefined;
+                updateSql += 'residenceVerified = ?, residenceVerifiedBy = ?, residenceVerifiedAt = ?';
+                params.push(request.verified, request.verified ? request.verifiedBy : null, request.verified ? now : null);
                 break;
             case 'income':
-                kyc.incomeVerified = request.verified;
-                kyc.incomeVerifiedBy = request.verified ? request.verifiedBy : undefined;
-                kyc.incomeVerifiedAt = request.verified ? now : undefined;
+                updateSql += 'incomeVerified = ?, incomeVerifiedBy = ?, incomeVerifiedAt = ?';
+                params.push(request.verified, request.verified ? request.verifiedBy : null, request.verified ? now : null);
                 break;
         }
 
-        // Add notes
         if (request.notes) {
-            kyc.notes = kyc.notes
-                ? `${kyc.notes}\n\n[${new Date().toISOString()}] ${request.documentType}: ${request.notes}`
-                : `[${new Date().toISOString()}] ${request.documentType}: ${request.notes}`;
+            const newNotes = kyc.notes
+                ? `${kyc.notes}\n\n[${now.toISOString()}] ${request.documentType}: ${request.notes}`
+                : `[${now.toISOString()}] ${request.documentType}: ${request.notes}`;
+            updateSql += ', notes = ?';
+            params.push(newNotes);
         }
 
-        await kycRepo.save(kyc);
+        updateSql += ', updatedAt = NOW() WHERE id = ?';
+        params.push(request.kycId);
 
-        return kyc;
+        await execute(updateSql, params);
+
+        const [[updatedKyc]] = await query('SELECT * FROM kyc WHERE id = ? LIMIT 1', [request.kycId]) as any;
+
+        return updatedKyc as KYC;
     }
 
     /**
      * Get KYC compliance rate for a SACCO
      */
     static async getKYCComplianceRate(tenantId: string): Promise<number> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const [[totalMembersRow]] = await query('SELECT COUNT(*) as count FROM members WHERE tenantId = ?', [tenantId]) as any;
+        const totalMembers = Number(totalMembersRow?.count || 0);
 
-        const memberRepo = AppDataSource.getRepository(Member);
-        const kycRepo = AppDataSource.getRepository(KYC);
-
-        const totalMembers = await memberRepo.count({ where: { tenantId } });
         if (totalMembers === 0) return 100;
 
-        const verifiedKYCs = await kycRepo
-            .createQueryBuilder('kyc')
-            .innerJoin('kyc.member', 'member')
-            .where('member.tenantId = :tenantId', { tenantId })
-            .andWhere('kyc.identityVerified = :verified', { verified: true })
-            .andWhere('kyc.residenceVerified = :verified', { verified: true })
-            .andWhere('kyc.incomeVerified = :verified', { verified: true })
-            .getCount();
+        const [[verifiedKYCsRow]] = await query(`
+            SELECT COUNT(*) as count 
+            FROM kyc k
+            INNER JOIN members m ON m.id = k.memberId
+            WHERE m.tenantId = ? 
+              AND k.identityVerified = true 
+              AND k.residenceVerified = true 
+              AND k.incomeVerified = true
+        `, [tenantId]) as any;
+
+        const verifiedKYCs = Number(verifiedKYCsRow?.count || 0);
 
         return (verifiedKYCs / totalMembers) * 100;
     }
@@ -123,48 +121,49 @@ export class KYCVerificationService {
      * Get KYC details by ID
      */
     static async getKYCById(kycId: string): Promise<KYC | null> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const [[kyc]] = await query(`
+            SELECT k.*, m.firstName, m.lastName, t.name as tenantName 
+            FROM kyc k
+            LEFT JOIN members m ON m.id = k.memberId
+            LEFT JOIN tenants t ON t.id = m.tenantId
+            WHERE k.id = ? 
+            LIMIT 1
+        `, [kycId]) as any;
 
-        const kycRepo = AppDataSource.getRepository(KYC);
+        if (!kyc) return null;
 
-        return await kycRepo.findOne({
-            where: { id: kycId },
-            relations: ['member', 'member.tenant'],
-        });
+        return {
+            ...kyc,
+            member: kyc.memberId ? {
+                id: kyc.memberId,
+                firstName: kyc.firstName,
+                lastName: kyc.lastName,
+                tenant: kyc.tenantName ? { name: kyc.tenantName } : undefined
+            } : undefined
+        } as KYC;
     }
 
     /**
      * Get KYC statistics for dashboard
      */
     static async getKYCStatistics() {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const [[totalResult]] = await query('SELECT COUNT(*) as count FROM kyc') as any;
+        const totalKYCs = Number(totalResult?.count || 0);
 
-        const kycRepo = AppDataSource.getRepository(KYC);
+        const [[fullyVerifiedResult]] = await query(`
+            SELECT COUNT(*) as count FROM kyc 
+            WHERE identityVerified = true AND residenceVerified = true AND incomeVerified = true
+        `) as any;
+        const fullyVerified = Number(fullyVerifiedResult?.count || 0);
 
-        const totalKYCs = await kycRepo.count();
-        const fullyVerified = await kycRepo.count({
-            where: {
-                identityVerified: true,
-                residenceVerified: true,
-                incomeVerified: true,
-            },
-        });
+        const [[pendingIdentityResult]] = await query('SELECT COUNT(*) as count FROM kyc WHERE identityVerified = false') as any;
+        const pendingIdentity = Number(pendingIdentityResult?.count || 0);
 
-        const pendingIdentity = await kycRepo.count({
-            where: { identityVerified: false },
-        });
+        const [[pendingResidenceResult]] = await query('SELECT COUNT(*) as count FROM kyc WHERE residenceVerified = false') as any;
+        const pendingResidence = Number(pendingResidenceResult?.count || 0);
 
-        const pendingResidence = await kycRepo.count({
-            where: { residenceVerified: false },
-        });
-
-        const pendingIncome = await kycRepo.count({
-            where: { incomeVerified: false },
-        });
+        const [[pendingIncomeResult]] = await query('SELECT COUNT(*) as count FROM kyc WHERE incomeVerified = false') as any;
+        const pendingIncome = Number(pendingIncomeResult?.count || 0);
 
         return {
             totalKYCs,
@@ -185,33 +184,33 @@ export class KYCVerificationService {
         verified: boolean = true,
         notes?: string
     ): Promise<void> {
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        if (kycIds.length === 0) return;
 
-        const kycRepo = AppDataSource.getRepository(KYC);
+        const placeholders = kycIds.map(() => '?').join(',');
+        const kycs = await query(`SELECT id, notes FROM kyc WHERE id IN (${placeholders})`, kycIds) as any[];
 
-        const kycs = await kycRepo.findByIds(kycIds);
-
+        const now = new Date();
         for (const kyc of kycs) {
-            const now = new Date();
-            kyc.identityVerified = verified;
-            kyc.identityVerifiedBy = verified ? verifiedBy : undefined;
-            kyc.identityVerifiedAt = verified ? now : undefined;
-            kyc.residenceVerified = verified;
-            kyc.residenceVerifiedBy = verified ? verifiedBy : undefined;
-            kyc.residenceVerifiedAt = verified ? now : undefined;
-            kyc.incomeVerified = verified;
-            kyc.incomeVerifiedBy = verified ? verifiedBy : undefined;
-            kyc.incomeVerifiedAt = verified ? now : undefined;
-
+            let newNotes = kyc.notes;
             if (notes) {
-                kyc.notes = kyc.notes
-                    ? `${kyc.notes}\n\n[${new Date().toISOString()}] Batch Verify: ${notes}`
-                    : `[${new Date().toISOString()}] Batch Verify: ${notes}`;
+                newNotes = kyc.notes
+                    ? `${kyc.notes}\n\n[${now.toISOString()}] Batch Verify: ${notes}`
+                    : `[${now.toISOString()}] Batch Verify: ${notes}`;
             }
-        }
 
-        await kycRepo.save(kycs);
+            await execute(`
+                UPDATE kyc 
+                SET identityVerified = ?, identityVerifiedBy = ?, identityVerifiedAt = ?,
+                    residenceVerified = ?, residenceVerifiedBy = ?, residenceVerifiedAt = ?,
+                    incomeVerified = ?, incomeVerifiedBy = ?, incomeVerifiedAt = ?,
+                    notes = ?, updatedAt = NOW()
+                WHERE id = ?
+            `, [
+                verified, verified ? verifiedBy : null, verified ? now : null,
+                verified, verified ? verifiedBy : null, verified ? now : null,
+                verified, verified ? verifiedBy : null, verified ? now : null,
+                newNotes, kyc.id
+            ]);
+        }
     }
 }
