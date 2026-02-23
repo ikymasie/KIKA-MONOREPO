@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import MemberSidebar from '@/components/layout/MemberSidebar';
+import Pagination from '@/components/ui/Pagination';
 
 interface SavingProduct {
     id: string;
@@ -31,6 +32,8 @@ export default function MemberSavingsPage() {
     const [accounts, setAccounts] = useState<SavingAccount[]>([]);
     const [availableProducts, setAvailableProducts] = useState<SavingProduct[]>([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, totalPages: 0 });
     const [error, setError] = useState<string | null>(null);
 
     // Update Contribution Modal state
@@ -48,7 +51,7 @@ export default function MemberSavingsPage() {
     const fetchData = async () => {
         try {
             const [accRes, prodRes] = await Promise.all([
-                fetch('/api/member/savings'),
+                fetch(`/api/member/savings?page=${page}&limit=10`),
                 fetch('/api/member/savings/products')
             ]);
 
@@ -57,10 +60,11 @@ export default function MemberSavingsPage() {
             const accData = await accRes.json();
             const prodData = await prodRes.json();
 
-            setAccounts(accData);
+            setAccounts(accData.savings || []);
+            setPagination(accData.pagination);
 
             // Filter out products member already has
-            const existingProductIds = accData.map((a: SavingAccount) => a.product.id);
+            const existingProductIds = (accData.savings || []).map((a: SavingAccount) => a.product.id);
             setAvailableProducts(prodData.filter((p: SavingProduct) => !existingProductIds.includes(p.id)));
 
         } catch (err: any) {
@@ -72,7 +76,7 @@ export default function MemberSavingsPage() {
 
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [page]);
 
     const handleUpdateContribution = async () => {
         if (!selectedAccount) return;
@@ -179,6 +183,18 @@ export default function MemberSavingsPage() {
                                 </div>
                             ))}
                         </div>
+
+                        {pagination && pagination.totalPages > 1 && (
+                            <div className="mb-8">
+                                <Pagination
+                                    currentPage={pagination.page}
+                                    totalPages={pagination.totalPages}
+                                    totalItems={pagination.total}
+                                    itemsPerPage={pagination.limit}
+                                    onPageChange={setPage}
+                                />
+                            </div>
+                        )}
 
                         <div className="card p-6 bg-gradient-to-br from-primary-600 to-primary-800 text-white mb-12">
                             <div className="flex flex-col md:flex-row justify-between items-center gap-6">

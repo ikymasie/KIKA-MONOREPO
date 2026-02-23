@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/lib/db';
-import { User } from '@/entities/User';
 import { generateTemporaryPassword, hashPassword } from '@/lib/password';
 import { sendEmail, generateCredentialsEmail } from '@/lib/email';
+import { query, execute } from '@/src/db/query';
 
 export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -14,12 +13,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const userRepo = AppDataSource.getRepository(User);
-        const user = await userRepo.findOne({ where: { id: params.id } });
+        const users = await query('SELECT * FROM users WHERE id = ? LIMIT 1', [params.id]) as any[];
+        const user = users[0];
 
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -30,17 +25,17 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         const hashedPassword = await hashPassword(temporaryPassword);
 
         // Update user
-        user.temporaryPassword = hashedPassword;
-        user.mustChangePassword = true;
-
-        await userRepo.save(user);
+        await execute(
+            'UPDATE users SET temporaryPassword = ?, mustChangePassword = 1, updatedAt = NOW() WHERE id = ?',
+            [hashedPassword, params.id]
+        );
 
         // Send email with new credentials
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         const loginUrl = `${baseUrl}/signin`;
 
         const emailContent = generateCredentialsEmail({
-            recipientName: user.fullName,
+            recipientName: user.firstName ? `${user.firstName} ${user.lastName}` : 'User',
             email: user.email || '',
             temporaryPassword,
             loginUrl

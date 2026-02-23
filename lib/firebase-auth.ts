@@ -1,6 +1,6 @@
 import { adminAuth } from './firebase-admin';
-import { AppDataSource } from '../src/config/database';
-import { User, UserRole } from '../src/entities/User';
+import { IUser, UserRole } from '../src/interfaces/IUser';
+import { setFirebaseUid, getUserByFirebaseUid } from '../src/db/services/UserService';
 
 /**
  * Sync a MySQL user with Firebase Authentication
@@ -8,7 +8,7 @@ import { User, UserRole } from '../src/entities/User';
 export async function syncUserWithFirebase(
     email: string,
     password: string,
-    user: User
+    user: IUser
 ): Promise<string> {
     try {
         // Check if user already has a Firebase UID
@@ -21,7 +21,7 @@ export async function syncUserWithFirebase(
             email,
             password,
             emailVerified: true,
-            displayName: user.fullName,
+            displayName: `${user.firstName} ${user.lastName}`,
         });
 
         // Set custom claims for RBAC
@@ -32,8 +32,7 @@ export async function syncUserWithFirebase(
         });
 
         // Update MySQL user with Firebase UID
-        user.firebaseUid = firebaseUser.uid;
-        await AppDataSource.manager.save(user);
+        await setFirebaseUid(user.id!, firebaseUser.uid);
 
         return firebaseUser.uid;
     } catch (error: any) {
@@ -49,8 +48,7 @@ export async function syncUserWithFirebase(
             });
 
             // Update MySQL user with Firebase UID
-            user.firebaseUid = firebaseUser.uid;
-            await AppDataSource.manager.save(user);
+            await setFirebaseUid(user.id!, firebaseUser.uid);
 
             return firebaseUser.uid;
         }
@@ -63,16 +61,12 @@ export async function syncUserWithFirebase(
  */
 export async function getUserFromFirebaseToken(
     token: string
-): Promise<User | null> {
+): Promise<IUser | null> {
     try {
         const decodedToken = await adminAuth.verifyIdToken(token);
         const firebaseUid = decodedToken.uid;
 
-        const userRepository = AppDataSource.getRepository(User);
-        const user = await userRepository.findOne({
-            where: { firebaseUid },
-            relations: ['tenant'],
-        });
+        const user = await getUserByFirebaseUid(firebaseUid);
 
         return user;
     } catch (error) {

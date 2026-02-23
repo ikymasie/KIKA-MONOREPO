@@ -4,17 +4,11 @@ import { calculateLiquidityRatio } from '@/lib/dashboard-utils';
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Member, MemberStatus } = await import('@/src/entities/Member');
-        const { Loan, LoanStatus } = await import('@/src/entities/Loan');
-        const { MemberSavings } = await import('@/src/entities/MemberSavings');
-        const { Transaction } = await import('@/src/entities/Transaction');
-        const { InsuranceClaim, ClaimStatus } = await import('@/src/entities/InsuranceClaim');
-        const { MerchandiseOrder, OrderStatus } = await import('@/src/entities/MerchandiseOrder');
+        // Dynamic imports to avoid circular dependencies
+        const { query, queryOne } = await import('@/src/db/query');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
-    
+
         // Authenticate user
         const user = await getUserFromRequest(request);
         if (!user) {
@@ -30,99 +24,64 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'No tenant associated with user' }, { status: 400 });
         }
 
-        // Initialize database connection
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const memberRepo = AppDataSource.getRepository(Member);
-        const loanRepo = AppDataSource.getRepository(Loan);
-        const savingsRepo = AppDataSource.getRepository(MemberSavings);
-        const transactionRepo = AppDataSource.getRepository(Transaction);
-        const claimRepo = AppDataSource.getRepository(InsuranceClaim);
-        const orderRepo = AppDataSource.getRepository(MerchandiseOrder);
-
         // Fetch metrics
         const [
-            totalMembers,
+            totalMembersRow,
             activeLoans,
-            totalSavings,
+            totalSavingsRow,
             recentTransactions,
             pendingLoans,
             pendingClaims,
             pendingOrders,
         ] = await Promise.all([
             // Total members
-            memberRepo.count({ where: { tenantId: user.tenantId, status: MemberStatus.ACTIVE } }),
+            queryOne('SELECT COUNT(*) as count FROM members WHERE tenantId = ? AND status = ?', [user.tenantId, 'active']) as any,
 
             // Active loans
-            loanRepo.find({
-                where: { tenantId: user.tenantId, status: LoanStatus.ACTIVE },
-                relations: ['member'],
-            }),
+            query('SELECT l.*, m.firstName, m.lastName FROM loans l JOIN members m ON m.id = l.memberId WHERE l.tenantId = ? AND l.status = ?', [user.tenantId, 'active']) as any,
 
             // Total savings
-            savingsRepo
-                .createQueryBuilder('savings')
-                .innerJoin('savings.member', 'member')
-                .where('member.tenantId = :tenantId', { tenantId: user.tenantId })
-                .select('SUM(savings.balance)', 'total')
-                .getRawOne(),
+            queryOne('SELECT SUM(s.balance) as total FROM member_savings s JOIN members m ON m.id = s.memberId WHERE m.tenantId = ?', [user.tenantId]) as any,
 
             // Recent transactions (last 10)
-            transactionRepo.find({
-                where: { tenantId: user.tenantId },
-                order: { createdAt: 'DESC' },
-                take: 10,
-                relations: ['member'],
-            }),
+            query('SELECT t.*, m.firstName, m.lastName FROM transactions t LEFT JOIN members m ON m.id = t.memberId WHERE t.tenantId = ? ORDER BY t.createdAt DESC LIMIT 10', [user.tenantId]) as any,
 
             // Pending loan applications
-            loanRepo.find({
-                where: { tenantId: user.tenantId, status: LoanStatus.PENDING },
-                relations: ['member'],
-                take: 5,
-            }),
+            query('SELECT l.*, m.firstName, m.lastName FROM loans l JOIN members m ON m.id = l.memberId WHERE l.tenantId = ? AND l.status = ? LIMIT 5', [user.tenantId, 'pending']) as any,
 
             // Pending insurance claims
-            claimRepo.find({
-                where: { tenantId: user.tenantId, status: ClaimStatus.SUBMITTED },
-                relations: ['policy', 'policy.member'],
-                take: 5,
-            }),
+            query('SELECT c.*, p.memberId, m.firstName, m.lastName FROM insurance_claims c JOIN insurance_policies p ON p.id = c.policyId JOIN members m ON m.id = p.memberId WHERE c.tenantId = ? AND c.status = ? LIMIT 5', [user.tenantId, 'submitted']) as any,
 
             // Pending merchandise orders
-            orderRepo.find({
-                where: { tenantId: user.tenantId, status: OrderStatus.PENDING },
-                relations: ['member'],
-                take: 5,
-            }),
+            query('SELECT o.*, m.firstName, m.lastName FROM merchandise_orders o JOIN members m ON m.id = o.memberId WHERE o.tenantId = ? AND o.status = ? LIMIT 5', [user.tenantId, 'pending']) as any,
         ]);
 
+        const totalMembers = Number(totalMembersRow?.count || 0);
+
         // Calculate totals
-        const totalLoansAmount = activeLoans.reduce((sum, loan) => sum + Number(loan.principalAmount), 0);
-        const savingsBalance = Number(totalSavings?.total || 0);
+        const totalLoansAmount = activeLoans.reduce((sum: number, loan: any) => sum + Number(loan.principalAmount), 0);
+        const savingsBalance = Number(totalSavingsRow?.total || 0);
         const liquidityRatio = calculateLiquidityRatio(savingsBalance, totalLoansAmount);
 
         // Format pending approvals
         const pendingApprovals = [
-            ...pendingLoans.map(loan => ({
+            ...pendingLoans.map((loan: any) => ({
                 type: 'Loan Application',
-                name: loan.member?.firstName + ' ' + loan.member?.lastName,
+                name: loan.firstName + ' ' + loan.lastName,
                 amount: Number(loan.principalAmount),
                 details: `P ${Number(loan.principalAmount).toLocaleString()} • ${loan.termMonths} months`,
                 id: loan.id,
             })),
-            ...pendingClaims.map(claim => ({
+            ...pendingClaims.map((claim: any) => ({
                 type: 'Insurance Claim',
-                name: claim.policy?.member?.firstName + ' ' + claim.policy?.member?.lastName,
+                name: claim.firstName + ' ' + claim.lastName,
                 amount: Number(claim.claimAmount),
                 details: `P ${Number(claim.claimAmount).toLocaleString()} • ${claim.claimType}`,
                 id: claim.id,
             })),
-            ...pendingOrders.map(order => ({
+            ...pendingOrders.map((order: any) => ({
                 type: 'Merchandise Order',
-                name: order.member?.firstName + ' ' + order.member?.lastName,
+                name: order.firstName + ' ' + order.lastName,
                 amount: Number(order.totalPrice),
                 details: `P ${Number(order.totalPrice).toLocaleString()}`,
                 id: order.id,
@@ -130,12 +89,12 @@ export async function GET(request: NextRequest) {
         ].slice(0, 5); // Limit to 5 total
 
         // Format recent transactions
-        const formattedTransactions = recentTransactions.map(txn => ({
+        const formattedTransactions = recentTransactions.map((txn: any) => ({
             type: txn.transactionType,
             description: txn.description || txn.transactionType,
             amount: Number(txn.amount),
             date: txn.createdAt,
-            member: txn.member ? `${txn.member.firstName} ${txn.member.lastName}` : 'System',
+            member: (txn.firstName && txn.lastName) ? `${txn.firstName} ${txn.lastName}` : 'System',
         }));
 
         return NextResponse.json({

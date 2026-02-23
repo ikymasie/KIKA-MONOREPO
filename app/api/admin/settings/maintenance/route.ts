@@ -3,12 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Tenant } = await import('@/src/entities/Tenant');
+        // Dynamic imports to avoid circular dependencies
+        const { execute } = await import('@/src/db/query');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
-    
+
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -21,12 +20,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'enabled must be a boolean' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const tenantRepo = AppDataSource.getRepository(Tenant);
-        await tenantRepo.update(user.tenantId, { isMaintenanceMode: enabled });
+        await execute('UPDATE tenants SET isMaintenanceMode = ? WHERE id = ?', [enabled ? 1 : 0, user.tenantId]);
 
         return NextResponse.json({
             success: true,

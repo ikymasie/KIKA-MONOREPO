@@ -1,25 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/lib/db';
-import { User, UserRole, UserStatus } from '@/entities/User';
 import { generateTemporaryPassword, hashPassword } from '@/lib/password';
 import { sendEmail, generateCredentialsEmail } from '@/lib/email';
+import { query, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
 
 export const dynamic = 'force-dynamic';
-// List of regulator and government roles
 const REGULATOR_ROLES = [
-    UserRole.DCD_DIRECTOR,
-    UserRole.DCD_FIELD_OFFICER,
-    UserRole.DCD_COMPLIANCE_OFFICER,
-    UserRole.BOB_PRUDENTIAL_SUPERVISOR,
-    UserRole.BOB_FINANCIAL_AUDITOR,
-    UserRole.BOB_COMPLIANCE_OFFICER,
-    UserRole.DEDUCTION_OFFICER,
-    UserRole.REGISTRY_CLERK,
-    UserRole.INTELLIGENCE_LIAISON,
-    UserRole.LEGAL_OFFICER,
-    UserRole.REGISTRAR,
-    UserRole.DIRECTOR_COOPERATIVES,
-    UserRole.MINISTER_DELEGATE,
+    'dcd_director',
+    'dcd_field_officer',
+    'dcd_compliance_officer',
+    'bob_prudential_supervisor',
+    'bob_financial_auditor',
+    'bob_compliance_officer',
+    'deduction_officer',
+    'registry_clerk',
+    'intelligence_liaison',
+    'legal_officer',
+    'registrar',
+    'director_cooperatives',
+    'minister_delegate',
 ];
 
 export async function GET(request: NextRequest) {
@@ -32,18 +31,11 @@ export async function GET(request: NextRequest) {
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const userRepo = AppDataSource.getRepository(User);
-
-        // Fetch all regulator/government users
-        const users = await userRepo
-            .createQueryBuilder('user')
-            .where('user.role IN (:...roles)', { roles: REGULATOR_ROLES })
-            .select(['user.id', 'user.email', 'user.firstName', 'user.lastName', 'user.role', 'user.status', 'user.phone'])
-            .getMany();
+        const placeholders = REGULATOR_ROLES.map(() => '?').join(',');
+        const users = await query(
+            `SELECT id, email, firstName, lastName, role, status, phone FROM users WHERE role IN (${placeholders})`,
+            REGULATOR_ROLES
+        ) as any[];
 
         return NextResponse.json(users);
 
@@ -72,15 +64,9 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid role for regulator user' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const userRepo = AppDataSource.getRepository(User);
-
         // Check if user already exists
-        const existing = await userRepo.findOne({ where: { email } });
-        if (existing) {
+        const existingUsers = await query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]) as any[];
+        if (existingUsers.length > 0) {
             return NextResponse.json({ error: 'User with this email already exists' }, { status: 409 });
         }
 
@@ -89,18 +75,22 @@ export async function POST(request: NextRequest) {
         const hashedPassword = await hashPassword(temporaryPassword);
 
         // Create new user
-        const newUser = userRepo.create({
+        const newUserId = uuidv4();
+        await execute(
+            `INSERT INTO users (id, email, firstName, lastName, role, phone, status, temporaryPassword, mustChangePassword, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+            [newUserId, email, firstName, lastName, role, phone || null, 'active', hashedPassword]
+        );
+
+        const newUser = {
+            id: newUserId,
             email,
             firstName,
             lastName,
             role,
             phone,
-            status: UserStatus.ACTIVE,
-            temporaryPassword: hashedPassword,
-            mustChangePassword: true,
-        });
-
-        await userRepo.save(newUser);
+            fullName: `${firstName} ${lastName}`
+        };
 
         // Send credentials email
         const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';

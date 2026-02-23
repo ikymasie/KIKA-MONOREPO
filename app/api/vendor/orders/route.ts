@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { MerchandiseOrder, OrderStatus } from '@/src/entities/MerchandiseOrder';
+import { query, execute } from '@/src/db/query';
 import { getUserFromRequest } from '@/lib/auth-server';
 import { asyncHandler, ForbiddenError } from '@/lib/errors';
 
@@ -11,20 +10,45 @@ export const GET = asyncHandler(async (request: NextRequest) => {
         throw new ForbiddenError('Unauthorized access');
     }
 
-    if (!AppDataSource.isInitialized) {
-        await AppDataSource.initialize();
-    }
+    const ordersData = await query(`
+        SELECT mo.*, 
+               p.name as productName, p.sku as productSku, p.retailPrice, p.costPrice, p.description as productDescription,
+               m.firstName as memberFirstName, m.lastName as memberLastName, m.memberNumber, m.email as memberEmail, m.phone as memberPhone
+        FROM merchandise_orders mo
+        LEFT JOIN merchandise_products p ON p.id = mo.productId
+        LEFT JOIN members m ON m.id = mo.memberId
+        WHERE mo.tenantId = ?
+        ORDER BY mo.createdAt DESC
+    `, [user.tenantId]) as any[];
 
-    const orderRepo = AppDataSource.getRepository(MerchandiseOrder);
-
-    // In a real scenario, we would filter by product.vendorId
-    // Assuming the user.tenantId might be used differently for vendors or they have a direct association
-    // For now, listing all orders to demonstrate functionality, but production would filter by assigned products
-    const orders = await orderRepo.find({
-        where: { tenantId: user.tenantId }, // This is a simplification
-        relations: ['product', 'member'],
-        order: { createdAt: 'DESC' }
-    });
+    const orders = ordersData.map((order: any) => ({
+        id: order.id,
+        status: order.status,
+        quantity: order.quantity,
+        totalAmount: order.totalAmount,
+        orderDate: order.orderDate,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        tenantId: order.tenantId,
+        productId: order.productId,
+        memberId: order.memberId,
+        product: order.productId ? {
+            id: order.productId,
+            name: order.productName,
+            sku: order.productSku,
+            retailPrice: order.retailPrice,
+            costPrice: order.costPrice,
+            description: order.productDescription,
+        } : null,
+        member: order.memberId ? {
+            id: order.memberId,
+            firstName: order.memberFirstName,
+            lastName: order.memberLastName,
+            memberNumber: order.memberNumber,
+            email: order.memberEmail,
+            phone: order.memberPhone,
+        } : null
+    }));
 
     return NextResponse.json(orders);
 });
@@ -37,19 +61,15 @@ export const PATCH = asyncHandler(async (request: NextRequest) => {
 
     const { id, status } = await request.json();
 
-    if (!AppDataSource.isInitialized) {
-        await AppDataSource.initialize();
-    }
-
-    const orderRepo = AppDataSource.getRepository(MerchandiseOrder);
-    const order = await orderRepo.findOne({ where: { id } });
+    const orders = await query('SELECT * FROM merchandise_orders WHERE id = ? LIMIT 1', [id]) as any[];
+    const order = orders[0];
 
     if (!order) {
         throw new Error('Order not found');
     }
 
-    order.status = status as OrderStatus;
-    await orderRepo.save(order);
+    await execute('UPDATE merchandise_orders SET status = ?, updatedAt = NOW() WHERE id = ?', [status, id]);
+    order.status = status;
 
     return NextResponse.json(order);
 });

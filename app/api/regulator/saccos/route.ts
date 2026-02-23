@@ -3,13 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Tenant } = await import('@/src/entities/Tenant');
-        const { Member, MemberStatus } = await import('@/src/entities/Member');
+        // Dynamic imports to avoid circular dependencies
+        const { query } = await import('@/src/db/query');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
-    
+
         // Authenticate user
         const user = await getUserFromRequest(request);
         if (!user) {
@@ -21,41 +19,28 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        // Initialize database connection
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
+        const allSaccos = await query('SELECT * FROM tenants ORDER BY name ASC') as any[];
+
+        // Build member counts lookup
+        const memberCountsResults = await query('SELECT tenantId, COUNT(*) as count FROM members WHERE status = ? GROUP BY tenantId', ['active']) as any[];
+        const memberCountsMap = new Map();
+        for (const row of memberCountsResults) {
+            memberCountsMap.set(row.tenantId, parseInt(row.count || '0', 10));
         }
 
-        const tenantRepo = AppDataSource.getRepository(Tenant);
-        const memberRepo = AppDataSource.getRepository(Member);
-
-        // Fetch all SACCOS with member counts
-        const allSaccos = await tenantRepo.find({
-            order: { name: 'ASC' },
+        // Combine
+        const saccosWithCounts = allSaccos.map((saccos) => {
+            return {
+                id: saccos.id,
+                name: saccos.name,
+                code: saccos.code,
+                status: saccos.status,
+                registrationDate: saccos.registrationDate,
+                phone: saccos.phone,
+                email: saccos.email,
+                memberCount: memberCountsMap.get(saccos.id) || 0,
+            };
         });
-
-        // Get member counts for each SACCOS
-        const saccosWithCounts = await Promise.all(
-            allSaccos.map(async (saccos) => {
-                const memberCount = await memberRepo.count({
-                    where: {
-                        tenantId: saccos.id,
-                        status: MemberStatus.ACTIVE,
-                    },
-                });
-
-                return {
-                    id: saccos.id,
-                    name: saccos.name,
-                    code: saccos.code,
-                    status: saccos.status,
-                    registrationDate: saccos.registrationDate,
-                    phone: saccos.phone,
-                    email: saccos.email,
-                    memberCount,
-                };
-            })
-        );
 
         return NextResponse.json({
             saccos: saccosWithCounts,

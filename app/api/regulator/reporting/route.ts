@@ -5,38 +5,22 @@ export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const { AppDataSource } = await import('@/src/config/database');
-        const { Tenant } = await import('@/src/entities/Tenant');
-        const { Account } = await import('@/src/entities/Account');
-        const { Loan } = await import('@/src/entities/Loan');
+        const { query } = await import('@/src/db/query');
 
-    
+
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
         // 1. Compliance Data with Real Risk Ratings
-        const tenants = await AppDataSource.getRepository(Tenant).find({ select: ['id', 'name', 'status'] });
+        const tenants = await query('SELECT id, name, status FROM tenants') as any[];
 
         // Calculate risk rating for each SACCO based on financial metrics
         const complianceDataPromises = tenants.map(async (t) => {
             // Get SACCO-specific financial data
-            const saccoAssets = await AppDataSource.getRepository(Account)
-                .createQueryBuilder('account')
-                .select('SUM(account.balance)', 'total')
-                .where('account.tenantId = :tenantId', { tenantId: t.id })
-                .getRawOne();
-
-            const saccoLoans = await AppDataSource.getRepository(Loan)
-                .createQueryBuilder('loan')
-                .select('SUM(loan.outstandingBalance)', 'outstanding')
-                .where('loan.tenantId = :tenantId', { tenantId: t.id })
-                .getRawOne();
+            const [[saccoAssets]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [t.id]) as any[];
+            const [[saccoLoans]] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [t.id]) as any[];
 
             const assets = parseFloat(saccoAssets?.total || '0');
             const outstanding = parseFloat(saccoLoans?.outstanding || '0');
@@ -70,20 +54,9 @@ const { AppDataSource } = await import('@/src/config/database');
         const complianceData = await Promise.all(complianceDataPromises);
 
         // 2. Financial Health (Sector Wide)
-        const totalAssets = await AppDataSource.getRepository(Account)
-            .createQueryBuilder('account')
-            .select('SUM(account.balance)', 'total')
-            .getRawOne();
-
-        const totalLoans = await AppDataSource.getRepository(Loan)
-            .createQueryBuilder('loan')
-            .select('SUM(loan.principalAmount)', 'total')
-            .getRawOne();
-
-        const outstandingLoans = await AppDataSource.getRepository(Loan)
-            .createQueryBuilder('loan')
-            .select('SUM(loan.outstandingBalance)', 'totalOutstanding')
-            .getRawOne();
+        const [[totalAssets]] = await query('SELECT SUM(balance) as total FROM accounts') as any[];
+        const [[totalLoans]] = await query('SELECT SUM(principalAmount) as total FROM loans') as any[];
+        const [[outstandingLoans]] = await query('SELECT SUM(outstandingBalance) as totalOutstanding FROM loans') as any[];
 
         // Calculate Liquidity Ratio: (Total Assets / Total Outstanding Loans) × 100
         const totalAssetsValue = parseFloat(totalAssets?.total || '0');

@@ -5,9 +5,8 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Member, MemberStatus } = await import('@/src/entities/Member');
-        const { MemberCommunication, CommunicationType, CommunicationDirection } = await import('@/src/entities/MemberCommunication');
+        const { query, execute } = await import('@/src/db/query');
+        const { v4: uuidv4 } = await import('uuid');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
         const user = await getUserFromRequest(request);
@@ -22,24 +21,21 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Type and content are required' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
 
-        const memberRepo = AppDataSource.getRepository(Member);
-        const communicationRepo = AppDataSource.getRepository(MemberCommunication);
 
         let targetMemberIds = memberIds;
 
         // If no specific IDs, use filter or all active members
         if (!targetMemberIds || targetMemberIds.length === 0) {
-            const query: any = { tenantId: user.tenantId, status: MemberStatus.ACTIVE };
-            if (filter?.employmentStatus) query.employmentStatus = filter.employmentStatus;
+            let sql = 'SELECT id FROM members WHERE tenantId = ? AND status = ?';
+            const params: any[] = [user.tenantId, 'active'];
 
-            const members = await memberRepo.find({
-                where: query,
-                select: ['id'],
-            });
+            if (filter?.employmentStatus) {
+                sql += ' AND employmentStatus = ?';
+                params.push(filter.employmentStatus);
+            }
+
+            const members = await query(sql, params) as any[];
             targetMemberIds = members.map(m => m.id);
         }
 
@@ -48,22 +44,22 @@ export async function POST(request: NextRequest) {
         }
 
         // Create communication logs
-        const communications = targetMemberIds.map((memberId: string) =>
-            communicationRepo.create({
-                tenantId: user.tenantId,
-                memberId,
-                type: type,
-                direction: CommunicationDirection.OUTBOUND,
-                subject,
-                content,
-                recordedById: user.id,
-                metadata: { bulk: true },
-            })
-        );
+        // We will execute a batch insert
+        if (targetMemberIds.length > 0) {
+            const values = targetMemberIds.map((memberId: string) => [
+                uuidv4(), user.tenantId, memberId, type, 'outbound', subject, content, user.id, JSON.stringify({ bulk: true })
+            ]);
 
-        // In a real scenario, we would trigger SMS/Email service here
-        // For now, we just save the logs to represent "sending"
-        await communicationRepo.save(communications);
+            // Create placeholders exactly matching the number of values
+            const placeholders = values.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())').join(', ');
+            const flatValues = values.flat();
+
+            await execute(
+                `INSERT INTO member_communications (id, tenantId, memberId, type, direction, subject, content, recordedById, metadata, createdAt, updatedAt)
+                 VALUES ${placeholders}`,
+                flatValues
+            );
+        }
 
         return NextResponse.json({
             success: true,

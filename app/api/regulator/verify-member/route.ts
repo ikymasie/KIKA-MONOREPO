@@ -5,10 +5,9 @@ export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const { AppDataSource } = await import('@/src/config/database');
-        const { Member } = await import('@/src/entities/Member');
+        const { query } = await import('@/src/db/query');
 
-    
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -26,15 +25,18 @@ const { AppDataSource } = await import('@/src/config/database');
             return NextResponse.json({ error: 'Tenant ID and Member Number are required' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const members = await query(`
+            SELECT m.*, 
+                   k.identityVerified as kycIdentityVerified, 
+                   k.residenceVerified as kycResidenceVerified, 
+                   k.incomeVerified as kycIncomeVerified
+            FROM members m
+            LEFT JOIN kycs k ON k.memberId = m.id
+            WHERE m.tenantId = ? AND m.memberNumber = ?
+            LIMIT 1
+        `, [tenantId, memberNumber]) as any[];
 
-        const memberRepo = AppDataSource.getRepository(Member);
-        const member = await memberRepo.findOne({
-            where: { tenantId, memberNumber },
-            relations: ['kyc'],
-        });
+        const member = members[0];
 
         if (!member) {
             return NextResponse.json({ error: 'Member not found' }, { status: 404 });
@@ -47,7 +49,7 @@ const { AppDataSource } = await import('@/src/config/database');
             lastName: member.lastName,
             nationalId: member.nationalId,
             status: member.status,
-            kycStatus: member.kyc ? (member.kyc.identityVerified && member.kyc.residenceVerified && member.kyc.incomeVerified ? 'Verified' : 'Pending Verification') : 'No KYC Record',
+            kycStatus: member.kycIdentityVerified !== undefined && member.kycIdentityVerified !== null ? (member.kycIdentityVerified && member.kycResidenceVerified && member.kycIncomeVerified ? 'Verified' : 'Pending Verification') : 'No KYC Record',
         });
     } catch (error: any) {
         console.error('Member verification tool error:', error);

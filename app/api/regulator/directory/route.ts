@@ -3,54 +3,48 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Tenant } = await import('@/src/entities/Tenant');
-        const { Member } = await import('@/src/entities/Member');
-        const { Account } = await import('@/src/entities/Account');
+        // Dynamic imports to avoid circular dependencies
+        const { query } = await import('@/src/db/query');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
-    
+
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
         const { searchParams } = new URL(request.url);
-        const query = searchParams.get('q') || '';
+        const searchQuery = searchParams.get('q') || '';
         const status = searchParams.get('status');
 
-        const tenantRepo = AppDataSource.getRepository(Tenant);
+        let sql = 'SELECT id, name, status, createdAt, registrationNumber FROM tenants';
+        const params: any[] = [];
+        const conditions: string[] = [];
 
-        let queryBuilder = tenantRepo.createQueryBuilder('tenant')
-            .leftJoinAndSelect('tenant.users', 'users') // To get contact info if needed, or better separate query
-            .select(['tenant.id', 'tenant.name', 'tenant.status', 'tenant.createdAt', 'tenant.registrationNumber']); // Select specific fields
-
-        if (query) {
-            queryBuilder = queryBuilder.where('tenant.name LIKE :query OR tenant.registrationNumber LIKE :query', { query: `%${query}%` });
+        if (searchQuery) {
+            conditions.push('(name LIKE ? OR registrationNumber LIKE ?)');
+            params.push(`%${searchQuery}%`, `%${searchQuery}%`);
         }
 
         if (status) {
-            queryBuilder = queryBuilder.andWhere('tenant.status = :status', { status });
+            conditions.push('status = ?');
+            params.push(status);
         }
 
-        const tenants = await queryBuilder.getMany();
+        if (conditions.length > 0) {
+            sql += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        const tenants = await query(sql, params) as any[];
 
         // Enrich with stats (Member count, Assets)
         // This could be optimized with subqueries, but for now loop is acceptable for reasonable N or paginate
         const directoryData = await Promise.all(tenants.map(async (tenant) => {
-            const memberCount = await AppDataSource.getRepository(Member).count({ where: { tenantId: tenant.id } });
+            const [[memberCountResult]] = await query('SELECT COUNT(*) as count FROM members WHERE tenantId = ?', [tenant.id]) as any[];
+            const memberCount = parseInt(memberCountResult?.count || '0', 10);
 
             // Total Assets = Sum of Savings Accounts (simplification)
-            const assetsResult = await AppDataSource.getRepository(Account)
-                .createQueryBuilder('account')
-                .select('SUM(account.balance)', 'total')
-                .where('account.tenantId = :tenantId', { tenantId: tenant.id })
-                .getRawOne();
+            const [[assetsResult]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [tenant.id]) as any[];
             const totalAssets = parseFloat(assetsResult?.total || '0');
 
             return {

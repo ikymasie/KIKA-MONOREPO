@@ -3,14 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { MemberSavings } = await import('@/src/entities/MemberSavings');
-        const { Member } = await import('@/src/entities/Member');
-        const { SavingsProduct } = await import('@/src/entities/SavingsProduct');
+        // Dynamic imports to avoid circular dependencies
+        const { query, execute } = await import('@/src/db/query');
+        const { v4: uuidv4 } = await import('uuid');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
-    
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -23,49 +21,29 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Product ID and initial contribution are required' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        // Find the member record for this user
-        const memberRepo = AppDataSource.getRepository(Member);
-        const member = await memberRepo.findOne({
-            where: { userId: user.id }
-        });
-
+        const [[member]] = await query('SELECT id FROM members WHERE userId = ? LIMIT 1', [user.id]) as any;
         if (!member) {
             return NextResponse.json({ error: 'Member profile not found' }, { status: 404 });
         }
 
-        const productRepo = AppDataSource.getRepository(SavingsProduct);
-        const product = await productRepo.findOne({ where: { id: productId } });
-
+        const [[product]] = await query('SELECT id FROM savings_products WHERE id = ? LIMIT 1', [productId]) as any;
         if (!product) {
             return NextResponse.json({ error: 'Savings product not found' }, { status: 404 });
         }
 
-        // Check if member already has this product
-        const savingsRepo = AppDataSource.getRepository(MemberSavings);
-        const existing = await savingsRepo.findOne({
-            where: { memberId: member.id, productId: product.id }
-        });
-
+        const [[existing]] = await query('SELECT id FROM member_savings WHERE memberId = ? AND productId = ? LIMIT 1', [member.id, product.id]) as any;
         if (existing) {
             return NextResponse.json({ error: 'You already have an active account for this product' }, { status: 400 });
         }
 
-        // Create the new savings account
-        // In a real system, this might go through an approval workflow, 
-        // but for now we'll allow direct activation.
-        const newAccount = savingsRepo.create({
-            memberId: member.id,
-            productId: product.id,
-            balance: 0,
-            monthlyContribution: Number(initialMonthlyContribution),
-            isActive: true
-        });
+        const accountId = uuidv4();
+        await execute(
+            `INSERT INTO member_savings (id, memberId, productId, balance, monthlyContribution, isActive, createdAt, updatedAt) 
+             VALUES (?, ?, ?, 0, ?, 1, NOW(), NOW())`,
+            [accountId, member.id, product.id, Number(initialMonthlyContribution)]
+        );
 
-        await savingsRepo.save(newAccount);
+        const [[newAccount]] = await query('SELECT * FROM member_savings WHERE id = ? LIMIT 1', [accountId]) as any;
 
         return NextResponse.json({
             message: 'Application successful',

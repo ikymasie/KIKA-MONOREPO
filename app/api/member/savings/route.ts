@@ -13,8 +13,12 @@ export async function GET(request: NextRequest) {
         const member = await queryOne<RowDataPacket>('SELECT id FROM members WHERE userId = ? LIMIT 1', [user.id]);
         if (!member) return NextResponse.json({ error: 'Member profile not found' }, { status: 404 });
 
-        const savings = await getMemberSavings(member.id);
-        return NextResponse.json(savings);
+        const { searchParams } = new URL(request.url);
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '50', 10);
+
+        const data = await getMemberSavings(member.id, { page, limit });
+        return NextResponse.json(data);
     } catch (error: any) {
         console.error('Error fetching member savings:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

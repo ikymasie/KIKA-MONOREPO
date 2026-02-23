@@ -4,11 +4,52 @@ import { v4 as uuidv4 } from 'uuid';
 import { IMerchandiseOrder, IMerchandiseProduct, MerchandiseProductStatus, OrderStatus } from '../../interfaces/IMerchandise';
 
 // Products
-export async function listMerchandiseProducts(tenantId: string, activeOnly = false): Promise<IMerchandiseProduct[]> {
-    let sql = 'SELECT * FROM merchandise_products WHERE tenantId = ?';
-    if (activeOnly) sql += ' AND status = "active"';
-    sql += ' ORDER BY createdAt DESC';
-    return await query<RowDataPacket & IMerchandiseProduct>(sql, [tenantId]);
+export async function listMerchandiseProducts(
+    tenantId: string,
+    activeOnly = false,
+    search?: string,
+    pagination?: { page?: number; limit?: number }
+) {
+    const page = Math.max(1, pagination?.page ?? 1);
+    const limit = pagination?.limit ? Math.min(10000, Math.max(1, pagination.limit)) : 10000;
+    const offset = (page - 1) * limit;
+
+    let baseWhere = `WHERE tenantId = ?`;
+    const params: any[] = [tenantId];
+
+    if (activeOnly) {
+        baseWhere += ` AND status = 'active'`;
+    }
+
+    if (search) {
+        baseWhere += ` AND (name LIKE ? OR sku LIKE ?)`;
+        params.push(`%${search}%`, `%${search}%`);
+    }
+
+    const countRow = await queryOne<RowDataPacket & { total: string }>(
+        `SELECT COUNT(*) as total FROM merchandise_products ${baseWhere}`,
+        params
+    );
+    const total = parseInt(countRow?.total ?? '0', 10);
+
+    const sql = `
+        SELECT * FROM merchandise_products 
+        ${baseWhere} 
+        ORDER BY createdAt DESC 
+        LIMIT ? OFFSET ?
+    `;
+
+    const products = await query<RowDataPacket & IMerchandiseProduct>(sql, [...params, limit, offset]);
+
+    return {
+        products,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
 }
 
 export async function getMerchandiseProduct(id: string, tenantId: string): Promise<IMerchandiseProduct | null> {

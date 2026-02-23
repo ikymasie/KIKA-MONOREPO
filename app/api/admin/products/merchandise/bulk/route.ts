@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { MerchandiseProduct, MerchandiseCategory, MerchandiseProductStatus } from '@/src/entities/MerchandiseProduct';
+import { execute } from '@/src/db/query';
+import { MerchandiseProductStatus } from '@/src/interfaces/IMerchandise';
 import { getUserFromRequest } from '@/lib/auth-server';
+import { v4 as uuidv4 } from 'uuid';
 import { asyncHandler, ForbiddenError, BadRequestError } from '@/lib/errors';
 import Papa from 'papaparse';
 
@@ -33,17 +34,12 @@ export const POST = asyncHandler(async (request: NextRequest) => {
     const rows = parseResult.data as any[];
     const dataRows = rows;
 
-    if (!AppDataSource.isInitialized) {
-        await AppDataSource.initialize();
-    }
-
-    const productRepo = AppDataSource.getRepository(MerchandiseProduct);
     const results = {
         success: 0,
         errors: [] as string[]
     };
 
-    const productsToSave: MerchandiseProduct[] = [];
+    let successCount = 0;
 
     for (let i = 0; i < dataRows.length; i++) {
         try {
@@ -55,12 +51,13 @@ export const POST = asyncHandler(async (request: NextRequest) => {
                 continue;
             }
 
-            const product = productRepo.create({
+            const productData = {
+                id: uuidv4(),
                 tenantId: user.tenantId,
                 name: rowData.name,
                 sku: rowData.sku,
                 description: rowData.description || '',
-                category: (rowData.category as MerchandiseCategory) || MerchandiseCategory.OTHER,
+                category: rowData.category || 'other',
                 retailPrice: parseFloat(rowData.retailPrice),
                 costPrice: parseFloat(rowData.costPrice || '0'),
                 stockQuantity: parseInt(rowData.stockQuantity || '0'),
@@ -69,18 +66,28 @@ export const POST = asyncHandler(async (request: NextRequest) => {
                 interestRate: parseFloat(rowData.interestRate || '0'),
                 imageUrl: rowData.imageUrl || '',
                 status: (rowData.status as MerchandiseProductStatus) || MerchandiseProductStatus.ACTIVE
-            });
+            };
 
-            productsToSave.push(product);
+            await execute(
+                `INSERT INTO merchandise_products (
+                    id, tenantId, name, sku, description, category, retailPrice, costPrice, stockQuantity, 
+                    minimumTermMonths, maximumTermMonths, interestRate, imageUrl, status, createdAt, updatedAt
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+                [
+                    productData.id, productData.tenantId, productData.name, productData.sku, productData.description,
+                    productData.category, productData.retailPrice, productData.costPrice, productData.stockQuantity,
+                    productData.minimumTermMonths, productData.maximumTermMonths, productData.interestRate,
+                    productData.imageUrl, productData.status
+                ]
+            );
+
+            successCount++;
         } catch (err: any) {
             results.errors.push(`Row ${i + 2}: ${err.message}`);
         }
     }
 
-    if (productsToSave.length > 0) {
-        await productRepo.save(productsToSave);
-        results.success = productsToSave.length;
-    }
+    results.success = successCount;
 
     return NextResponse.json(results);
 });

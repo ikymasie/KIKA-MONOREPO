@@ -1,42 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { MemberCommunication, CommunicationType, CommunicationDirection } from '@/src/entities/MemberCommunication';
-import { Member } from '@/src/entities/Member';
+import { query, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
 import { getUserFromRequest } from '@/lib/auth-server';
-import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, DatabaseError, NotFoundError } from '@/lib/errors';
-
-export const dynamic = 'force-dynamic';
-async function initDB() {
-    if (!AppDataSource.isInitialized) {
-        try {
-            await AppDataSource.initialize();
-        } catch (error) {
-            throw new DatabaseError('Failed to initialize database connection');
-        }
-    }
-}
+import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, NotFoundError } from '@/lib/errors';
 
 // GET: Fetch communication history for a member
 export const GET = asyncHandler(async (request: NextRequest) => {
     const user = await getUserFromRequest(request);
     if (!user) throw new UnauthorizedError('User not authenticated');
 
-    await initDB();
-
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get('memberId');
 
     if (!memberId) throw new BadRequestError('Member ID is required');
 
-    const commRepo = AppDataSource.getRepository(MemberCommunication);
-    const communications = await commRepo.find({
-        where: {
-            memberId,
-            tenantId: user.tenantId
-        },
-        relations: ['recordedBy'],
-        order: { createdAt: 'DESC' }
-    });
+    const communications = await query(
+        `SELECT c.*, u.firstName as recordedByFirstName, u.lastName as recordedByLastName 
+         FROM member_communications c 
+         LEFT JOIN users u ON u.id = c.recordedById 
+         WHERE c.memberId = ? AND c.tenantId = ? 
+         ORDER BY c.createdAt DESC`,
+        [memberId, user.tenantId]
+    ) as any[];
 
     return NextResponse.json({
         success: true,
@@ -49,8 +34,6 @@ export const POST = asyncHandler(async (request: NextRequest) => {
     const user = await getUserFromRequest(request);
     if (!user) throw new UnauthorizedError('User not authenticated');
 
-    await initDB();
-
     const body = await request.json();
     const { memberId, type, direction, subject, content, metadata } = body;
 
@@ -58,26 +41,22 @@ export const POST = asyncHandler(async (request: NextRequest) => {
         throw new BadRequestError('Missing required fields');
     }
 
-    const memberRepo = AppDataSource.getRepository(Member);
-    const member = await memberRepo.findOne({ where: { id: memberId, tenantId: user.tenantId } });
+    const [[member]] = await query('SELECT id FROM members WHERE id = ? AND tenantId = ? LIMIT 1', [memberId, user.tenantId]) as any;
     if (!member) throw new NotFoundError('Member not found');
 
-    const commRepo = AppDataSource.getRepository(MemberCommunication);
-    const communication = commRepo.create({
-        tenantId: user.tenantId,
-        memberId,
-        type,
-        direction,
-        subject,
-        content,
-        recordedById: user.id,
-        metadata
-    });
+    const communicationId = uuidv4();
+    const metadataString = metadata ? JSON.stringify(metadata) : null;
 
-    await commRepo.save(communication);
+    await execute(
+        `INSERT INTO member_communications (id, tenantId, memberId, type, direction, subject, content, recordedById, metadata, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [communicationId, user.tenantId, memberId, type, direction, subject || null, content, user.id, metadataString]
+    );
 
     // Also update notification logs if it's an outbound automated message? 
     // Not needed here, this is for manual logging by reps.
+
+    const [[communication]] = await query('SELECT * FROM member_communications WHERE id = ? LIMIT 1', [communicationId]) as any;
 
     return NextResponse.json({
         success: true,

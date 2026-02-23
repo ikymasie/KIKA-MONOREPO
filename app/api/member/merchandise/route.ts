@@ -8,8 +8,8 @@ export async function GET(request: NextRequest) {
         const user = await getUserFromRequest(request);
         if (!user) return NextResponse.json({ error: 'Unauthorized access' }, { status: 401 });
 
-        const products = await listMerchandiseProducts(user.tenantId, true);
-        return NextResponse.json(products);
+        const data = await listMerchandiseProducts(user.tenantId, true);
+        return NextResponse.json(data.products);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
