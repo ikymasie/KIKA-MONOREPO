@@ -6,61 +6,61 @@ import {
     ManyToOne,
     JoinColumn
 } from 'typeorm';
-import { User } from './User';
+import type { User } from './User';
 
 @Entity('regulator_settings')
 export class RegulatorSettings {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 20.00 })
-    saccosApplicationFee!: number;
+    saccosApplicationFee?: number;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 20.00 })
-    cooperativeApplicationFee!: number;
+    cooperativeApplicationFee?: number;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 500.00 })
-    religiousSocietyApplicationFee!: number;
+    religiousSocietyApplicationFee?: number;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 250.00 })
-    generalSocietyApplicationFee!: number;
+    generalSocietyApplicationFee?: number;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 250.00 })
-    burialSocietyApplicationFee!: number;
+    burialSocietyApplicationFee?: number;
 
     // Annual Fees
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 50.00 })
-    annualReturnFee!: number;
+    annualReturnFee?: number;
 
     // Penalties
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 500.00 })
-    lateFilingPenaltyFee!: number;
+    lateFilingPenaltyFee?: number;
 
     // Administrative Fees
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 100.00 })
-    changeOfNameFee!: number;
+    changeOfNameFee?: number;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 20.00 })
-    changeOfOfficersFee!: number;
+    changeOfOfficersFee?: number;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 20.00 })
-    inspectionFee!: number;
+    inspectionFee?: number;
 
     @Column({ type: 'decimal', precision: 10, scale: 2, default: 20.00 })
-    certifiedCopyFee!: number;
+    certifiedCopyFee?: number;
 
     // Compliance Thresholds
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 90.00 })
-    excellentThreshold!: number;
+    excellentThreshold?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 75.00 })
-    goodThreshold!: number;
+    goodThreshold?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 60.00 })
-    fairThreshold!: number;
+    fairThreshold?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 40.00 })
-    poorThreshold!: number;
+    poorThreshold?: number;
 
     // Workflow Configuration: Maps application stages to responsible user roles
     @Column({ type: 'json', nullable: true })
@@ -69,10 +69,10 @@ export class RegulatorSettings {
     @Column({ type: 'uuid', nullable: true })
     updatedById?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'updatedById' })
     updatedBy?: User;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

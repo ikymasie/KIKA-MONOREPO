@@ -1,50 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { getClaim, updateClaim } from '@/src/db/services/InsuranceService';
+import { ClaimStatus } from '@/src/interfaces/IInsurance';
 
 export const dynamic = 'force-dynamic';
-export async function POST(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { InsuranceClaim, ClaimStatus } = await import('@/src/entities/InsuranceClaim');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-
         const user = await getUserFromRequest(request);
-        if (!user || user.role !== 'member') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user || user.role !== 'member') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const { id } = params;
-        const body = await request.json();
-        const { disputeReason, disputeEvidenceUrls } = body;
+        const { disputeReason, disputeEvidenceUrls } = await request.json();
 
-        const db = await getDb();
-        const claimRepo = db.getRepository(InsuranceClaim);
-        const claim = await claimRepo.findOne({
-            where: { id, policy: { memberId: user.id } },
-            relations: ['policy']
-        });
+        const claim = await getClaim(id, user.tenantId);
+        // Verify claim exists and belongs to member's policy
+        const { queryOne } = await import('@/src/db/query');
+        const policyCheck = await queryOne('SELECT id FROM insurance_policies WHERE id = ? AND memberId = ? LIMIT 1', [claim?.policyId, user.id]);
 
-        if (!claim) {
-            return NextResponse.json({ error: 'Claim not found or access denied' }, { status: 404 });
-        }
+        if (!claim || !policyCheck) return NextResponse.json({ error: 'Claim not found or access denied' }, { status: 404 });
 
         if (claim.status !== ClaimStatus.REJECTED && claim.status !== ClaimStatus.APPEAL_DECLINED) {
             return NextResponse.json({ error: 'Only rejected or declined claims can be appealed' }, { status: 400 });
         }
 
-        // Checklist for 30-day appeal window could be added here if incident date is available
+        const updatedClaim = await updateClaim(id, user.tenantId, {
+            status: ClaimStatus.UNDER_APPEAL,
+            disputeReason,
+            disputeEvidenceUrls
+        });
 
-        claim.status = ClaimStatus.UNDER_APPEAL;
-        claim.disputeReason = disputeReason;
-        claim.disputeEvidenceUrls = disputeEvidenceUrls;
-
-        await claimRepo.save(claim);
-
-        return NextResponse.json(claim);
+        return NextResponse.json(updatedClaim);
     } catch (error: any) {
         console.error('Error lodging dispute:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

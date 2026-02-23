@@ -13,34 +13,34 @@ import type { SavingsProduct } from './SavingsProduct';
 @Entity('member_savings')
 export class MemberSavings {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    memberId!: string;
+    memberId?: string;
 
-    @ManyToOne(() => require('./Member').Member, (member: Member) => member.savings)
+    @ManyToOne('Member', 'savings')
     @JoinColumn({ name: 'memberId' })
-    member!: Member;
+    member?: Member;
 
     @Column({ type: 'uuid' })
-    productId!: string;
+    productId?: string;
 
-    @ManyToOne(() => require('./SavingsProduct').SavingsProduct)
+    @ManyToOne('SavingsProduct')
     @JoinColumn({ name: 'productId' })
-    product!: SavingsProduct;
+    product?: SavingsProduct;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    balance!: number;
+    balance?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    monthlyContribution!: number;
+    monthlyContribution?: number;
 
     @Column({ default: true })
-    isActive!: boolean;
+    isActive?: boolean;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

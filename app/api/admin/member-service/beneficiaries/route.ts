@@ -86,7 +86,7 @@ export const PATCH = asyncHandler(async (request: NextRequest) => {
     });
 
     if (!beneficiary) throw new NotFoundError('Beneficiary not found');
-    if (beneficiary.member.tenantId !== user.tenantId) throw new ForbiddenError('Access denied');
+    if (beneficiary.member?.tenantId !== user.tenantId) throw new ForbiddenError('Access denied');
 
     // If updating allocation, check total
     if (updates.allocationPercentage !== undefined) {
@@ -134,7 +134,7 @@ export const DELETE = asyncHandler(async (request: NextRequest) => {
     });
 
     if (!beneficiary) throw new NotFoundError('Beneficiary not found');
-    if (beneficiary.member.tenantId !== user.tenantId) throw new ForbiddenError('Access denied');
+    if (beneficiary.member?.tenantId !== user.tenantId) throw new ForbiddenError('Access denied');
 
     await beneficiaryRepo.remove(beneficiary);
 

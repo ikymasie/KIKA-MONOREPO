@@ -8,24 +8,24 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
-import { Tenant } from './Tenant';
+import type { Tenant } from './Tenant';
 
 @Entity('board_minutes')
 @Index(['tenantId'])
 @Index(['meetingDate'])
 export class BoardMinute {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({ type: 'date' })
-    meetingDate!: Date;
+    meetingDate?: Date;
 
     @Column({ type: 'time', nullable: true })
     startTime?: string;
@@ -58,8 +58,8 @@ export class BoardMinute {
     notes?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

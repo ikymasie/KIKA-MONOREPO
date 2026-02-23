@@ -8,9 +8,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const { ReconciliationBatch } = await import('@/src/entities/ReconciliationBatch');
+        const { ReconciliationBatch } = await import('@/src/entities/ReconciliationBatch');
 
-    
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -31,7 +31,7 @@ const { ReconciliationBatch } = await import('@/src/entities/ReconciliationBatch
             return NextResponse.json({ error: 'Journals already posted for this batch' }, { status: 400 });
         }
 
-        const engine = new ReconciliationEngine(user.tenantId!, batch.month, batch.year);
+        const engine = new ReconciliationEngine(user.tenantId!, batch.month!, batch.year!);
         await engine.postJournals(params.id);
 
         return NextResponse.json({

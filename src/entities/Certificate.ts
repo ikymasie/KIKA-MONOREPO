@@ -8,6 +8,8 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 export enum CertificateType {
     REGISTRATION = 'registration',
@@ -20,20 +22,20 @@ export enum CertificateType {
 @Index(['certificateNumber'], { unique: true })
 export class Certificate {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne('Tenant', { nullable: false })
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: any;
+    tenant?: Tenant;
 
     @Column({ unique: true })
-    certificateNumber!: string;
+    certificateNumber?: string;
 
     @Column({ type: 'enum', enum: CertificateType })
-    certificateType!: CertificateType;
+    certificateType?: CertificateType;
 
     @Column({ type: 'date', nullable: true })
     issuedDate?: Date;
@@ -42,11 +44,11 @@ export class Certificate {
     expiryDate?: Date;
 
     @Column({ type: 'uuid' })
-    issuedBy!: string;
+    issuedBy?: string;
 
-    @ManyToOne('User', { nullable: false })
+    @ManyToOne('User')
     @JoinColumn({ name: 'issuedBy' })
-    issuer!: any;
+    issuer?: User;
 
     @Column({ nullable: true })
     documentUrl?: string;
@@ -61,8 +63,8 @@ export class Certificate {
     };
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

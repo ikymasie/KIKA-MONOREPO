@@ -8,9 +8,9 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
-import { Member } from './Member';
-import { Tenant } from './Tenant';
-import { User } from './User';
+import type { Member } from './Member';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 export enum TicketStatus {
     OPEN = 'open',
@@ -32,41 +32,41 @@ export enum TicketPriority {
 @Index(['status'])
 export class SupportTicket {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({ type: 'uuid' })
-    memberId!: string;
+    memberId?: string;
 
-    @ManyToOne(() => Member)
+    @ManyToOne('Member')
     @JoinColumn({ name: 'memberId' })
-    member!: Member;
+    member?: Member;
 
     @Column()
-    subject!: string;
+    subject?: string;
 
     @Column({ type: 'text' })
-    description!: string;
+    description?: string;
 
     @Column()
-    category!: string;
+    category?: string;
 
     @Column({ type: 'enum', enum: TicketPriority, default: TicketPriority.MEDIUM })
-    priority!: TicketPriority;
+    priority?: TicketPriority;
 
     @Column({ type: 'enum', enum: TicketStatus, default: TicketStatus.OPEN })
-    status!: TicketStatus;
+    status?: TicketStatus;
 
     @Column({ type: 'uuid', nullable: true })
     assignedToId?: string;
 
-    @ManyToOne(() => User, { nullable: true })
+    @ManyToOne('User', { nullable: true })
     @JoinColumn({ name: 'assignedToId' })
     assignedTo?: User;
 
@@ -74,8 +74,8 @@ export class SupportTicket {
     metadata?: Record<string, any>;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

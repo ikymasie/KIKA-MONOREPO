@@ -8,7 +8,7 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
-import { User } from './User';
+import type { User } from './User';
 
 export enum ApplicationType {
     GENERAL_SOCIETY = 'general_society',
@@ -59,7 +59,7 @@ export class SocietyApplication {
     @Column({ type: 'uuid' })
     applicantUserId!: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'applicantUserId' })
     applicant?: User;
 
@@ -98,28 +98,28 @@ export class SocietyApplication {
     @Column({ type: 'uuid', nullable: true })
     registryClerkId?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'registryClerkId' })
     registryClerk?: User;
 
     @Column({ type: 'uuid', nullable: true })
     intelligenceLiaisonId?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'intelligenceLiaisonId' })
     intelligenceLiaison?: User;
 
     @Column({ type: 'uuid', nullable: true })
     legalOfficerId?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'legalOfficerId' })
     legalOfficer?: User;
 
     @Column({ type: 'uuid', nullable: true })
     finalDecisionMakerId?: string; // Registrar or Director
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'finalDecisionMakerId' })
     finalDecisionMaker?: User;
 
@@ -143,7 +143,7 @@ export class SocietyApplication {
     @Column({ type: 'uuid', nullable: true })
     appealDecisionMakerId?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'appealDecisionMakerId' })
     appealDecisionMaker?: User;
 

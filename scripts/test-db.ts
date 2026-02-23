@@ -1,4 +1,4 @@
-import { AppDataSource } from './src/config/database';
+import { AppDataSource } from '../src/config/database';
 
 async function testConnection() {
     try {

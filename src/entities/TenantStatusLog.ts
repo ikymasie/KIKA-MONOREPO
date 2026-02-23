@@ -7,44 +7,46 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
+import type { Tenant } from './Tenant';
 import { TenantStatus } from './Tenant';
+import type { User } from './User';
 
 @Entity('tenant_status_logs')
 @Index(['tenantId'])
 @Index(['changedAt'])
 export class TenantStatusLog {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne('Tenant', { nullable: false })
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: any;
+    tenant?: Tenant;
 
     @Column({ type: 'enum', enum: TenantStatus })
-    previousStatus!: TenantStatus;
+    previousStatus?: TenantStatus;
 
     @Column({ type: 'enum', enum: TenantStatus })
-    newStatus!: TenantStatus;
+    newStatus?: TenantStatus;
 
     @Column({ type: 'text' })
-    reason!: string;
+    reason?: string;
 
     @Column({ type: 'uuid' })
-    changedBy!: string;
+    changedBy?: string;
 
-    @ManyToOne('User', { nullable: false })
+    @ManyToOne('User')
     @JoinColumn({ name: 'changedBy' })
-    changer!: any;
+    changer?: User;
 
     @Column({ type: 'timestamp' })
-    changedAt!: Date;
+    changedAt?: Date;
 
     @Column({ type: 'date' })
-    effectiveDate!: Date;
+    effectiveDate?: Date;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 }

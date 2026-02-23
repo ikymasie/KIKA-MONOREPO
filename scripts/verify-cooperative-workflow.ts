@@ -55,7 +55,7 @@ async function verifyCooperativeWorkflow() {
             documentType: 'constitution',
             fileName: 'bylaws.pdf',
             fileUrl: 'https://firebasestorage.local/bylaws.pdf'
-        }, testUser.id);
+        }, testUser.id!);
         console.log('✅ Document added to cooperative');
 
         // 4. Submit Application
@@ -65,7 +65,7 @@ async function verifyCooperativeWorkflow() {
         console.log('✅ Cooperative application submitted');
 
         // 5. Verify retrieval
-        const list = await SocietyApplicationService.getApplicantApplications(testUser.id);
+        const list = await SocietyApplicationService.getApplicantApplications(testUser.id!);
         console.log('✅ Retrieved applicant applications count:', list.length);
 
         const found = list.find(a => a.id === application.id);

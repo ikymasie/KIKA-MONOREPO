@@ -1,79 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { queryOne, query, execute, buildSetClause } from '@/src/db/query';
+import { RowDataPacket } from 'mysql2/promise';
 
 export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Member } = await import('@/src/entities/Member');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-
         const user = await getUserFromRequest(request);
-        if (!user || user.role !== 'member') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user || user.role !== 'member') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const member = await queryOne<RowDataPacket>(
+            `SELECT m.*, t.name AS tenantName FROM members m
+             LEFT JOIN tenants t ON t.id = m.tenantId
+             WHERE m.userId = ? LIMIT 1`,
+            [user.id]
+        );
+        if (!member) return NextResponse.json({ error: 'Member record not found' }, { status: 404 });
 
-        const memberRepo = AppDataSource.getRepository(Member);
-        const member = await memberRepo.findOne({
-            where: { userId: user.id },
-            relations: ['tenant', 'beneficiaries', 'dependents']
-        });
+        const beneficiaries = await query<RowDataPacket>('SELECT * FROM beneficiaries WHERE memberId = ?', [member.id]);
 
-        if (!member) {
-            return NextResponse.json({ error: 'Member record not found' }, { status: 404 });
-        }
-
-        return NextResponse.json(member);
+        return NextResponse.json({ ...member, beneficiaries });
     } catch (error: any) {
         console.error('Member profile API error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to fetch profile' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error.message || 'Failed to fetch profile' }, { status: 500 });
     }
 }
 
 export async function PATCH(request: NextRequest) {
     try {
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Member } = await import('@/src/entities/Member');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
         const user = await getUserFromRequest(request);
-        if (!user || user.role !== 'member') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user || user.role !== 'member') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        if (!AppDataSource.isInitialized) await AppDataSource.initialize();
-
-        const memberRepo = AppDataSource.getRepository(Member);
-        const member = await memberRepo.findOne({ where: { userId: user.id } });
-        if (!member) {
-            return NextResponse.json({ error: 'Member record not found' }, { status: 404 });
-        }
+        const member = await queryOne<RowDataPacket>('SELECT id FROM members WHERE userId = ? LIMIT 1', [user.id]);
+        if (!member) return NextResponse.json({ error: 'Member record not found' }, { status: 404 });
 
         const body = await request.json();
-        // Only allow the fields a member is permitted to self-update
-        const allowedFields: string[] = ['phone', 'physicalAddress', 'employer', 'employmentStatus'];
-        let updated = false;
+        const allowedFields = ['phone', 'physicalAddress', 'employer', 'employmentStatus'];
+        const updates: Record<string, unknown> = {};
         for (const field of allowedFields) {
-            if (body[field] !== undefined) {
-                (member as any)[field] = body[field];
-                updated = true;
-            }
+            if (body[field] !== undefined) updates[field] = body[field];
         }
 
-        if (!updated) {
+        if (!Object.keys(updates).length) {
             return NextResponse.json({ error: 'No updatable fields provided' }, { status: 400 });
         }
 
-        await memberRepo.save(member);
-        return NextResponse.json({ message: 'Profile updated successfully', member });
+        const { clause, values } = buildSetClause(updates);
+        await execute(`UPDATE members SET ${clause}, updatedAt = NOW() WHERE id = ?`, [...values, member.id]);
+
+        const updated = await queryOne<RowDataPacket>('SELECT * FROM members WHERE id = ? LIMIT 1', [member.id]);
+        return NextResponse.json({ message: 'Profile updated successfully', member: updated });
     } catch (error: any) {
         console.error('Member profile PATCH error:', error);
         return NextResponse.json({ error: error.message || 'Failed to update profile' }, { status: 500 });

@@ -1,43 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
-import { Not, In } from 'typeorm';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { createClaim } from '@/src/db/services/InsuranceService';
+import { ClaimStatus } from '@/src/interfaces/IInsurance';
+import { queryOne } from '@/src/db/query';
 
 export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { InsuranceClaim, ClaimStatus } = await import('@/src/entities/InsuranceClaim');
-        const { InsurancePolicy } = await import('@/src/entities/InsurancePolicy');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-    
         const user = await getUserFromRequest(request);
-        if (!user || user.role !== 'member') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user || user.role !== 'member') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        const body = await request.json();
-        const { policyId, incidentDate, claimType, claimAmount, description, supportingDocuments } = body;
-
-        if (!policyId || !incidentDate) {
-            return NextResponse.json({ error: 'Policy ID and incident date are required' }, { status: 400 });
-        }
-
-        const db = await getDb();
-        const claimRepo = db.getRepository(InsuranceClaim);
-        const policyRepo = db.getRepository(InsurancePolicy);
-
-        // 1. Fetch Policy for Triage
-        const policy = await policyRepo.findOne({
-            where: { id: policyId, memberId: user.id },
-            relations: ['product']
-        });
-
-        if (!policy) {
-            return NextResponse.json({ error: 'Policy not found' }, { status: 404 });
-        }
+        const { policyId, incidentDate, claimType, claimAmount, description, supportingDocuments } = await request.json();
+        if (!policyId || !incidentDate) return NextResponse.json({ error: 'Policy ID and incident date are required' }, { status: 400 });
 
         const incidentDateObj = new Date(incidentDate);
+
+        // 1. Fetch Policy for Triage
+        const policy = await queryOne('SELECT status, waitingPeriodEndDate FROM insurance_policies WHERE id = ? AND memberId = ?', [policyId, user.id]) as any;
+        if (!policy) return NextResponse.json({ error: 'Policy not found' }, { status: 404 });
 
         // 2. Automated Triage: Policy Status
         if (policy.status !== 'active' && policy.status !== 'waiting_period') {
@@ -56,13 +36,11 @@ export async function POST(request: NextRequest) {
         }
 
         // 4. Automated Triage: Duplicate Check
-        const existingClaim = await claimRepo.findOne({
-            where: {
-                policyId,
-                incidentDate: incidentDateObj,
-                status: Not(In([ClaimStatus.REJECTED, ClaimStatus.FINAL_REJECTION]))
-            }
-        });
+        const existingClaim = await queryOne(`
+            SELECT id FROM insurance_claims 
+            WHERE policyId = ? AND incidentDate = ? AND status NOT IN ('rejected', 'final_rejection')
+            LIMIT 1
+        `, [policyId, incidentDateObj.toISOString().split('T')[0]]);
 
         if (existingClaim) {
             return NextResponse.json({
@@ -71,14 +49,14 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        const claimCount = await claimRepo.count();
+        const countRes = await queryOne('SELECT COUNT(*) as c FROM insurance_claims WHERE tenantId = ?', [user.tenantId]) as any;
+        const claimCount = countRes?.c || 0;
         const claimNumber = `CLM-${new Date().getFullYear()}-${String(claimCount + 1).padStart(5, '0')}`;
 
-        const claim = claimRepo.create({
-            tenantId: user.tenantId,
+        const claim = await createClaim(user.tenantId, {
             claimNumber,
             policyId,
-            incidentDate: incidentDateObj,
+            incidentDate: incidentDateObj.toISOString().split('T')[0],
             claimType,
             claimAmount,
             description,
@@ -86,7 +64,6 @@ export async function POST(request: NextRequest) {
             status: ClaimStatus.SUBMITTED
         });
 
-        await claimRepo.save(claim);
         return NextResponse.json(claim);
     } catch (error: any) {
         console.error('Error submitting insurance claim:', error);

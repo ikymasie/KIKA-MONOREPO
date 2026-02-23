@@ -8,9 +8,9 @@ import {
     JoinColumn,
     OneToOne,
 } from 'typeorm';
-import { MerchandiseOrder } from './MerchandiseOrder';
-import { Vendor } from './Vendor';
-import { Tenant } from './Tenant';
+import type { MerchandiseOrder } from './MerchandiseOrder';
+import type { Vendor } from './Vendor';
+import type { Tenant } from './Tenant';
 
 export enum InvoiceStatus {
     DRAFT = 'draft',
@@ -23,40 +23,40 @@ export enum InvoiceStatus {
 @Entity('merchandise_invoices')
 export class MerchandiseInvoice {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({ type: 'uuid' })
-    vendorId!: string;
+    vendorId?: string;
 
-    @ManyToOne(() => Vendor)
+    @ManyToOne('Vendor')
     @JoinColumn({ name: 'vendorId' })
-    vendor!: Vendor;
+    vendor?: Vendor;
 
     @Column({ type: 'uuid' })
-    orderId!: string;
+    orderId?: string;
 
-    @OneToOne(() => MerchandiseOrder)
+    @OneToOne('MerchandiseOrder')
     @JoinColumn({ name: 'orderId' })
-    order!: MerchandiseOrder;
+    order?: MerchandiseOrder;
 
     @Column()
-    invoiceNumber!: string;
+    invoiceNumber?: string;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    amount!: number;
+    amount?: number;
 
     @Column({ type: 'date' })
-    dueDate!: Date;
+    dueDate?: Date;
 
     @Column({ type: 'enum', enum: InvoiceStatus, default: InvoiceStatus.DRAFT })
-    status!: InvoiceStatus;
+    status?: InvoiceStatus;
 
     @Column({ nullable: true })
     paymentReference?: string;
@@ -68,8 +68,8 @@ export class MerchandiseInvoice {
     notes?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

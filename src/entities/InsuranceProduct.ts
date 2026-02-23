@@ -23,35 +23,35 @@ export enum CoverageType {
 @Entity('insurance_products')
 export class InsuranceProduct {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant, (tenant: any) => tenant.insuranceProducts)
+    @ManyToOne('Tenant', 'insuranceProducts')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column()
-    name!: string;
+    name?: string;
 
     @Column()
-    code!: string;
+    code?: string;
 
     @Column({ type: 'text', nullable: true })
     description?: string;
 
     @Column({ type: 'enum', enum: CoverageType })
-    coverageType!: CoverageType;
+    coverageType?: CoverageType;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    monthlyPremium!: number;
+    monthlyPremium?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    coverageAmount!: number;
+    coverageAmount?: number;
 
     @Column({ type: 'int', default: 6 })
-    waitingPeriodMonths!: number;
+    waitingPeriodMonths?: number;
 
     @Column({ type: 'int', nullable: true })
     maxDependents?: number;
@@ -66,14 +66,14 @@ export class InsuranceProduct {
     policyNumber?: string;
 
     @Column({ type: 'enum', enum: InsuranceProductStatus, default: InsuranceProductStatus.ACTIVE })
-    status!: InsuranceProductStatus;
+    status?: InsuranceProductStatus;
 
     @Column({ nullable: true })
     flyerUrl?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

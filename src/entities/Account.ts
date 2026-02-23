@@ -29,23 +29,23 @@ export enum AccountStatus {
 @Index(['tenantId', 'code'], { unique: true })
 export class Account {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant, (tenant: Tenant) => tenant.accounts)
+    @ManyToOne('Tenant', 'accounts')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column()
-    code!: string;
+    code?: string;
 
     @Column()
-    name!: string;
+    name?: string;
 
     @Column({ type: 'enum', enum: AccountType })
-    accountType!: AccountType;
+    accountType?: AccountType;
 
     @Column({ type: 'text', nullable: true })
     description?: string;
@@ -53,22 +53,22 @@ export class Account {
     @Column({ type: 'uuid', nullable: true })
     parentAccountId?: string;
 
-    @ManyToOne(() => Account, { nullable: true })
+    @ManyToOne('Account', { nullable: true })
     @JoinColumn({ name: 'parentAccountId' })
     parentAccount?: Account;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    balance!: number;
+    balance?: number;
 
     @Column({ type: 'enum', enum: AccountStatus, default: AccountStatus.ACTIVE })
-    status!: AccountStatus;
+    status?: AccountStatus;
 
-    @OneToMany(() => require('./JournalEntry').JournalEntry, (entry: JournalEntry) => entry.account)
-    journalEntries!: JournalEntry[];
+    @OneToMany('JournalEntry', 'account')
+    journalEntries?: JournalEntry[];
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

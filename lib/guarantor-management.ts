@@ -215,7 +215,7 @@ export async function requestGuarantorPledges(
     let successCount = 0;
     for (const guarantor of guarantors) {
         const result = await sendGuarantorNotification(
-            guarantor.guarantorMemberId,
+            guarantor.guarantorMemberId!,
             loanId
         );
         if (result.success) successCount++;

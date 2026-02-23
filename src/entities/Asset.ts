@@ -7,7 +7,7 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { Tenant } from './Tenant';
+import type { Tenant } from './Tenant';
 
 export enum AssetType {
     LAND = 'land',
@@ -20,51 +20,51 @@ export enum AssetType {
 export enum AssetStatus {
     ACTIVE = 'active',
     DISPOSED = 'disposed',
-    ENCUMBERED = 'encumbered', // Pledged as collateral
+    ENCUMBERED = 'encumbered',
 }
 
 @Entity('assets')
 export class Asset {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column()
-    name!: string;
+    name?: string;
 
     @Column({ type: 'enum', enum: AssetType })
-    assetType!: AssetType;
+    assetType?: AssetType;
 
     @Column({ type: 'text', nullable: true })
     description?: string;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    purchasePrice!: number;
+    purchasePrice?: number;
 
     @Column({ type: 'date', nullable: true })
     purchaseDate?: Date;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    currentValuation!: number;
+    currentValuation?: number;
 
     @Column({ type: 'date', nullable: true })
     lastValuationDate?: Date;
 
     @Column({ type: 'enum', enum: AssetStatus, default: AssetStatus.ACTIVE })
-    status!: AssetStatus;
+    status?: AssetStatus;
 
     @Column({ type: 'text', nullable: true })
     collateralDetails?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

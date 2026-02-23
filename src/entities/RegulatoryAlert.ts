@@ -7,7 +7,7 @@ import {
     CreateDateColumn,
     Index,
 } from 'typeorm';
-import { Tenant } from './Tenant';
+import type { Tenant } from './Tenant';
 
 export enum AlertSeverity {
     LOW = 'low',
@@ -34,38 +34,38 @@ export enum AlertType {
 @Index(['createdAt'])
 export class RegulatoryAlert {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({
         type: 'enum',
         enum: AlertType
     })
-    type!: AlertType;
+    type?: AlertType;
 
     @Column({
         type: 'enum',
         enum: AlertSeverity
     })
-    severity!: AlertSeverity;
+    severity?: AlertSeverity;
 
     @Column({ type: 'varchar', length: 255 })
-    title!: string;
+    title?: string;
 
     @Column({ type: 'text' })
-    description!: string;
+    description?: string;
 
     @Column({ type: 'json', nullable: true })
     metadata?: Record<string, any>;
 
     @Column({ type: 'boolean', default: false })
-    isResolved!: boolean;
+    isResolved?: boolean;
 
     @Column({ type: 'timestamp', nullable: true })
     resolvedAt?: Date;
@@ -74,5 +74,5 @@ export class RegulatoryAlert {
     resolvedBy?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 }

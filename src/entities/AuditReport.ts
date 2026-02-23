@@ -7,7 +7,7 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { AuditorAccessRequest } from './AuditorAccessRequest';
+import type { AuditorAccessRequest } from './AuditorAccessRequest';
 
 export enum AuditReportStatus {
     DRAFT = 'draft',
@@ -17,34 +17,34 @@ export enum AuditReportStatus {
 @Entity('audit_reports')
 export class AuditReport {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    requestId!: string;
+    requestId?: string;
 
-    @ManyToOne(() => AuditorAccessRequest)
+    @ManyToOne('AuditorAccessRequest')
     @JoinColumn({ name: 'requestId' })
-    request!: AuditorAccessRequest;
+    request?: AuditorAccessRequest;
 
     @Column()
-    fileName!: string;
+    fileName?: string;
 
     @Column()
-    fileUrl!: string;
+    fileUrl?: string;
 
     @Column({
         type: 'enum',
         enum: AuditReportStatus,
         default: AuditReportStatus.DRAFT,
     })
-    status!: AuditReportStatus;
+    status?: AuditReportStatus;
 
     @Column({ type: 'timestamp', nullable: true })
     submittedAt?: Date;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

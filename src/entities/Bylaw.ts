@@ -8,6 +8,8 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 export enum BylawStatus {
     PENDING = 'pending',
@@ -20,23 +22,23 @@ export enum BylawStatus {
 @Index(['status'])
 export class Bylaw {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne('Tenant', { nullable: false })
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: any;
+    tenant?: Tenant;
 
     @Column()
-    version!: string;
+    version?: string;
 
     @Column({ type: 'date' })
-    submittedDate!: Date;
+    submittedDate?: Date;
 
     @Column({ type: 'enum', enum: BylawStatus, default: BylawStatus.PENDING })
-    status!: BylawStatus;
+    status?: BylawStatus;
 
     @Column({ nullable: true })
     documentUrl?: string;
@@ -49,7 +51,7 @@ export class Bylaw {
 
     @ManyToOne('User', { nullable: true })
     @JoinColumn({ name: 'approvedBy' })
-    approver?: any;
+    approver?: User;
 
     @Column({ type: 'timestamp', nullable: true })
     approvedDate?: Date;
@@ -64,8 +66,8 @@ export class Bylaw {
     notes?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

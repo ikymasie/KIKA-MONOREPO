@@ -23,44 +23,44 @@ export enum InterestCalculationMethod {
 @Entity('loan_products')
 export class LoanProduct {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant, (tenant: any) => tenant.loanProducts)
+    @ManyToOne('Tenant', 'loanProducts')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column()
-    name!: string;
+    name?: string;
 
     @Column()
-    code!: string;
+    code?: string;
 
     @Column({ type: 'text', nullable: true })
     description?: string;
 
     @Column({ type: 'decimal', precision: 5, scale: 2 })
-    interestRate!: number;
+    interestRate?: number;
 
     @Column({ type: 'enum', enum: InterestCalculationMethod, default: InterestCalculationMethod.REDUCING_BALANCE })
-    interestMethod!: InterestCalculationMethod;
+    interestMethod?: InterestCalculationMethod;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    minimumAmount!: number;
+    minimumAmount?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    maximumAmount!: number;
+    maximumAmount?: number;
 
     @Column({ type: 'int' })
-    minimumTermMonths!: number;
+    minimumTermMonths?: number;
 
     @Column({ type: 'int' })
-    maximumTermMonths!: number;
+    maximumTermMonths?: number;
 
     @Column({ type: 'int', default: 0 })
-    requiredGuarantors!: number;
+    requiredGuarantors?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
     processingFeePercentage?: number;
@@ -69,29 +69,29 @@ export class LoanProduct {
     insuranceFeePercentage?: number;
 
     @Column({ default: false })
-    requiresCollateral!: boolean;
+    requiresCollateral?: boolean;
 
     @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
     penaltyRate?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 3 })
-    savingsMultiplier!: number;
+    savingsMultiplier?: number;
 
     @Column({ type: 'int', default: 12 })
-    maxDurationMonths!: number;
+    maxDurationMonths?: number;
 
     @Column({ type: 'int', default: 0 })
-    gracePeriodDays!: number;
+    gracePeriodDays?: number;
 
     @Column({ type: 'enum', enum: LoanProductStatus, default: LoanProductStatus.ACTIVE })
-    status!: LoanProductStatus;
+    status?: LoanProductStatus;
 
     @Column({ nullable: true })
     flyerUrl?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

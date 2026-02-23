@@ -7,9 +7,9 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
-import { Member } from './Member';
-import { Tenant } from './Tenant';
-import { User } from './User';
+import type { Member } from './Member';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 export enum CommunicationType {
     CALL = 'call',
@@ -32,44 +32,44 @@ export enum CommunicationDirection {
 @Index(['createdAt'])
 export class MemberCommunication {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({ type: 'uuid' })
-    memberId!: string;
+    memberId?: string;
 
-    @ManyToOne(() => Member)
+    @ManyToOne('Member')
     @JoinColumn({ name: 'memberId' })
-    member!: Member;
+    member?: Member;
 
     @Column({ type: 'enum', enum: CommunicationType })
-    type!: CommunicationType;
+    type?: CommunicationType;
 
     @Column({ type: 'enum', enum: CommunicationDirection })
-    direction!: CommunicationDirection;
+    direction?: CommunicationDirection;
 
     @Column({ nullable: true })
     subject?: string;
 
     @Column({ type: 'text' })
-    content!: string;
+    content?: string;
 
     @Column({ type: 'uuid' })
-    recordedById!: string;
+    recordedById?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'recordedById' })
-    recordedBy!: User;
+    recordedBy?: User;
 
     @Column({ type: 'json', nullable: true })
     metadata?: Record<string, any>;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 }

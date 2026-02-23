@@ -7,8 +7,9 @@ import {
     CreateDateColumn,
     Index,
 } from 'typeorm';
-import { SocietyApplication, ApplicationStatus } from './SocietyApplication';
-import { User } from './User';
+import type { SocietyApplication } from './SocietyApplication';
+import { ApplicationStatus } from './SocietyApplication';
+import type { User } from './User';
 
 @Entity('application_status_history')
 @Index(['applicationId'])
@@ -20,7 +21,7 @@ export class ApplicationStatusHistory {
     @Column({ type: 'uuid' })
     applicationId!: string;
 
-    @ManyToOne(() => SocietyApplication, { onDelete: 'CASCADE' })
+    @ManyToOne('SocietyApplication', { onDelete: 'CASCADE' })
     @JoinColumn({ name: 'applicationId' })
     application!: SocietyApplication;
 
@@ -40,7 +41,7 @@ export class ApplicationStatusHistory {
     @Column({ type: 'uuid' })
     changedBy!: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'changedBy' })
     user!: User;
 

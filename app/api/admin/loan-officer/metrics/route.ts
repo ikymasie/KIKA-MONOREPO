@@ -1,96 +1,58 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Loan, LoanStatus } from '@/src/entities/Loan';
-import { LoanWorkflowLog, WorkflowActionType } from '@/src/entities/LoanWorkflowLog';
 import { getUserFromRequest } from '@/lib/auth-server';
-import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, DatabaseError } from '@/lib/errors';
+import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError } from '@/lib/errors';
+import { query, queryOne } from '@/src/db/query';
+import { RowDataPacket } from 'mysql2/promise';
 
 export const dynamic = 'force-dynamic';
 export const GET = asyncHandler(async (request: NextRequest) => {
     const user = await getUserFromRequest(request);
+    if (!user) throw new UnauthorizedError('User not authenticated');
+    if (!user.isTenantAdmin()) throw new ForbiddenError('Staff access required');
+    if (!user.tenantId) throw new BadRequestError('No tenant associated with user');
 
-    if (!user) {
-        throw new UnauthorizedError('User not authenticated');
-    }
+    // Approval rate: compare approved vs rejected in officer's portfolio
+    const [processed, reviewCount, pendingCount] = await Promise.all([
+        query<RowDataPacket>(
+            `SELECT status, principalAmount, outstandingBalance, maturityDate
+             FROM loans WHERE tenantId = ? AND loanOfficerId = ?`,
+            [user.tenantId, user.id]
+        ),
+        queryOne<RowDataPacket & { cnt: string }>(
+            `SELECT COUNT(*) AS cnt FROM loan_workflow_logs WHERE actionBy = ? AND actionType = 'officer_review'`,
+            [user.id]
+        ),
+        queryOne<RowDataPacket & { cnt: string }>(
+            `SELECT COUNT(*) AS cnt FROM loans WHERE tenantId = ? AND loanOfficerId = ? AND status = 'under_appraisal'`,
+            [user.tenantId, user.id]
+        ),
+    ]);
 
-    if (!user.isTenantAdmin()) {
-        throw new ForbiddenError('Staff access required');
-    }
+    const approvedCount = processed.filter(l => ['approved', 'disbursed', 'active'].includes(l.status)).length;
+    const rejectedCount = processed.filter(l => l.status === 'rejected').length;
+    const recomm = parseInt(reviewCount?.cnt ?? '0', 10);
+    const approvalRate = (approvedCount + rejectedCount) > 0 ? (approvedCount / (approvedCount + rejectedCount)) * 100 : 0;
 
-    if (!user.tenantId) {
-        throw new BadRequestError('No tenant associated with user');
-    }
-
-    if (!AppDataSource.isInitialized) {
-        try {
-            await AppDataSource.initialize();
-        } catch (error) {
-            throw new DatabaseError('Failed to initialize database connection');
-        }
-    }
-
-    const loanRepo = AppDataSource.getRepository(Loan);
-    const logRepo = AppDataSource.getRepository(LoanWorkflowLog);
-
-    // 1. Approval Rate (Based on Workflow Logs)
-    const reviews = await logRepo.find({
-        where: {
-            actionBy: user.id,
-            actionType: WorkflowActionType.OFFICER_REVIEW
-        }
-    });
-
-    const recommendations = reviews.length;
-    // Assuming metadata stores the recommendation (e.g., recommend_approve, recommend_reject)
-    // For now, let's look at the result of loans they were assigned to
-    const myProcessedLoans = await loanRepo.find({
-        where: {
-            loanOfficerId: user.id,
-            tenantId: user.tenantId
-        }
-    });
-
-    const approvedCount = myProcessedLoans.filter(l => [LoanStatus.APPROVED, LoanStatus.DISBURSED, LoanStatus.ACTIVE].includes(l.status)).length;
-    const rejectedCount = myProcessedLoans.filter(l => l.status === LoanStatus.REJECTED).length;
-    const approvalRate = recommendations > 0 ? (approvedCount / (approvedCount + rejectedCount || 1)) * 100 : 0;
-
-    // 2. Portfolio Quality (PAR - Portfolio at Risk)
-    // PAR = (Outstanding balance of loans with overdue payments) / Total outstanding balance
-    const myActiveLoans = myProcessedLoans.filter(l => l.status === LoanStatus.ACTIVE);
-    const totalOutstanding = myActiveLoans.reduce((sum, l) => sum + Number(l.outstandingBalance), 0);
-
-    // Check for past due loans
-    const pastDueLoans = myActiveLoans.filter(l => {
-        if (!l.maturityDate) return false;
-        return new Date() > new Date(l.maturityDate);
-    });
-    const parAmount = pastDueLoans.reduce((sum, l) => sum + Number(l.outstandingBalance), 0);
+    const activeLoans = processed.filter(l => l.status === 'active');
+    const totalOutstanding = activeLoans.reduce((s, l) => s + Number(l.outstandingBalance), 0);
+    const pastDue = activeLoans.filter(l => l.maturityDate && new Date() > new Date(l.maturityDate));
+    const parAmount = pastDue.reduce((s, l) => s + Number(l.outstandingBalance), 0);
     const parPercentage = totalOutstanding > 0 ? (parAmount / totalOutstanding) * 100 : 0;
 
-    // 3. Workload
-    const pendingTasks = await loanRepo.count({
-        where: {
-            loanOfficerId: user.id,
-            tenantId: user.tenantId,
-            status: LoanStatus.UNDER_APPRAISAL
-        }
-    });
-
-    // 4. Disbursement Totals
-    const disbursedAmount = myProcessedLoans
-        .filter(l => l.status === LoanStatus.DISBURSED || l.status === LoanStatus.ACTIVE)
-        .reduce((sum, l) => sum + Number(l.principalAmount), 0);
+    const disbursedAmount = processed
+        .filter(l => ['disbursed', 'active'].includes(l.status))
+        .reduce((s, l) => s + Number(l.principalAmount), 0);
 
     return NextResponse.json({
         success: true,
         data: {
             approvalRate: Math.round(approvalRate),
             portfolioAtRiskPercentage: Math.round(parPercentage * 100) / 100,
-            pendingTasks,
+            pendingTasks: parseInt(pendingCount?.cnt ?? '0', 10),
             totalDisbursed: disbursedAmount,
-            recommendationsCount: recommendations,
-            activePortfolioCount: myActiveLoans.length,
+            recommendationsCount: recomm,
+            activePortfolioCount: activeLoans.length,
             totalPortfolioOutstanding: totalOutstanding,
-        }
+        },
     });
 });

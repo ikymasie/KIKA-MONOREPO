@@ -46,7 +46,7 @@ async function verifyRegistrarWorkflow() {
 
         // 3. Approve via RegistrationService
         console.log('Approving application...');
-        const approvedApp = await RegistrationService.approveApplication(application.id, registrar.id, 'Verified and approved.');
+        const approvedApp = await RegistrationService.approveApplication(application.id!, registrar.id!, 'Verified and approved.');
 
         if (approvedApp.status === ApplicationStatus.APPROVED && approvedApp.certificateNumber) {
             console.log(`✅ Application approved! Reg #: ${approvedApp.certificateNumber}`);
@@ -56,7 +56,7 @@ async function verifyRegistrarWorkflow() {
 
         // 4. Issue Certificate
         console.log('Issuing certificate...');
-        const certificate = await RegistrationService.issueCertificate(application.id, registrar.id);
+        const certificate = await RegistrationService.issueCertificate(application.id!, registrar.id!);
 
         if (certificate && certificate.certificateNumber === approvedApp.certificateNumber) {
             console.log(`✅ Certificate issued: ${certificate.id}`);

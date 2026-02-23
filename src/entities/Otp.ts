@@ -9,21 +9,21 @@ import {
 @Entity('otps')
 export class Otp {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column()
     @Index()
-    phone!: string;
+    phone?: string;
 
     @Column()
-    code!: string;
+    code?: string;
 
     @Column({ type: 'timestamp' })
-    expiresAt!: Date;
+    expiresAt?: Date;
 
     @Column({ default: false })
-    used!: boolean;
+    used?: boolean;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 }

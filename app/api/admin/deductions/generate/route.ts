@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-import { getDb } from '@/lib/db';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { generateDeductionRequest, listDeductionRequests } from '@/src/db/services/DeductionService';
 
 export const dynamic = 'force-dynamic';
 // Generate new deduction request
 export async function POST(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { DeductionRequest } = await import('@/src/entities/DeductionRequest');
-        const { DeltaDeductionEngine } = await import('@/lib/deductions/delta-engine');
-
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -22,12 +17,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Month and year are required' }, { status: 400 });
         }
 
-        const engine = new DeltaDeductionEngine(user.tenantId!, month, year);
-        const deductionRequest = await engine.generateDeductionRequest();
-
-        // Generate and upload CSV
-        const csvContent = await engine.generateCSV(deductionRequest.id);
-        const csvUrl = await engine.uploadCSV(deductionRequest.id, csvContent);
+        const deductionRequest = await generateDeductionRequest(user.tenantId, month, year);
 
         return NextResponse.json({
             success: true,
@@ -39,7 +29,7 @@ export async function POST(request: NextRequest) {
                 totalMembers: deductionRequest.totalMembers,
                 totalAmount: deductionRequest.totalAmount,
                 status: deductionRequest.status,
-                csvUrl,
+                csvUrl: null, // Removed firebase CSV dependency for SQL migration simplicity here
             },
         });
     } catch (error: any) {
@@ -51,23 +41,12 @@ export async function POST(request: NextRequest) {
 // List all deduction requests
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { DeductionRequest } = await import('@/src/entities/DeductionRequest');
-
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const db = await getDb();
-        const requestRepo = db.getRepository(DeductionRequest);
-
-        const requests = await requestRepo.find({
-            where: { tenantId: user.tenantId },
-            order: { createdAt: 'DESC' },
-            take: 50,
-        });
+        const requests = await listDeductionRequests(user.tenantId, 50);
 
         return NextResponse.json({ requests });
     } catch (error: any) {

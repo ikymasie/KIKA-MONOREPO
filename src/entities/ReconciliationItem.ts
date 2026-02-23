@@ -7,7 +7,7 @@ import {
     JoinColumn,
 } from 'typeorm';
 import type { ReconciliationBatch } from './ReconciliationBatch';
-import { Member } from './Member';
+import type { Member } from './Member';
 
 export enum MatchStatus {
     MATCHED = 'matched',
@@ -27,19 +27,19 @@ export enum VarianceReason {
 @Entity('reconciliation_items')
 export class ReconciliationItem {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    batchId!: string;
+    batchId?: string;
 
-    @ManyToOne(() => require('./ReconciliationBatch').ReconciliationBatch, (batch: ReconciliationBatch) => batch.items)
+    @ManyToOne('ReconciliationBatch', 'items')
     @JoinColumn({ name: 'batchId' })
-    batch!: ReconciliationBatch;
+    batch?: ReconciliationBatch;
 
     @Column({ type: 'uuid', nullable: true })
     memberId?: string;
 
-    @ManyToOne(() => Member, { nullable: true })
+    @ManyToOne('Member', { nullable: true })
     @JoinColumn({ name: 'memberId' })
     member?: Member;
 
@@ -53,19 +53,19 @@ export class ReconciliationItem {
     employeeNumber?: string;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    expectedAmount!: number;
+    expectedAmount?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    requestedAmount!: number;
+    requestedAmount?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    actualAmount!: number;
+    actualAmount?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    variance!: number;
+    variance?: number;
 
     @Column({ type: 'enum', enum: MatchStatus })
-    matchStatus!: MatchStatus;
+    matchStatus?: MatchStatus;
 
     @Column({ type: 'enum', enum: VarianceReason, nullable: true })
     varianceReason?: VarianceReason;
@@ -74,11 +74,11 @@ export class ReconciliationItem {
     notes?: string;
 
     @Column({ default: false })
-    requiresManualReview!: boolean;
+    requiresManualReview?: boolean;
 
     @Column({ default: false })
-    journalPosted!: boolean;
+    journalPosted?: boolean;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 }

@@ -7,22 +7,22 @@ import {
     Index,
 } from 'typeorm';
 import { NotificationEvent, NotificationChannel, NotificationPriority } from '@/lib/notification-types';
-import { UserRole } from './User';
+import type { UserRole } from './User';
 
 @Entity('notification_templates')
 @Index(['event', 'targetRole'], { unique: true })
 export class NotificationTemplate {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'varchar' })
-    event!: NotificationEvent;
+    event?: NotificationEvent;
 
     @Column({ type: 'varchar' })
-    targetRole!: UserRole;
+    targetRole?: UserRole;
 
     @Column({ type: 'simple-array' })
-    channels!: NotificationChannel[];
+    channels?: NotificationChannel[];
 
     @Column({ type: 'text', nullable: true })
     smsTemplate?: string;
@@ -34,20 +34,20 @@ export class NotificationTemplate {
     emailTemplate?: string;
 
     @Column({ type: 'simple-array' })
-    placeholders!: string[];
+    placeholders?: string[];
 
     @Column({ default: true })
-    isActive!: boolean;
+    isActive?: boolean;
 
     @Column({ type: 'varchar' })
-    priority!: NotificationPriority;
+    priority?: NotificationPriority;
 
     @Column({ type: 'text', nullable: true })
     description?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

@@ -7,37 +7,37 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { AuditorAccessRequest } from './AuditorAccessRequest';
-import { User } from './User';
+import type { AuditorAccessRequest } from './AuditorAccessRequest';
+import type { User } from './User';
 
 @Entity('audit_working_papers')
 export class AuditWorkingPaper {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    requestId!: string;
+    requestId?: string;
 
-    @ManyToOne(() => AuditorAccessRequest)
+    @ManyToOne('AuditorAccessRequest')
     @JoinColumn({ name: 'requestId' })
-    request!: AuditorAccessRequest;
+    request?: AuditorAccessRequest;
 
     @Column()
-    fileName!: string;
+    fileName?: string;
 
     @Column()
-    fileUrl!: string;
+    fileUrl?: string;
 
     @Column({ type: 'uuid' })
-    uploadedById!: string;
+    uploadedById?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'uploadedById' })
-    uploadedBy!: User;
+    uploadedBy?: User;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

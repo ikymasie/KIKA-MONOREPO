@@ -100,7 +100,7 @@ export async function checkActiveLoanStatus(
             : `Member has ${activeLoans.length} active loan(s)`,
         activeLoansCount: activeLoans.length,
         activeLoans: activeLoans.map(loan => ({
-            loanNumber: loan.loanNumber,
+            loanNumber: loan.loanNumber || 'UNKNOWN',
             outstandingBalance: Number(loan.outstandingBalance),
         })),
     };
@@ -124,7 +124,7 @@ export async function checkMembershipDuration(
         throw new Error('Member not found');
     }
 
-    const joinDate = new Date(member.joinDate);
+    const joinDate = new Date(member.joinDate!);
     const today = new Date();
     const monthsDiff =
         (today.getFullYear() - joinDate.getFullYear()) * 12 +
@@ -162,17 +162,17 @@ export async function runFullEligibilityCheck(
 
     // Run all checks
     const savingsRatioCheck = await checkSavingsRatio(
-        loan.memberId,
+        loan.memberId!,
         Number(loan.principalAmount),
-        loan.productId
+        loan.productId!
     );
 
     const activeLoanCheck = await checkActiveLoanStatus(
-        loan.memberId,
-        loan.tenantId
+        loan.memberId!,
+        loan.tenantId!
     );
 
-    const membershipDurationCheck = await checkMembershipDuration(loan.memberId);
+    const membershipDurationCheck = await checkMembershipDuration(loan.memberId!);
 
     // Determine overall pass/fail
     const passed =

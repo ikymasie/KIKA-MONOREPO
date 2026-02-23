@@ -14,42 +14,42 @@ import type { Member } from './Member';
 @Index(['memberId', 'isPrimary'])
 export class MemberBankAccount {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    memberId!: string;
+    memberId?: string;
 
-    @ManyToOne(() => require('./Member').Member, (member: any) => member.bankAccounts)
+    @ManyToOne('Member', 'bankAccounts')
     @JoinColumn({ name: 'memberId' })
-    member!: Member;
+    member?: Member;
 
     @Column()
-    bankName!: string;
+    bankName?: string;
 
     @Column()
-    branchCode!: string;
+    branchCode?: string;
 
     @Column()
-    accountNumber!: string;
+    accountNumber?: string;
 
     @Column()
-    accountHolderName!: string;
+    accountHolderName?: string;
 
     @Column({ type: 'enum', enum: ['savings', 'current', 'cheque'], default: 'savings' })
-    accountType!: string;
+    accountType?: string;
 
     @Column({ default: false })
-    isPrimary!: boolean; // One account must always be primary
+    isPrimary?: boolean;
 
     @Column({ default: true })
-    isActive!: boolean;
+    isActive?: boolean;
 
     @Column({ type: 'text', nullable: true })
-    notes?: string; // e.g., "For salary deposits", "For loan disbursements"
+    notes?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

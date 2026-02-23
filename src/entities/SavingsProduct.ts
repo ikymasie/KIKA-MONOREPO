@@ -17,41 +17,41 @@ export enum ProductStatus {
 @Entity('savings_products')
 export class SavingsProduct {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant, (tenant: any) => tenant.savingsProducts)
+    @ManyToOne('Tenant', 'savingsProducts')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column()
-    name!: string;
+    name?: string;
 
     @Column()
-    code!: string;
+    code?: string;
 
     @Column({ type: 'text', nullable: true })
     description?: string;
 
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
-    interestRate!: number;
+    interestRate?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    minimumBalance!: number;
+    minimumBalance?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
     maximumBalance?: number;
 
     @Column({ default: false })
-    isShareCapital!: boolean;
+    isShareCapital?: boolean;
 
     @Column({ default: true })
-    allowWithdrawals!: boolean;
+    allowWithdrawals?: boolean;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    minMonthlyContribution!: number;
+    minMonthlyContribution?: number;
 
     @Column({ type: 'json', nullable: true })
     withdrawalRestrictions?: {
@@ -61,17 +61,17 @@ export class SavingsProduct {
     };
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    interestEarningThreshold!: number;
+    interestEarningThreshold?: number;
 
     @Column({ type: 'enum', enum: ProductStatus, default: ProductStatus.ACTIVE })
-    status!: ProductStatus;
+    status?: ProductStatus;
 
     @Column({ nullable: true })
     flyerUrl?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

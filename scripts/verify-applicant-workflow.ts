@@ -61,7 +61,7 @@ async function verify() {
             documentType: 'constitution',
             fileName: 'constitution.pdf',
             fileUrl: 'https://test.com/const.pdf'
-        }, applicant.id);
+        }, applicant.id!);
         console.log('✅ Documents added');
 
         // 5. Submit application
@@ -73,7 +73,7 @@ async function verify() {
         console.log(`✅ Application submitted! Status: ${submittedApp.status}`);
 
         // 6. Verify retrieval
-        const foundApp = await SocietyApplicationService.getApplicantApplication(app.id, applicant.id);
+        const foundApp = await SocietyApplicationService.getApplicantApplication(app.id, applicant.id!);
         if (foundApp && foundApp.status === ApplicationStatus.SUBMITTED) {
             console.log('✅ Verification successful! Workflow is functional.');
         } else {

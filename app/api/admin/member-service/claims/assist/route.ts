@@ -39,7 +39,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
         relations: ['member']
     });
 
-    if (!policy || policy.member.tenantId !== user.tenantId) {
+    if (!policy || policy.member?.tenantId !== user.tenantId) {
         throw new NotFoundError('Policy not found');
     }
 

@@ -50,13 +50,13 @@ class NotificationService {
             // 3. Send via appropriate channels
             const promises: Promise<any>[] = [];
 
-            if (template.channels.includes(NotificationChannel.SMS) && context.recipientPhone) {
+            if ((template.channels || []).includes(NotificationChannel.SMS) && context.recipientPhone) {
                 promises.push(
                     this.sendSMS(context, resolvedSMS!)
                 );
             }
 
-            if (template.channels.includes(NotificationChannel.EMAIL) && context.recipientEmail) {
+            if ((template.channels || []).includes(NotificationChannel.EMAIL) && context.recipientEmail) {
                 promises.push(
                     this.sendEmail(context, resolvedEmailSubject!, resolvedEmailBody!)
                 );

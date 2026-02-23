@@ -1,28 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { listBoardMinutes, createBoardMinute } from '@/src/db/services/GovernanceService';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { BoardMinute } = await import('@/src/entities/BoardMinute');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const repo = AppDataSource.getRepository(BoardMinute);
-        const minutes = await repo.find({
-            where: { tenantId: user.tenantId },
-            order: { meetingDate: 'DESC' },
-        });
-
+        const minutes = await listBoardMinutes(user.tenantId);
         return NextResponse.json(minutes);
     } catch (error: any) {
         console.error('Board Minutes GET error:', error);
@@ -32,11 +20,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { AppDataSource } = await import('@/src/config/database');
-        const { BoardMinute } = await import('@/src/entities/BoardMinute');
-
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -49,14 +32,8 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Meeting date is required' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const repo = AppDataSource.getRepository(BoardMinute);
-        const minute = repo.create({
-            tenantId: user.tenantId,
-            meetingDate: new Date(meetingDate),
+        const minute = await createBoardMinute(user.tenantId, {
+            meetingDate,
             startTime,
             endTime,
             location,
@@ -66,8 +43,6 @@ export async function POST(request: NextRequest) {
             documentUrl,
             notes,
         });
-
-        await repo.save(minute);
 
         return NextResponse.json(minute, { status: 201 });
     } catch (error: any) {

@@ -51,9 +51,9 @@ async function verifyFieldOfficer() {
         // 4. Test submitting a report
         console.log('Testing: Submit Report...');
         const report = await FieldOfficerService.submitReport({
-            visitId: visit.id,
-            tenantId: tenant.id,
-            submittedById: officer.id,
+            visitId: visit.id!,
+            tenantId: tenant.id!,
+            submittedById: officer.id!,
             cooperativePrinciplesChecklist: {
                 voluntaryMembership: true,
                 democraticControl: true,

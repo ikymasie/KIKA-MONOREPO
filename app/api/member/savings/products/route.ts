@@ -1,32 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { listSavingsProducts } from '@/src/db/services/SavingsService';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { SavingsProduct } = await import('@/src/entities/SavingsProduct');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-    
         const user = await getUserFromRequest(request);
-        if (!user || user.role !== 'member') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user || user.role !== 'member') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user.tenantId) return NextResponse.json({ error: 'No tenant associated' }, { status: 400 });
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const productRepo = AppDataSource.getRepository(SavingsProduct);
-        const products = await productRepo.find({
-            where: {
-                tenantId: user.tenantId,
-                status: 'active' as any // ProductStatus.ACTIVE
-            },
-            order: { createdAt: 'DESC' }
-        });
-
+        const products = await listSavingsProducts(user.tenantId, true);
         return NextResponse.json(products);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

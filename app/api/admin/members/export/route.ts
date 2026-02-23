@@ -1,54 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Member } from '@/src/entities/Member';
 import { getUserFromRequest } from '@/lib/auth-server';
 import { asyncHandler, ForbiddenError, BadRequestError } from '@/lib/errors';
+import { exportMembers } from '@/src/db/services/MemberService';
+import type { IMemberListFilters } from '@/src/interfaces/IMember';
+import { MemberStatus } from '@/src/interfaces/IMember';
 import Papa from 'papaparse';
 
 export const dynamic = 'force-dynamic';
 export const GET = asyncHandler(async (request: NextRequest) => {
-    // Authenticate user
     const user = await getUserFromRequest(request);
-    if (!user || !user.isTenantAdmin()) {
-        throw new ForbiddenError('Admin access required');
-    }
+    if (!user || !user.isTenantAdmin()) throw new ForbiddenError('Admin access required');
+    if (!user.tenantId) throw new BadRequestError('No tenant associated with user');
 
-    if (!user.tenantId) {
-        throw new BadRequestError('No tenant associated with user');
-    }
-
-    // Initialize database connection
-    if (!AppDataSource.isInitialized) {
-        await AppDataSource.initialize();
-    }
-
-    const memberRepo = AppDataSource.getRepository(Member);
-
-    // Get filter parameters
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const search = searchParams.get('search');
+    const rawStatus = searchParams.get('status');
 
-    // Build query
-    const queryBuilder = memberRepo
-        .createQueryBuilder('member')
-        .where('member.tenantId = :tenantId', { tenantId: user.tenantId });
-
-    if (status) {
-        queryBuilder.andWhere('member.status = :status', { status });
+    // exportMembers returns all members; we can filter in memory for the status
+    // (could also pass to a filtered SQL query — export is low-frequency so this is fine)
+    let members = await exportMembers(user.tenantId);
+    if (rawStatus && Object.values(MemberStatus).includes(rawStatus as MemberStatus)) {
+        members = members.filter((m) => m.status === rawStatus);
     }
-
-    if (search) {
-        queryBuilder.andWhere(
-            '(member.firstName LIKE :search OR member.lastName LIKE :search OR member.memberNumber LIKE :search OR member.nationalId LIKE :search)',
-            { search: `%${search}%` }
-        );
-    }
-
-    const members = await queryBuilder.orderBy('member.createdAt', 'DESC').getMany();
 
     // Format for CSV
-    const data = members.map(m => ({
+    const data = members.map((m) => ({
         'Member Number': m.memberNumber,
         'First Name': m.firstName,
         'Last Name': m.lastName,
@@ -59,7 +34,7 @@ export const GET = asyncHandler(async (request: NextRequest) => {
         'Join Date': m.joinDate,
         'Employer': m.employer || 'N/A',
         'Employment Status': m.employmentStatus.toUpperCase(),
-        'Share Capital': m.shareCapital
+        'Share Capital': m.shareCapital,
     }));
 
     const csv = Papa.unparse(data);

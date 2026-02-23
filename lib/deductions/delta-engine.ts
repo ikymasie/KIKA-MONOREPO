@@ -73,7 +73,7 @@ export class DeltaDeductionEngine {
             const breakdown = await this.calculateMemberDeduction(member);
 
             // Only include if there's a change from previous month
-            if (breakdown.total > 0 && await this.hasChanged(member.id, breakdown.total)) {
+            if (breakdown.total > 0 && await this.hasChanged(member.id!, breakdown.total)) {
                 breakdowns.push(breakdown);
             }
         }
@@ -94,7 +94,7 @@ export class DeltaDeductionEngine {
         await requestRepo.save(request);
 
         // Validate against regulator cap if configured
-        await this.validateRegulatorCap(request.totalAmount);
+        await this.validateRegulatorCap(request.totalAmount || 0);
 
         // Create deduction items with previous amounts
         const items = await Promise.all(
@@ -177,16 +177,16 @@ export class DeltaDeductionEngine {
 
         // Determine change reason based on comparison with previous month
         const changeReason = await this.determineChangeReason(
-            member.id,
+            member.id!,
             currentTotal,
             { savings, loanRepayment, insurance, merchandise },
-            member.status
+            member.status!
         );
 
         return {
-            memberId: member.id,
-            memberNumber: member.memberNumber,
-            nationalId: member.nationalId,
+            memberId: member.id!,
+            memberNumber: member.memberNumber || '',
+            nationalId: member.nationalId || '',
             employeeNumber: member.employeeNumber || '',
             savings,
             loanRepayment,

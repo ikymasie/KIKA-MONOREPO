@@ -8,6 +8,7 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
+import type { User } from './User';
 
 export enum BroadcastType {
     CIRCULAR = 'circular',
@@ -35,32 +36,32 @@ export enum BroadcastTargetAudience {
 @Index(['publishedAt'])
 export class RegulatoryBroadcast {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column()
-    title!: string;
+    title?: string;
 
     @Column({ type: 'text' })
-    content!: string;
+    content?: string;
 
     @Column({ type: 'enum', enum: BroadcastType })
-    broadcastType!: BroadcastType;
+    broadcastType?: BroadcastType;
 
     @Column({ type: 'enum', enum: BroadcastPriority, default: BroadcastPriority.MEDIUM })
-    priority!: BroadcastPriority;
+    priority?: BroadcastPriority;
 
     @Column({ type: 'enum', enum: BroadcastTargetAudience, default: BroadcastTargetAudience.ALL_TENANTS })
-    targetAudience!: BroadcastTargetAudience;
+    targetAudience?: BroadcastTargetAudience;
 
     @Column({ type: 'json', nullable: true })
     targetTenantIds?: string[];
 
     @Column({ type: 'uuid' })
-    createdBy!: string;
+    createdBy?: string;
 
-    @ManyToOne('User', { nullable: false })
+    @ManyToOne('User')
     @JoinColumn({ name: 'createdBy' })
-    creator!: any;
+    creator?: User;
 
     @Column({ type: 'timestamp', nullable: true })
     publishedAt?: Date;
@@ -69,7 +70,7 @@ export class RegulatoryBroadcast {
     expiresAt?: Date;
 
     @Column({ type: 'json', nullable: true })
-    deliveryChannels!: ('email' | 'sms' | 'in_app')[];
+    deliveryChannels?: ('email' | 'sms' | 'in_app')[];
 
     @Column({ type: 'json', nullable: true })
     deliveryStatus?: {
@@ -79,8 +80,8 @@ export class RegulatoryBroadcast {
     };
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

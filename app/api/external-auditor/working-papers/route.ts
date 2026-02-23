@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { AuditorService } from '@/src/services/AuditorService';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { AuditorService } = await import('@/src/services/AuditorService');
-        const { UserRole } = await import('@/src/entities/User');
-
-
         const user = await getUserFromRequest(request);
-        if (!user || user.role !== UserRole.EXTERNAL_AUDITOR) {
+        if (!user || user.role !== 'external_auditor') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -21,8 +16,6 @@ export async function GET(request: NextRequest) {
         if (!requestId) {
             return NextResponse.json({ error: 'Missing requestId' }, { status: 400 });
         }
-
-        if (!AppDataSource.isInitialized) await AppDataSource.initialize();
 
         const auditorService = new AuditorService();
         const workingPapers = await auditorService.getWorkingPapers(requestId);
@@ -36,13 +29,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { UserRole } = await import('@/src/entities/User');
-        const { AuditorService } = await import('@/src/services/AuditorService');
-        const { AppDataSource } = await import('@/src/config/database');
         const user = await getUserFromRequest(request);
-        if (!user || user.role !== UserRole.EXTERNAL_AUDITOR) {
+        if (!user || user.role !== 'external_auditor') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -53,10 +41,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) await AppDataSource.initialize();
-
         const auditorService = new AuditorService();
-        // Here we ideally check if the auditor is the one who owns the requestId
         const workingPaper = await auditorService.uploadWorkingPaper({
             requestId,
             fileName,

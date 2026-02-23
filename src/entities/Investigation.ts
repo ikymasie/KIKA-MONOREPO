@@ -7,8 +7,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { Tenant } from './Tenant';
-import { User } from './User';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 export enum InvestigationStatus {
     OPEN = 'open',
@@ -27,33 +27,33 @@ export enum InvestigationSeverity {
 @Entity('investigations')
 export class Investigation {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({ type: 'uuid' })
-    officerId!: string;
+    officerId?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'officerId' })
-    officer!: User;
+    officer?: User;
 
     @Column()
-    subject!: string;
+    subject?: string;
 
     @Column({ type: 'text' })
-    description!: string;
+    description?: string;
 
     @Column({ type: 'enum', enum: InvestigationStatus, default: InvestigationStatus.OPEN })
-    status!: InvestigationStatus;
+    status?: InvestigationStatus;
 
     @Column({ type: 'enum', enum: InvestigationSeverity, default: InvestigationSeverity.MEDIUM })
-    severity!: InvestigationSeverity;
+    severity?: InvestigationSeverity;
 
     @Column({ type: 'text', nullable: true })
     findings?: string;
@@ -65,8 +65,8 @@ export class Investigation {
     completedAt?: Date;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

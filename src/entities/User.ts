@@ -15,19 +15,17 @@ export enum UserRole {
     SUPER_REGULATOR = 'super_regulator',
 
     // Department of Co-operative Development (DCD) - Ministry of Trade and Industry
-    // Handles registration, bye-laws, and cooperative compliance
     DCD_DIRECTOR = 'dcd_director',
     DCD_FIELD_OFFICER = 'dcd_field_officer',
     DCD_COMPLIANCE_OFFICER = 'dcd_compliance_officer',
 
     // Bank of Botswana (BoB) - Central Bank
-    // Provides prudential supervision for deposit-taking SACCOs
     BOB_PRUDENTIAL_SUPERVISOR = 'bob_prudential_supervisor',
     BOB_FINANCIAL_AUDITOR = 'bob_financial_auditor',
     BOB_COMPLIANCE_OFFICER = 'bob_compliance_officer',
 
     // Shared Regulatory Functions
-    DEDUCTION_OFFICER = 'deduction_officer', // Government payroll integration
+    DEDUCTION_OFFICER = 'deduction_officer',
 
     // Government Registration Officers (work with DCD)
     REGISTRY_CLERK = 'registry_clerk',
@@ -69,31 +67,31 @@ export enum UserStatus {
 export class User {
 
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column()
-    email!: string;
+    email?: string;
 
     @Column({ nullable: true, unique: true })
     firebaseUid?: string;
 
     @Column()
-    firstName!: string;
+    firstName?: string;
 
     @Column()
-    lastName!: string;
+    lastName?: string;
 
     @Column({ type: 'enum', enum: UserRole })
-    role!: UserRole;
+    role?: UserRole;
 
     @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
-    status!: UserStatus;
+    status?: UserStatus;
 
     @Column({ nullable: true })
     phone?: string;
 
     @Column({ default: false })
-    mfaEnabled!: boolean;
+    mfaEnabled?: boolean;
 
     @Column({ nullable: true })
     mfaSecret?: string;
@@ -116,19 +114,19 @@ export class User {
 
     // Password Management
     @Column({ nullable: true })
-    temporaryPassword?: string; // Hashed temporary password for first login
+    temporaryPassword?: string;
 
     @Column({ default: false })
-    mustChangePassword!: boolean; // Force password change on next login
+    mustChangePassword?: boolean;
 
     @Column({ type: 'timestamp', nullable: true })
-    passwordChangedAt?: Date; // Track when password was last changed
+    passwordChangedAt?: Date;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 
     get fullName(): string {
         return `${this.firstName} ${this.lastName}`;
@@ -137,17 +135,14 @@ export class User {
     isRegulator(): boolean {
         return [
             UserRole.SUPER_REGULATOR,
-            // DCD roles
             UserRole.DCD_DIRECTOR,
             UserRole.DCD_FIELD_OFFICER,
             UserRole.DCD_COMPLIANCE_OFFICER,
-            // BoB roles
             UserRole.BOB_PRUDENTIAL_SUPERVISOR,
             UserRole.BOB_FINANCIAL_AUDITOR,
             UserRole.BOB_COMPLIANCE_OFFICER,
-            // Shared
             UserRole.DEDUCTION_OFFICER,
-        ].includes(this.role);
+        ].includes(this.role!);
     }
 
     isDCD(): boolean {
@@ -155,7 +150,7 @@ export class User {
             UserRole.DCD_DIRECTOR,
             UserRole.DCD_FIELD_OFFICER,
             UserRole.DCD_COMPLIANCE_OFFICER,
-        ].includes(this.role);
+        ].includes(this.role!);
     }
 
     isBoB(): boolean {
@@ -163,7 +158,7 @@ export class User {
             UserRole.BOB_PRUDENTIAL_SUPERVISOR,
             UserRole.BOB_FINANCIAL_AUDITOR,
             UserRole.BOB_COMPLIANCE_OFFICER,
-        ].includes(this.role);
+        ].includes(this.role!);
     }
 
     isGovernmentOfficer(): boolean {
@@ -174,14 +169,14 @@ export class User {
             UserRole.REGISTRAR,
             UserRole.DIRECTOR_COOPERATIVES,
             UserRole.MINISTER_DELEGATE,
-        ].includes(this.role);
+        ].includes(this.role!);
     }
 
     isApplicant(): boolean {
         return [
             UserRole.SOCIETY_APPLICANT,
             UserRole.COOPERATIVE_APPLICANT,
-        ].includes(this.role);
+        ].includes(this.role!);
     }
 
     isTenantAdmin(): boolean {
@@ -191,6 +186,6 @@ export class User {
             UserRole.ACCOUNTANT,
             UserRole.MEMBER_SERVICE_REP,
             UserRole.CREDIT_COMMITTEE,
-        ].includes(this.role);
+        ].includes(this.role!);
     }
 }

@@ -106,7 +106,7 @@ async function verify() {
     console.log('5. Running Deduction Engine for Tenant A (Alpha)...');
     const month = new Date().getMonth() + 1;
     const year = new Date().getFullYear();
-    const engineA = new DeltaDeductionEngine(tenantA.id, month, year);
+    const engineA = new DeltaDeductionEngine(tenantA.id!, month, year);
     const requestA = await engineA.generateDeductionRequest();
 
     const itemA = await AppDataSource.getRepository(DeductionItem).findOne({
@@ -118,7 +118,7 @@ async function verify() {
 
     // 6. Run Deduction Engine for Tenant B
     console.log('6. Running Deduction Engine for Tenant B (Beta)...');
-    const engineB = new DeltaDeductionEngine(tenantB.id, month, year);
+    const engineB = new DeltaDeductionEngine(tenantB.id!, month, year);
     const requestB = await engineB.generateDeductionRequest();
 
     const itemB = await AppDataSource.getRepository(DeductionItem).findOne({

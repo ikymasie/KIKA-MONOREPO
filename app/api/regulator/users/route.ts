@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const user = await getUserFromRequest(request);
+        const user = await getUserFromRequest(request);
         // Only super regulators can manage users
         if (!user || !user.isRegulator()) {
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const user = await getUserFromRequest(request);
+        const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -108,19 +108,19 @@ const user = await getUserFromRequest(request);
 
         const emailContent = generateCredentialsEmail({
             recipientName: newUser.fullName,
-            email: newUser.email,
+            email: newUser.email || '',
             temporaryPassword,
             loginUrl
         });
 
         await sendEmail({
-            to: newUser.email,
+            to: newUser.email || '',
             subject: emailContent.subject,
             html: emailContent.html,
             text: emailContent.text
         });
 
-        console.log(`✅ User created and credentials sent to ${newUser.email}`);
+        console.log(`✅ Sent welcome email to ${newUser.email || 'unknown'}`);
 
         return NextResponse.json({
             success: true,

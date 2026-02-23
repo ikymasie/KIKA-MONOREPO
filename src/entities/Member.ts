@@ -41,53 +41,52 @@ export enum EmploymentStatus {
 @Index(['tenantId', 'nationalId'], { unique: true })
 export class Member {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid', nullable: true })
     userId?: string;
 
-    @OneToOne(() => require('./User').User)
+    @OneToOne('User')
     @JoinColumn({ name: 'userId' })
     user?: User;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant, (tenant: any) => tenant.members)
+    @ManyToOne('Tenant', 'members')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column()
-    memberNumber!: string;
+    memberNumber?: string;
 
     @Column()
-    firstName!: string;
+    firstName?: string;
 
     @Column()
-    lastName!: string;
+    lastName?: string;
 
     @Column({ nullable: true })
     middleName?: string;
 
     @Column()
-    nationalId!: string;
+    nationalId?: string;
 
     @Column({ nullable: true })
     passportNumber?: string;
 
     @Column({ type: 'date' })
-    dateOfBirth!: Date;
+    dateOfBirth?: Date;
 
     @Column()
-    gender!: string;
+    gender?: string;
 
     @Column()
-    email!: string;
+    email?: string;
 
     @Column()
     @Index()
-    phone!: string;
-
+    phone?: string;
 
     @Column({ type: 'text', nullable: true })
     physicalAddress?: string;
@@ -96,10 +95,10 @@ export class Member {
     postalAddress?: string;
 
     @Column({ type: 'enum', enum: MemberStatus, default: MemberStatus.ACTIVE })
-    status!: MemberStatus;
+    status?: MemberStatus;
 
     @Column({ type: 'enum', enum: EmploymentStatus })
-    employmentStatus!: EmploymentStatus;
+    employmentStatus?: EmploymentStatus;
 
     @Column({ nullable: true })
     employer?: string;
@@ -108,13 +107,13 @@ export class Member {
     employeeNumber?: string;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    shareCapital!: number;
+    shareCapital?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    monthlyNetSalary!: number;
+    monthlyNetSalary?: number;
 
     @Column({ type: 'date' })
-    joinDate!: Date;
+    joinDate?: Date;
 
     @Column({ type: 'date', nullable: true })
     exitDate?: Date;
@@ -122,32 +121,32 @@ export class Member {
     @Column({ type: 'text', nullable: true })
     exitReason?: string;
 
-    @OneToOne(() => require('./KYC').KYC, (kyc: any) => kyc.member, { cascade: true })
-    kyc?: any;
+    @OneToOne('KYC', 'member', { cascade: true })
+    kyc?: KYC;
 
-    @OneToMany(() => require('./Beneficiary').Beneficiary, (beneficiary: any) => beneficiary.member, { cascade: true })
-    beneficiaries!: any[];
+    @OneToMany('Beneficiary', 'member', { cascade: true })
+    beneficiaries?: Beneficiary[];
 
-    @OneToMany(() => require('./Dependent').Dependent, (dependent: any) => dependent.member, { cascade: true })
-    dependents!: any[];
+    @OneToMany('Dependent', 'member', { cascade: true })
+    dependents?: Dependent[];
 
-    @OneToMany(() => require('./MemberSavings').MemberSavings, (savings: any) => savings.member)
-    savings!: any[];
+    @OneToMany('MemberSavings', 'member')
+    savings?: MemberSavings[];
 
-    @OneToMany(() => require('./Loan').Loan, (loan: any) => loan.member)
-    loans!: any[];
+    @OneToMany('Loan', 'member')
+    loans?: Loan[];
 
-    @OneToMany(() => require('./InsurancePolicy').InsurancePolicy, (policy: any) => policy.member)
-    insurancePolicies!: any[];
+    @OneToMany('InsurancePolicy', 'member')
+    insurancePolicies?: InsurancePolicy[];
 
-    @OneToMany(() => require('./MemberBankAccount').MemberBankAccount, (account: any) => account.member, { cascade: true })
-    bankAccounts!: any[];
+    @OneToMany('MemberBankAccount', 'member', { cascade: true })
+    bankAccounts?: MemberBankAccount[];
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 
     get fullName(): string {
         return this.middleName
@@ -155,7 +154,8 @@ export class Member {
             : `${this.firstName} ${this.lastName}`;
     }
 
-    get age(): number {
+    get age(): number | null {
+        if (!this.dateOfBirth) return null;
         const today = new Date();
         const birthDate = new Date(this.dateOfBirth);
         let age = today.getFullYear() - birthDate.getFullYear();

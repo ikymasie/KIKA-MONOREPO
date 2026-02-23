@@ -1,101 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { getLoanById, updateLoan } from '@/src/db/services/LoanService';
+import { queryOne, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
+import { LoanStatus, WorkflowStage } from '@/src/interfaces/ILoan';
+import { RowDataPacket } from 'mysql2/promise';
 
 export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Loan, LoanStatus, WorkflowStage } = await import('@/src/entities/Loan');
-        const { LoanGuarantor, GuarantorStatus } = await import('@/src/entities/LoanGuarantor');
-        const { LoanWorkflowLog, WorkflowActionType } = await import('@/src/entities/LoanWorkflowLog');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-    
         const user = await getUserFromRequest(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user.isTenantAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+        const { loanOfficerId } = await request.json();
+        if (!loanOfficerId) return NextResponse.json({ error: 'Loan officer ID is required' }, { status: 400 });
+
+        const loan = await getLoanById(params.id, user.tenantId!);
+        if (!loan) return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
+
+        // Verify all guarantors accepted
+        const pendingGuarantors = await queryOne<RowDataPacket & { cnt: string }>(
+            `SELECT COUNT(*) AS cnt FROM loan_guarantors WHERE loanId = ? AND status != 'accepted'`,
+            [params.id]
+        );
+        const pendingCount = parseInt(pendingGuarantors?.cnt ?? '0', 10);
+        if (pendingCount > 0) {
+            return NextResponse.json({ error: `Cannot assign loan officer. ${pendingCount} guarantor(s) have not yet accepted` }, { status: 400 });
         }
 
-        if (!user.isTenantAdmin()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        const body = await request.json();
-        const { loanOfficerId } = body;
-
-        if (!loanOfficerId) {
-            return NextResponse.json(
-                { error: 'Loan officer ID is required' },
-                { status: 400 }
-            );
-        }
-
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const loanRepo = AppDataSource.getRepository(Loan);
-        const loan = await loanRepo.findOne({
-            where: { id: params.id, tenantId: user.tenantId },
-            relations: ['guarantors'],
+        const updated = await updateLoan(params.id, user.tenantId!, {
+            loanOfficerId,
+            status: LoanStatus.UNDER_APPRAISAL,
+            workflowStage: WorkflowStage.TECHNICAL_APPRAISAL,
         });
 
-        if (!loan) {
-            return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
-        }
-
-        // Validate all guarantors have accepted
-        const guarantorRepo = AppDataSource.getRepository(LoanGuarantor);
-        const guarantors = await guarantorRepo.find({
-            where: { loanId: params.id },
-        });
-
-        const allAccepted = guarantors.every(
-            g => g.status === GuarantorStatus.ACCEPTED
+        await execute(
+            `INSERT INTO loan_workflow_logs (id, loanId, actionType, actionBy, fromStatus, toStatus, notes, createdAt)
+             VALUES (?, ?, 'officer_assign', ?, 'pending_guarantors', 'under_appraisal', ?, NOW())`,
+            [uuidv4(), params.id, user.id, `Assigned to loan officer ${loanOfficerId}`]
         );
 
-        if (!allAccepted) {
-            const pendingCount = guarantors.filter(
-                g => g.status === GuarantorStatus.PENDING
-            ).length;
-            return NextResponse.json(
-                {
-                    error: `Cannot assign loan officer. ${pendingCount} guarantor(s) have not yet accepted`,
-                },
-                { status: 400 }
-            );
-        }
-
-        // Assign loan officer
-        loan.loanOfficerId = loanOfficerId;
-        loan.status = LoanStatus.UNDER_APPRAISAL;
-        loan.workflowStage = WorkflowStage.TECHNICAL_APPRAISAL;
-        await loanRepo.save(loan);
-
-        // Log the assignment
-        const logRepo = AppDataSource.getRepository(LoanWorkflowLog);
-        await logRepo.save({
-            loanId: params.id,
-            actionType: WorkflowActionType.OFFICER_ASSIGN,
-            actionBy: user.id,
-            fromStatus: LoanStatus.PENDING_GUARANTORS,
-            toStatus: LoanStatus.UNDER_APPRAISAL,
-            notes: `Assigned to loan officer ${loanOfficerId}`,
-            metadata: { loanOfficerId },
-        } as any);
-
-        // TODO: Send notification to loan officer
-
-        return NextResponse.json({
-            message: 'Loan officer assigned successfully',
-            loanStatus: loan.status,
-            loanOfficerId: loan.loanOfficerId,
-        });
+        return NextResponse.json({ message: 'Loan officer assigned successfully', loanStatus: updated.status, loanOfficerId: updated.loanOfficerId });
     } catch (error: any) {
         console.error('Assign officer API error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to assign loan officer' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error.message || 'Failed to assign loan officer' }, { status: 500 });
     }
 }

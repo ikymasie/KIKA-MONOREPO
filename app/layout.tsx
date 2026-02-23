@@ -5,6 +5,7 @@ import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import { BrandingProvider } from '@/components/providers/BrandingProvider';
 import RouteProgressBar from '@/components/common/RouteProgressBar';
+import GlobalLoadingOverlay from '@/components/common/GlobalLoadingOverlay';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
         <html lang="en">
             <body className={inter.className}>
                 <Suspense fallback={null}>
+                    <GlobalLoadingOverlay />
                     <RouteProgressBar />
                 </Suspense>
                 <AuthProvider>

@@ -1,135 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { getLoanById, updateLoan } from '@/src/db/services/LoanService';
+import { execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
+import { LoanStatus, WorkflowStage } from '@/src/interfaces/ILoan';
 
 export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Loan, LoanStatus, WorkflowStage } = await import('@/src/entities/Loan');
-        const { MemberSavings } = await import('@/src/entities/MemberSavings');
-        const { Transaction } = await import('@/src/entities/Transaction');
-        const { LoanWorkflowLog, WorkflowActionType } = await import('@/src/entities/LoanWorkflowLog');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-    
         const user = await getUserFromRequest(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user.isTenantAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+
+        const { disbursementMethod, accountNumber, notes } = await request.json();
+
+        const loan = await getLoanById(params.id, user.tenantId!);
+        if (!loan) return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
+
+        if (loan.status !== LoanStatus.COMMITTEE_APPROVED && loan.status !== LoanStatus.APPROVED) {
+            return NextResponse.json({ error: `Cannot disburse loan with status: ${loan.status}. Loan must be approved first.` }, { status: 400 });
         }
 
-        if (!user.isTenantAdmin()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+        const disbursementDate = new Date();
+        const maturityDate = new Date(disbursementDate);
+        maturityDate.setMonth(maturityDate.getMonth() + loan.termMonths);
 
-        const body = await request.json();
-        const { disbursementMethod, accountNumber, notes } = body;
+        // Disburse + create transaction + log — all in one SQL transaction
+        const { withTransaction } = await import('@/src/db/query');
+        const updated = await withTransaction(async (conn) => {
+            // Update loan
+            await conn.execute(
+                `UPDATE loans SET status = 'disbursed', workflowStage = 'disbursement',
+                 disbursementDate = ?, disbursedBy = ?, maturityDate = ?,
+                 outstandingBalance = totalAmountDue, deductionScheduled = 1, deductionScheduledAt = NOW(),
+                 updatedAt = NOW() WHERE id = ?`,
+                [disbursementDate, user.id, maturityDate, params.id]
+            );
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+            // Transaction record
+            await conn.execute(
+                `INSERT INTO transactions (id, tenantId, memberId, transactionNumber, transactionType, amount, description, transactionDate, status, createdBy, referenceId, referenceType)
+                 VALUES (?, ?, ?, ?, 'loan_disbursement', ?, ?, NOW(), 'completed', ?, ?, 'loan')`,
+                [uuidv4(), loan.tenantId, loan.memberId, `TXN-${Date.now()}`, loan.principalAmount,
+                `Loan disbursement - ${loan.loanNumber}`, user.id, params.id]
+            );
 
-        const loanRepo = AppDataSource.getRepository(Loan);
-        const loan = await loanRepo.findOne({
-            where: { id: params.id, tenantId: user.tenantId },
-            relations: ['member', 'product'],
+            // Workflow log
+            await conn.execute(
+                `INSERT INTO loan_workflow_logs (id, loanId, actionType, actionBy, fromStatus, toStatus, notes, createdAt)
+                 VALUES (?, ?, 'disbursement', ?, 'committee_approved', 'disbursed', ?, NOW())`,
+                [uuidv4(), params.id, user.id, `Loan disbursed - P ${loan.principalAmount.toLocaleString()}. Method: ${disbursementMethod ?? 'N/A'}`]
+            );
+
+            const [rows] = await conn.query('SELECT * FROM loans WHERE id = ? LIMIT 1', [params.id]);
+            return (rows as any[])[0];
         });
 
-        if (!loan) {
-            return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
-        }
-
-        // Validate loan can be disbursed
-        if (loan.status !== LoanStatus.COMMITTEE_APPROVED && loan.status !== LoanStatus.APPROVED) {
-            return NextResponse.json(
-                { error: `Cannot disburse loan with status: ${loan.status}. Loan must be approved first.` },
-                { status: 400 }
-            );
-        }
-
-        // Start transaction
-        const queryRunner = AppDataSource.createQueryRunner();
-        await queryRunner.connect();
-        await queryRunner.startTransaction();
-
-        try {
-            // Update loan status
-            loan.status = LoanStatus.DISBURSED;
-            loan.workflowStage = WorkflowStage.DISBURSEMENT;
-            loan.disbursementDate = new Date();
-            loan.disbursedBy = user.id;
-            loan.outstandingBalance = loan.totalAmountDue;
-            loan.deductionScheduled = true;
-            loan.deductionScheduledAt = new Date();
-
-            // Calculate maturity date
-            const maturityDate = new Date(loan.disbursementDate);
-            maturityDate.setMonth(maturityDate.getMonth() + loan.termMonths);
-            loan.maturityDate = maturityDate;
-
-            await queryRunner.manager.save(loan);
-
-            // Create disbursement transaction
-            const transaction = new Transaction();
-            transaction.tenantId = user.tenantId!;
-            transaction.memberId = loan.memberId;
-            transaction.transactionNumber = `TXN-${Date.now()}`;
-            transaction.transactionType = 'loan_disbursement' as any;
-            transaction.amount = loan.principalAmount;
-            transaction.description = `Loan disbursement - ${loan.loanNumber}`;
-            transaction.transactionDate = new Date();
-            transaction.status = 'completed' as any;
-            transaction.createdBy = user.id;
-            transaction.referenceId = params.id;
-            transaction.referenceType = 'loan';
-
-            await queryRunner.manager.save(transaction);
-
-            // Log disbursement
-            const workflowLog = new LoanWorkflowLog();
-            workflowLog.loanId = params.id;
-            workflowLog.actionType = WorkflowActionType.DISBURSEMENT;
-            workflowLog.actionBy = user.id;
-            workflowLog.fromStatus = 'committee_approved';
-            workflowLog.toStatus = 'disbursed';
-            workflowLog.notes = `Loan disbursed - P ${Number(loan.principalAmount).toLocaleString()}`;
-            workflowLog.metadata = {
-                disbursementDetails: {
-                    amount: Number(loan.principalAmount),
-                    method: disbursementMethod,
-                    accountNumber,
-                    notes,
-                },
-            };
-            await queryRunner.manager.save(workflowLog);
-
-            // TODO: Integrate with payment gateway for actual disbursement
-            // TODO: Send notification to member
-            // TODO: Create audit log entry
-
-            await queryRunner.commitTransaction();
-
-            return NextResponse.json({
-                message: 'Loan disbursed successfully',
-                loan: {
-                    id: loan.id,
-                    loanNumber: loan.loanNumber,
-                    status: loan.status,
-                    disbursementDate: loan.disbursementDate,
-                    maturityDate: loan.maturityDate,
-                    disbursedBy: loan.disbursedBy,
-                },
-            });
-        } catch (error) {
-            await queryRunner.rollbackTransaction();
-            throw error;
-        } finally {
-            await queryRunner.release();
-        }
+        return NextResponse.json({
+            message: 'Loan disbursed successfully',
+            loan: { id: updated.id, loanNumber: updated.loanNumber, status: updated.status, disbursementDate: updated.disbursementDate, maturityDate: updated.maturityDate, disbursedBy: updated.disbursedBy },
+        });
     } catch (error: any) {
         console.error('Loan disbursement API error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to disburse loan' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error.message || 'Failed to disburse loan' }, { status: 500 });
     }
 }

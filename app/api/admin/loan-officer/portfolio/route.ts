@@ -1,125 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Loan, LoanStatus } from '@/src/entities/Loan';
 import { getUserFromRequest } from '@/lib/auth-server';
-import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, DatabaseError } from '@/lib/errors';
+import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError } from '@/lib/errors';
+import { listLoans, getLoanPortfolioSummary } from '@/src/db/services/LoanService';
+import { LoanStatus } from '@/src/interfaces/ILoan';
 
 export const dynamic = 'force-dynamic';
 export const GET = asyncHandler(async (request: NextRequest) => {
     const user = await getUserFromRequest(request);
+    if (!user) throw new UnauthorizedError('User not authenticated');
+    if (!user.isTenantAdmin()) throw new ForbiddenError('Staff access required');
+    if (!user.tenantId) throw new BadRequestError('No tenant associated with user');
 
-    if (!user) {
-        throw new UnauthorizedError('User not authenticated');
-    }
-
-    // Check if user is either SACCOS_ADMIN or LOAN_OFFICER
-    if (!user.isTenantAdmin()) {
-        throw new ForbiddenError('Staff access required');
-    }
-
-    if (!user.tenantId) {
-        throw new BadRequestError('No tenant associated with user');
-    }
-
-    // Initialize database connection
-    if (!AppDataSource.isInitialized) {
-        try {
-            await AppDataSource.initialize();
-        } catch (error) {
-            throw new DatabaseError('Failed to initialize database connection');
-        }
-    }
-
-    const loanRepo = AppDataSource.getRepository(Loan);
-
-    // Get query parameters
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '20', 10);
     const status = searchParams.get('status') as LoanStatus | null;
     const search = searchParams.get('search') || '';
 
-    // Build query - Scoped to this Loan Officer
-    const queryBuilder = loanRepo
-        .createQueryBuilder('loan')
-        .leftJoinAndSelect('loan.member', 'member')
-        .leftJoinAndSelect('loan.product', 'product')
-        .where('loan.tenantId = :tenantId', { tenantId: user.tenantId })
-        .andWhere('loan.loanOfficerId = :userId', { userId: user.id });
+    const filters: { status?: LoanStatus; search?: string; loanOfficerId?: string } = {
+        loanOfficerId: user.id,  // scoped to this officer only
+    };
+    if (status && Object.values(LoanStatus).includes(status)) filters.status = status;
+    if (search) filters.search = search;
 
-    // Apply status filter
-    if (status) {
-        queryBuilder.andWhere('loan.status = :status', { status });
-    }
+    const { loans, total } = await listLoans(user.tenantId, filters, { page, limit });
 
-    // Apply search filter
-    if (search) {
-        queryBuilder.andWhere(
-            '(member.firstName LIKE :search OR member.lastName LIKE :search OR member.memberNumber LIKE :search OR loan.loanNumber LIKE :search)',
-            { search: `%${search}%` }
-        );
-    }
-
-    // Get total count
-    const total = await queryBuilder.getCount();
-
-    // Apply pagination and ordering
-    const loans = await queryBuilder
-        .orderBy('loan.updatedAt', 'DESC')
-        .skip((page - 1) * limit)
-        .take(limit)
-        .getMany();
-
-    // Format response
     const formattedLoans = loans.map(loan => ({
         id: loan.id,
         loanNumber: loan.loanNumber,
-        member: {
-            id: loan.member.id,
-            fullName: `${loan.member.firstName} ${loan.member.lastName}`,
-            memberNumber: loan.member.memberNumber,
-        },
-        product: {
-            id: loan.product.id,
-            name: loan.product.name,
-        },
-        principalAmount: Number(loan.principalAmount),
-        outstandingBalance: Number(loan.outstandingBalance),
+        memberId: loan.memberId,
+        productId: loan.productId,
+        principalAmount: loan.principalAmount,
+        outstandingBalance: loan.outstandingBalance,
         status: loan.status,
         applicationDate: loan.applicationDate,
         lastUpdated: loan.updatedAt,
     }));
 
-    // Personal Stats
-    const stats = {
-        totalAssigned: total,
-        active: await loanRepo.count({
-            where: {
-                tenantId: user.tenantId,
-                loanOfficerId: user.id,
-                status: LoanStatus.ACTIVE
-            }
-        }),
-        pending: await loanRepo.count({
-            where: {
-                tenantId: user.tenantId,
-                loanOfficerId: user.id,
-                status: LoanStatus.UNDER_APPRAISAL
-            }
-        }),
-    };
+    // Quick stats for this officer
+    const activeCount = loans.filter(l => l.status === LoanStatus.ACTIVE).length;
+    const pendingCount = loans.filter(l => l.status === LoanStatus.UNDER_APPRAISAL).length;
 
     return NextResponse.json({
         success: true,
         data: {
             loans: formattedLoans,
-            stats,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-            },
+            stats: { totalAssigned: total, active: activeCount, pending: pendingCount },
+            pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
         },
     });
 });

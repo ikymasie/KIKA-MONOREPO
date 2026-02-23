@@ -7,8 +7,8 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
-import { Tenant } from './Tenant';
-import { User } from './User';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 export enum ComplianceRating {
     EXCELLENT = 'excellent',
@@ -24,51 +24,51 @@ export enum ComplianceRating {
 @Index(['rating'])
 export class ComplianceScore {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({ type: 'decimal', precision: 5, scale: 2 })
-    overallScore!: number;
+    overallScore?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2 })
-    kycScore!: number;
+    kycScore?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2 })
-    reportingScore!: number;
+    reportingScore?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2 })
-    bylawScore!: number;
+    bylawScore?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2 })
-    issueScore!: number;
+    issueScore?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2 })
-    alertScore!: number;
+    alertScore?: number;
 
     @Column({ type: 'enum', enum: ComplianceRating })
-    rating!: ComplianceRating;
+    rating?: ComplianceRating;
 
     @Column({ type: 'timestamp' })
-    calculatedAt!: Date;
+    calculatedAt?: Date;
 
     @Column({ type: 'uuid' })
-    calculatedBy!: string;
+    calculatedBy?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'calculatedBy' })
-    calculator!: User;
+    calculator?: User;
 
     @Column({ type: 'text', nullable: true })
     notes?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     static getRatingFromScore(score: number): ComplianceRating {
         if (score >= 90) return ComplianceRating.EXCELLENT;

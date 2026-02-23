@@ -13,8 +13,6 @@ import type { LoanProduct } from './LoanProduct';
 import type { LoanGuarantor } from './LoanGuarantor';
 import type { Tenant } from './Tenant';
 
-
-
 export enum LoanStatus {
     // Workflow stages
     DRAFT = 'draft',
@@ -50,61 +48,61 @@ export enum WorkflowStage {
 @Entity('loans')
 export class Loan {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column()
-    loanNumber!: string;
+    loanNumber?: string;
 
     @Column({ type: 'uuid' })
-    memberId!: string;
+    memberId?: string;
 
-    @ManyToOne(() => require('./Member').Member, (member: Member) => member.loans)
+    @ManyToOne('Member', 'loans')
     @JoinColumn({ name: 'memberId' })
-    member!: Member;
+    member?: Member;
 
     @Column({ type: 'uuid' })
-    productId!: string;
+    productId?: string;
 
-    @ManyToOne(() => require('./LoanProduct').LoanProduct)
+    @ManyToOne('LoanProduct')
     @JoinColumn({ name: 'productId' })
-    product!: LoanProduct;
+    product?: LoanProduct;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    principalAmount!: number;
+    principalAmount?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2 })
-    interestRate!: number;
+    interestRate?: number;
 
     @Column({ type: 'int' })
-    termMonths!: number;
+    termMonths?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    monthlyInstallment!: number;
+    monthlyInstallment?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    processingFee!: number;
+    processingFee?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    insuranceFee!: number;
+    insuranceFee?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    totalAmountDue!: number;
+    totalAmountDue?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    amountPaid!: number;
+    amountPaid?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    outstandingBalance!: number;
+    outstandingBalance?: number;
 
     @Column({ type: 'enum', enum: LoanStatus, default: LoanStatus.PENDING })
-    status!: LoanStatus;
+    status?: LoanStatus;
 
     @Column({ type: 'date', nullable: true })
     applicationDate?: Date;
@@ -130,12 +128,11 @@ export class Loan {
     @Column({ type: 'text', nullable: true })
     rejectionReason?: string;
 
-    // Workflow tracking fields
     @Column({ type: 'enum', enum: WorkflowStage, nullable: true })
     workflowStage?: WorkflowStage;
 
     @Column({ type: 'boolean', default: false })
-    eligibilityCheckPassed!: boolean;
+    eligibilityCheckPassed?: boolean;
 
     @Column({ type: 'json', nullable: true })
     eligibilityCheckNotes?: {
@@ -166,19 +163,19 @@ export class Loan {
     }>;
 
     @Column({ type: 'boolean', default: false })
-    deductionScheduled!: boolean;
+    deductionScheduled?: boolean;
 
     @Column({ type: 'timestamp', nullable: true })
     deductionScheduledAt?: Date;
 
-    @OneToMany(() => require('./LoanGuarantor').LoanGuarantor, (guarantor: LoanGuarantor) => guarantor.loan, { cascade: true })
-    guarantors!: LoanGuarantor[];
+    @OneToMany('LoanGuarantor', 'loan', { cascade: true })
+    guarantors?: LoanGuarantor[];
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 
     get isPastDue(): boolean {
         if (!this.maturityDate || this.status !== LoanStatus.ACTIVE) return false;

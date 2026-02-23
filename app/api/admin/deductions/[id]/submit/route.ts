@@ -8,9 +8,9 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const { DeductionRequest } = await import('@/src/entities/DeductionRequest');
+        const { DeductionRequest } = await import('@/src/entities/DeductionRequest');
 
-    
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,8 +29,8 @@ const { DeductionRequest } = await import('@/src/entities/DeductionRequest');
 
         const engine = new DeltaDeductionEngine(
             user.tenantId!,
-            deductionRequest.month,
-            deductionRequest.year
+            deductionRequest.month!,
+            deductionRequest.year!
         );
 
         await engine.submitRequest(params.id, user.id);

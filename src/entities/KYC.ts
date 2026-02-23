@@ -12,14 +12,14 @@ import type { Member } from './Member';
 @Entity('kyc')
 export class KYC {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    memberId!: string;
+    memberId?: string;
 
-    @OneToOne(() => require('./Member').Member, (member: any) => member.kyc)
+    @OneToOne('Member', 'kyc')
     @JoinColumn({ name: 'memberId' })
-    member!: Member;
+    member?: Member;
 
     // --- Identity Documents ---
     @Column({ nullable: true })
@@ -73,7 +73,7 @@ export class KYC {
     guardianOmangUrl?: string;
 
     // --- Proof of Residence ---
-    @Column({ nullable: true }) // 'water', 'electricity', 'lease', 'affidavit', 'chief_letter'
+    @Column({ nullable: true })
     residenceProofType?: string;
 
     @Column({ nullable: true })
@@ -83,28 +83,28 @@ export class KYC {
     residenceDocumentDate?: Date;
 
     // --- Source of Funds / Income ---
-    @Column({ nullable: true }) // 'salary', 'business', 'other'
+    @Column({ nullable: true })
     incomeSourceType?: string;
 
     @Column({ nullable: true })
-    proofOfIncomeUrl?: string; // Payslip or Bank Statement
+    proofOfIncomeUrl?: string;
 
     @Column({ nullable: true })
     sourceOfFundsAffidavitUrl?: string;
 
     // --- PIP / PEP Declaration ---
     @Column({ default: false })
-    isPip!: boolean;
+    isPip?: boolean;
 
     @Column({ nullable: true })
-    pipPosition?: string; // e.g., "MP", "Minister", "Judge"
+    pipPosition?: string;
 
     @Column({ type: 'date', nullable: true })
     pipDeclarationDate?: Date;
 
     // --- Verification Status & Metadata ---
     @Column({ default: false })
-    identityVerified!: boolean;
+    identityVerified?: boolean;
 
     @Column({ type: 'uuid', nullable: true })
     identityVerifiedBy?: string;
@@ -113,7 +113,7 @@ export class KYC {
     identityVerifiedAt?: Date;
 
     @Column({ default: false })
-    residenceVerified!: boolean;
+    residenceVerified?: boolean;
 
     @Column({ type: 'uuid', nullable: true })
     residenceVerifiedBy?: string;
@@ -122,7 +122,7 @@ export class KYC {
     residenceVerifiedAt?: Date;
 
     @Column({ default: false })
-    incomeVerified!: boolean;
+    incomeVerified?: boolean;
 
     @Column({ type: 'uuid', nullable: true })
     incomeVerifiedBy?: string;
@@ -131,7 +131,7 @@ export class KYC {
     incomeVerifiedAt?: Date;
 
     @Column({ default: false })
-    pipVerified!: boolean;
+    pipVerified?: boolean;
 
     @Column({ type: 'uuid', nullable: true })
     pipVerifiedBy?: string;
@@ -143,18 +143,16 @@ export class KYC {
     notes?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 
     get isFullyVerified(): boolean {
-        // Basic requirement: Identity + Residence + Income
-        // If PIP, then PIP must also be verified
         const base = this.identityVerified && this.residenceVerified && this.incomeVerified;
         if (this.isPip) {
-            return base && this.pipVerified;
+            return !!(base && this.pipVerified);
         }
-        return base;
+        return !!base;
     }
 }

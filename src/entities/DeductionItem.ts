@@ -25,14 +25,14 @@ export class DeductionItem {
     @Column({ type: 'uuid' })
     requestId!: string;
 
-    @ManyToOne(() => require('./DeductionRequest').DeductionRequest, (request: DeductionRequest) => request.items)
+    @ManyToOne('DeductionRequest', 'items')
     @JoinColumn({ name: 'requestId' })
     request!: DeductionRequest;
 
     @Column({ type: 'uuid' })
     memberId!: string;
 
-    @ManyToOne(() => require('./Member').Member)
+    @ManyToOne('Member')
     @JoinColumn({ name: 'memberId' })
     member!: Member;
 

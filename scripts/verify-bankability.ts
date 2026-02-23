@@ -26,7 +26,7 @@ async function verify() {
     console.log('✅ Tenant Created:', tenant.id);
 
     // 2. Initialize Accounts
-    await accountingService.initializeChartOfAccounts(tenant.id);
+    await accountingService.initializeChartOfAccounts(tenant.id!);
     console.log('✅ Chart of Accounts Initialized');
 
     // 3. Simulate Loan Disbursement
@@ -43,7 +43,7 @@ async function verify() {
     console.log('✅ Loan Disbursement Transaction Created');
 
     // 4. Process Journaling
-    const entries = await accountingService.processTransaction(txn.id);
+    const entries = await accountingService.processTransaction(txn.id!);
     console.log('✅ Journal Entries Generated:', entries.length);
 
     // 5. Verify Balances

@@ -9,8 +9,8 @@ import {
     OneToOne,
 } from 'typeorm';
 import type { FieldReport } from './FieldReport';
-import { Tenant } from './Tenant';
-import { User } from './User';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 export enum FieldVisitStatus {
     SCHEDULED = 'scheduled',
@@ -22,39 +22,39 @@ export enum FieldVisitStatus {
 @Entity('field_visits')
 export class FieldVisit {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({ type: 'uuid' })
-    officerId!: string;
+    officerId?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'officerId' })
-    officer!: User;
+    officer?: User;
 
     @Column({ type: 'timestamp' })
-    scheduledDate!: Date;
+    scheduledDate?: Date;
 
     @Column({ type: 'timestamp', nullable: true })
     actualDate?: Date;
 
     @Column({ type: 'enum', enum: FieldVisitStatus, default: FieldVisitStatus.SCHEDULED })
-    status!: FieldVisitStatus;
+    status?: FieldVisitStatus;
 
     @Column({ type: 'text' })
-    purpose!: string;
+    purpose?: string;
 
     @Column({ type: 'text', nullable: true })
     notes?: string;
 
-    @OneToOne(() => require('./FieldReport').FieldReport, (report: any) => report.visit)
-    report?: any; // Use any or Import type for the type hint
+    @OneToOne('FieldReport', 'visit')
+    report?: FieldReport;
 
     @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
     latitude?: number;
@@ -66,8 +66,8 @@ export class FieldVisit {
     geoLoggedAt?: Date;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

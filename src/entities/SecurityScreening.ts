@@ -8,8 +8,8 @@ import {
     JoinColumn,
     OneToMany,
 } from 'typeorm';
-import { SocietyApplication } from './SocietyApplication';
-import { User } from './User';
+import type { SocietyApplication } from './SocietyApplication';
+import type { User } from './User';
 import type { RiskFlag } from './RiskFlag';
 
 export enum ScreeningStatus {
@@ -29,24 +29,24 @@ export enum RiskLevel {
 @Entity('security_screenings')
 export class SecurityScreening {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    applicationId!: string;
+    applicationId?: string;
 
-    @ManyToOne(() => SocietyApplication)
+    @ManyToOne('SocietyApplication')
     @JoinColumn({ name: 'applicationId' })
-    application!: SocietyApplication;
+    application?: SocietyApplication;
 
     @Column({ type: 'uuid' })
-    officerId!: string;
+    officerId?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'officerId' })
-    officer!: User;
+    officer?: User;
 
     @Column({ type: 'json' })
-    checks!: {
+    checks?: {
         criminalRecordMatched: boolean;
         sanctionsListMatched: boolean;
         adverseMediaFound: boolean;
@@ -55,20 +55,20 @@ export class SecurityScreening {
     };
 
     @Column({ type: 'enum', enum: RiskLevel, default: RiskLevel.LOW })
-    riskLevel!: RiskLevel;
+    riskLevel?: RiskLevel;
 
     @Column({ type: 'enum', enum: ScreeningStatus, default: ScreeningStatus.PENDING })
-    status!: ScreeningStatus;
+    status?: ScreeningStatus;
 
     @Column({ type: 'text', nullable: true })
     notes?: string;
 
-    @OneToMany(() => require('./RiskFlag').RiskFlag, (flag: RiskFlag) => flag.screening)
-    riskFlags!: RiskFlag[];
+    @OneToMany('RiskFlag', 'screening')
+    riskFlags?: RiskFlag[];
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

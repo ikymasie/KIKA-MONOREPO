@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { AuditorService } from '@/src/services/AuditorService';
 
 export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { AuditorService } = await import('@/src/services/AuditorService');
-        const { UserRole } = await import('@/src/entities/User');
-
-
         const user = await getUserFromRequest(request);
-        if (!user || user.role !== UserRole.EXTERNAL_AUDITOR) {
+        if (!user || user.role !== 'external_auditor') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -21,8 +16,6 @@ export async function POST(request: NextRequest) {
         if (!requestId || !fileName || !fileUrl) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
-
-        if (!AppDataSource.isInitialized) await AppDataSource.initialize();
 
         const auditorService = new AuditorService();
         const auditReport = await auditorService.submitAuditReport({
@@ -40,10 +33,6 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { AuditorService } = await import('@/src/services/AuditorService');
-        const { AppDataSource } = await import('@/src/config/database');
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -55,8 +44,6 @@ export async function GET(request: NextRequest) {
         if (!requestId) {
             return NextResponse.json({ error: 'Missing requestId' }, { status: 400 });
         }
-
-        if (!AppDataSource.isInitialized) await AppDataSource.initialize();
 
         const auditorService = new AuditorService();
         const report = await auditorService.getAuditReport(requestId);

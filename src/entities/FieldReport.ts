@@ -9,37 +9,37 @@ import {
     OneToOne,
 } from 'typeorm';
 import type { FieldVisit } from './FieldVisit';
-import { User } from './User';
-import { Tenant } from './Tenant';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 @Entity('field_reports')
 export class FieldReport {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    visitId!: string;
+    visitId?: string;
 
-    @OneToOne(() => require('./FieldVisit').FieldVisit, (visit: any) => visit.report)
+    @OneToOne('FieldVisit', 'report')
     @JoinColumn({ name: 'visitId' })
-    visit!: FieldVisit;
+    visit?: FieldVisit;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({ type: 'uuid' })
-    submittedById!: string;
+    submittedById?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'submittedById' })
-    submittedBy!: User;
+    submittedBy?: User;
 
     @Column({ type: 'json' })
-    cooperativePrinciplesChecklist!: {
+    cooperativePrinciplesChecklist?: {
         voluntaryMembership: boolean;
         democraticControl: boolean;
         memberEconomicParticipation: boolean;
@@ -61,17 +61,17 @@ export class FieldReport {
     };
 
     @Column({ type: 'text' })
-    generalFindings!: string;
+    generalFindings?: string;
 
     @Column({ type: 'text' })
-    recommendations!: string;
+    recommendations?: string;
 
     @Column({ type: 'json', nullable: true })
     attachments?: string[];
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

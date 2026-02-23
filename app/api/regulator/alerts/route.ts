@@ -52,8 +52,8 @@ export async function GET(request: NextRequest) {
                 resolvedAt: alert.resolvedAt,
                 createdAt: alert.createdAt,
                 tenant: {
-                    id: alert.tenant.id,
-                    name: alert.tenant.name
+                    id: alert.tenant?.id,
+                    name: alert.tenant?.name
                 }
             }))
         );

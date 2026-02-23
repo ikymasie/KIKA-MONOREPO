@@ -9,7 +9,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const currentUser = await getUserFromRequest(request);
+        const currentUser = await getUserFromRequest(request);
         if (!currentUser || !currentUser.isRegulator()) {
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -41,19 +41,19 @@ const currentUser = await getUserFromRequest(request);
 
         const emailContent = generateCredentialsEmail({
             recipientName: user.fullName,
-            email: user.email,
+            email: user.email || '',
             temporaryPassword,
             loginUrl
         });
 
         await sendEmail({
-            to: user.email,
+            to: user.email || '',
             subject: 'Password Reset - KIKA Platform',
             html: emailContent.html,
             text: emailContent.text
         });
 
-        console.log(`✅ Password reset for ${user.email}`);
+        console.log(`✅ Password reset for ${user.email || 'unknown'}`);
 
         return NextResponse.json({
             success: true,

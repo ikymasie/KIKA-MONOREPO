@@ -26,32 +26,32 @@ export enum ComparisonOperator {
 @Entity('compliance_rules')
 export class ComplianceRule {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'varchar', length: 255 })
-    name!: string;
+    name?: string;
 
     @Column({ type: 'enum', enum: ComplianceMetric })
-    metric!: ComplianceMetric;
+    metric?: ComplianceMetric;
 
     @Column({ type: 'enum', enum: ComparisonOperator })
-    operator!: ComparisonOperator;
+    operator?: ComparisonOperator;
 
     @Column({ type: 'decimal', precision: 10, scale: 2 })
-    threshold!: number;
+    threshold?: number;
 
     @Column({ type: 'enum', enum: AlertSeverity })
-    severity!: AlertSeverity;
+    severity?: AlertSeverity;
 
     @Column({ type: 'boolean', default: true })
-    isActive!: boolean;
+    isActive?: boolean;
 
     @Column({ type: 'text', nullable: true })
     description?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

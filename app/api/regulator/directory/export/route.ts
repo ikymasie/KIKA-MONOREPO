@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
                     contactPhone: tenant.users?.[0]?.phone || 'N/A',
                     memberCount,
                     totalAssets: totalAssets.toFixed(2),
-                    registeredDate: new Date(tenant.createdAt).toLocaleDateString()
+                    registeredDate: tenant.createdAt ? new Date(tenant.createdAt).toLocaleDateString() : 'N/A'
                 };
             })
         );

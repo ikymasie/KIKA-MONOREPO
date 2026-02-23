@@ -8,8 +8,8 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
-import { Tenant } from './Tenant';
-import { User } from './User';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 export enum ByelawReviewStatus {
     PENDING = 'pending',
@@ -25,28 +25,28 @@ export enum ByelawReviewStatus {
 @Index(['submittedAt'])
 export class ByelawReview {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({ type: 'text' })
-    bylawDocumentUrl!: string;
+    bylawDocumentUrl?: string;
 
     @Column({ type: 'timestamp' })
-    submittedAt!: Date;
+    submittedAt?: Date;
 
     @Column({ type: 'enum', enum: ByelawReviewStatus, default: ByelawReviewStatus.PENDING })
-    status!: ByelawReviewStatus;
+    status?: ByelawReviewStatus;
 
     @Column({ type: 'uuid', nullable: true })
     reviewedBy?: string;
 
-    @ManyToOne(() => User, { nullable: true })
+    @ManyToOne('User', { nullable: true })
     @JoinColumn({ name: 'reviewedBy' })
     reviewer?: User;
 
@@ -63,13 +63,13 @@ export class ByelawReview {
     rejectionReason?: string;
 
     @Column({ type: 'int', default: 1 })
-    version!: number;
+    version?: number;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 
     get isPending(): boolean {
         return this.status === ByelawReviewStatus.PENDING || this.status === ByelawReviewStatus.UNDER_REVIEW;

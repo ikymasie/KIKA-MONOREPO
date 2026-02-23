@@ -8,7 +8,7 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
-import { Tenant } from './Tenant';
+import type { Tenant } from './Tenant';
 
 export enum ResolutionStatus {
     PENDING = 'pending',
@@ -23,33 +23,33 @@ export enum ResolutionStatus {
 @Index(['status'])
 export class AgmResolution {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({ type: 'int' })
-    year!: number;
+    year?: number;
 
     @Column({ type: 'date' })
-    date!: Date;
+    date?: Date;
 
     @Column()
-    title!: string;
+    title?: string;
 
     @Column({ type: 'text' })
-    description!: string;
+    description?: string;
 
     @Column({
         type: 'enum',
         enum: ResolutionStatus,
         default: ResolutionStatus.PENDING,
     })
-    status!: ResolutionStatus;
+    status?: ResolutionStatus;
 
     @Column({ nullable: true })
     meetingMinutesUrl?: string;
@@ -58,8 +58,8 @@ export class AgmResolution {
     metadata?: Record<string, any>;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

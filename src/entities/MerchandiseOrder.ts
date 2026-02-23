@@ -7,10 +7,9 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { Member } from './Member';
-import { MerchandiseProduct } from './MerchandiseProduct';
-import { Tenant } from './Tenant';
-
+import type { Member } from './Member';
+import type { MerchandiseProduct } from './MerchandiseProduct';
+import type { Tenant } from './Tenant';
 
 export enum OrderStatus {
     PENDING = 'pending',
@@ -25,58 +24,58 @@ export enum OrderStatus {
 @Entity('merchandise_orders')
 export class MerchandiseOrder {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column()
-    orderNumber!: string;
+    orderNumber?: string;
 
     @Column({ type: 'uuid' })
-    memberId!: string;
+    memberId?: string;
 
-    @ManyToOne(() => Member)
+    @ManyToOne('Member')
     @JoinColumn({ name: 'memberId' })
-    member!: Member;
+    member?: Member;
 
     @Column({ type: 'uuid' })
-    productId!: string;
+    productId?: string;
 
-    @ManyToOne(() => MerchandiseProduct)
+    @ManyToOne('MerchandiseProduct')
     @JoinColumn({ name: 'productId' })
-    product!: MerchandiseProduct;
+    product?: MerchandiseProduct;
 
     @Column({ type: 'int', default: 1 })
-    quantity!: number;
+    quantity?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    unitPrice!: number;
+    unitPrice?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    totalPrice!: number;
+    totalPrice?: number;
 
     @Column({ type: 'int' })
-    termMonths!: number;
+    termMonths?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })
-    interestRate!: number;
+    interestRate?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    monthlyInstallment!: number;
+    monthlyInstallment?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    amountPaid!: number;
+    amountPaid?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    outstandingBalance!: number;
+    outstandingBalance?: number;
 
     @Column({ type: 'enum', enum: OrderStatus, default: OrderStatus.PENDING })
-    status!: OrderStatus;
+    status?: OrderStatus;
 
     @Column({ type: 'date', nullable: true })
     approvalDate?: Date;
@@ -91,8 +90,8 @@ export class MerchandiseOrder {
     deliveryNotes?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

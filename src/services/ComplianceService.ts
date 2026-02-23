@@ -339,11 +339,11 @@ export class ComplianceService {
 
             let triggered = false;
             switch (rule.operator) {
-                case ComparisonOperator.LESS_THAN: triggered = metricValue < rule.threshold; break;
-                case ComparisonOperator.GREATER_THAN: triggered = metricValue > rule.threshold; break;
-                case ComparisonOperator.EQUALS: triggered = metricValue === rule.threshold; break;
-                case ComparisonOperator.LESS_THAN_OR_EQUAL: triggered = metricValue <= rule.threshold; break;
-                case ComparisonOperator.GREATER_THAN_OR_EQUAL: triggered = metricValue >= rule.threshold; break;
+                case ComparisonOperator.LESS_THAN: triggered = metricValue < rule.threshold!; break;
+                case ComparisonOperator.GREATER_THAN: triggered = metricValue > rule.threshold!; break;
+                case ComparisonOperator.EQUALS: triggered = metricValue === rule.threshold!; break;
+                case ComparisonOperator.LESS_THAN_OR_EQUAL: triggered = metricValue <= rule.threshold!; break;
+                case ComparisonOperator.GREATER_THAN_OR_EQUAL: triggered = metricValue >= rule.threshold!; break;
             }
 
             if (triggered) {
@@ -405,7 +405,7 @@ export class ComplianceService {
         if (!audit) throw new Error('Audit not found');
 
         // Capture current score
-        const latestMetrics = await this.getComplianceMetrics(audit.tenantId);
+        const latestMetrics = await this.getComplianceMetrics(audit.tenantId!);
 
         audit.status = AuditStatus.COMPLETED;
         audit.completedDate = new Date();

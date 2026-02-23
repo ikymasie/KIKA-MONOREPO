@@ -8,32 +8,31 @@ import {
     OneToMany,
     JoinColumn,
 } from 'typeorm';
-import { DeductionRequest } from './DeductionRequest';
-import { Tenant } from './Tenant';
+import type { DeductionRequest } from './DeductionRequest';
+import type { Tenant } from './Tenant';
 import type { ReconciliationItem } from './ReconciliationItem';
-
 import { ReconciliationStatus } from '../enums/ReconciliationStatus';
 
 @Entity('reconciliation_batches')
 export class ReconciliationBatch {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column()
-    batchNumber!: string;
+    batchNumber?: string;
 
     @Column({ type: 'int' })
-    month!: number;
+    month?: number;
 
     @Column({ type: 'int' })
-    year!: number;
+    year?: number;
 
     @Column({ nullable: true })
     mofFileUrl?: string;
@@ -41,33 +40,33 @@ export class ReconciliationBatch {
     @Column({ type: 'uuid', nullable: true })
     deductionRequestId?: string;
 
-    @ManyToOne(() => DeductionRequest, { nullable: true })
+    @ManyToOne('DeductionRequest', { nullable: true })
     @JoinColumn({ name: 'deductionRequestId' })
-    deductionRequest?: any;
+    deductionRequest?: DeductionRequest;
 
     @Column({ type: 'int', default: 0 })
-    totalRecords!: number;
+    totalRecords?: number;
 
     @Column({ type: 'int', default: 0 })
-    matchedRecords!: number;
+    matchedRecords?: number;
 
     @Column({ type: 'int', default: 0 })
-    unmatchedRecords!: number;
+    unmatchedRecords?: number;
 
     @Column({ type: 'int', default: 0 })
-    varianceRecords!: number;
+    varianceRecords?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    totalExpected!: number;
+    totalExpected?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    totalActual!: number;
+    totalActual?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    totalVariance!: number;
+    totalVariance?: number;
 
     @Column({ type: 'enum', enum: ReconciliationStatus, default: ReconciliationStatus.PENDING })
-    status!: ReconciliationStatus;
+    status?: ReconciliationStatus;
 
     @Column({ type: 'uuid', nullable: true })
     processedBy?: string;
@@ -76,14 +75,14 @@ export class ReconciliationBatch {
     processedAt?: Date;
 
     @Column({ default: false })
-    journalsPosted!: boolean;
+    journalsPosted?: boolean;
 
-    @OneToMany(() => require('./ReconciliationItem').ReconciliationItem, (item: ReconciliationItem) => item.batch, { cascade: true })
-    items!: ReconciliationItem[];
+    @OneToMany('ReconciliationItem', 'batch', { cascade: true })
+    items?: ReconciliationItem[];
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

@@ -220,8 +220,9 @@ export class AlertGenerationService {
             order: { submittedAt: 'ASC' }
         });
 
-        if (overdueReview) {
-            const daysPending = Math.floor((new Date().getTime() - overdueReview.submittedAt.getTime()) / (1000 * 60 * 60 * 24));
+        const submittedAt = overdueReview?.submittedAt;
+        if (overdueReview && submittedAt) {
+            const daysPending = Math.floor((new Date().getTime() - submittedAt.getTime()) / (1000 * 60 * 60 * 24));
 
             if (daysPending > 30) {
                 await this.createAlert(tenant.id, {
@@ -264,7 +265,7 @@ export class AlertGenerationService {
      * Create an alert if it doesn't already exist (avoid duplicates)
      */
     private static async createAlert(
-        tenantId: string,
+        tenantId: string | undefined,
         alertData: {
             type: AlertType;
             severity: AlertSeverity;
@@ -273,6 +274,8 @@ export class AlertGenerationService {
             metadata?: Record<string, any>;
         }
     ): Promise<void> {
+        if (!tenantId) return;
+
         const alertRepo = AppDataSource.getRepository(RegulatoryAlert);
 
         // Check if similar unresolved alert exists

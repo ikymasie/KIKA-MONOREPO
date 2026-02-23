@@ -1,109 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { getLoanById } from '@/src/db/services/LoanService';
+import { query } from '@/src/db/query';
+import { RowDataPacket } from 'mysql2/promise';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Loan, LoanStatus } = await import('@/src/entities/Loan');
-        const { LoanGuarantor } = await import('@/src/entities/LoanGuarantor');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-    
         const user = await getUserFromRequest(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user.isTenantAdmin()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        if (!user.isTenantAdmin()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+        const loan = await getLoanById(params.id, user.tenantId!);
+        if (!loan) return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        // Fetch joined member + product + guarantors
+        const [members, products, guarantors] = await Promise.all([
+            query<RowDataPacket>('SELECT id, memberNumber, firstName, lastName, email, phone, nationalId, employer FROM members WHERE id = ? LIMIT 1', [loan.memberId]),
+            query<RowDataPacket>('SELECT id, name, code, interestRate, savingsMultiplier FROM loan_products WHERE id = ? LIMIT 1', [loan.productId]),
+            query<RowDataPacket>(
+                `SELECT lg.*, m.id AS gmId, m.memberNumber AS gmNumber, m.firstName AS gmFirst, m.lastName AS gmLast
+                 FROM loan_guarantors lg LEFT JOIN members m ON m.id = lg.guarantorMemberId
+                 WHERE lg.loanId = ?`,
+                [loan.id]
+            ),
+        ]);
 
-        const loanRepo = AppDataSource.getRepository(Loan);
-        const loan = await loanRepo.findOne({
-            where: { id: params.id, tenantId: user.tenantId },
-            relations: [
-                'member',
-                'product',
-                'guarantors',
-                'guarantors.guarantorMember',
-            ],
-        });
+        const member = members[0] ?? null;
+        const product = products[0] ?? null;
 
-        if (!loan) {
-            return NextResponse.json({ error: 'Loan not found' }, { status: 404 });
-        }
-
-        // Format response with full details
-        const formattedLoan = {
-            id: loan.id,
-            loanNumber: loan.loanNumber,
-            member: {
-                id: loan.member.id,
-                memberNumber: loan.member.memberNumber,
-                firstName: loan.member.firstName,
-                lastName: loan.member.lastName,
-                fullName: `${loan.member.firstName} ${loan.member.lastName}`,
-                email: loan.member.email,
-                phone: loan.member.phone,
-                nationalId: loan.member.nationalId,
-                employer: loan.member.employer,
-            },
-            product: {
-                id: loan.product.id,
-                name: loan.product.name,
-                code: loan.product.code,
-                interestRate: Number(loan.product.interestRate),
-                savingsMultiplier: Number(loan.product.savingsMultiplier),
-            },
-            principalAmount: Number(loan.principalAmount),
-            interestRate: Number(loan.interestRate),
-            termMonths: loan.termMonths,
-            monthlyInstallment: Number(loan.monthlyInstallment),
-            processingFee: Number(loan.processingFee),
-            insuranceFee: Number(loan.insuranceFee),
-            totalAmountDue: Number(loan.totalAmountDue),
-            outstandingBalance: Number(loan.outstandingBalance),
-            amountPaid: Number(loan.amountPaid),
-            status: loan.status,
-            applicationDate: loan.applicationDate,
-            approvalDate: loan.approvalDate,
-            disbursementDate: loan.disbursementDate,
-            maturityDate: loan.maturityDate,
-            approvedBy: loan.approvedBy,
-            disbursedBy: loan.disbursedBy,
-            purpose: loan.purpose,
-            rejectionReason: loan.rejectionReason,
-            isPastDue: loan.isPastDue,
-            guarantors: loan.guarantors?.map(g => ({
+        return NextResponse.json({
+            ...loan,
+            member: member ? {
+                id: member.id, memberNumber: member.memberNumber,
+                firstName: member.firstName, lastName: member.lastName,
+                fullName: `${member.firstName} ${member.lastName}`,
+                email: member.email, phone: member.phone,
+                nationalId: member.nationalId, employer: member.employer,
+            } : null,
+            product: product ? {
+                id: product.id, name: product.name, code: product.code,
+                interestRate: Number(product.interestRate),
+                savingsMultiplier: Number(product.savingsMultiplier),
+            } : null,
+            guarantors: guarantors.map(g => ({
                 id: g.id,
-                guarantorMember: {
-                    id: g.guarantorMember.id,
-                    memberNumber: g.guarantorMember.memberNumber,
-                    firstName: g.guarantorMember.firstName,
-                    lastName: g.guarantorMember.lastName,
-                    fullName: `${g.guarantorMember.firstName} ${g.guarantorMember.lastName}`,
-                },
+                guarantorMember: g.gmId ? {
+                    id: g.gmId, memberNumber: g.gmNumber,
+                    firstName: g.gmFirst, lastName: g.gmLast,
+                    fullName: `${g.gmFirst} ${g.gmLast}`,
+                } : null,
                 guaranteedAmount: Number(g.guaranteedAmount),
                 status: g.status,
                 acceptedAt: g.acceptedAt,
                 rejectedAt: g.rejectedAt,
                 rejectionReason: g.rejectionReason,
-            })) || [],
-            createdAt: loan.createdAt,
-            updatedAt: loan.updatedAt,
-        };
-
-        return NextResponse.json(formattedLoan);
+            })),
+        });
     } catch (error: any) {
         console.error('Loan detail API error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to fetch loan details' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error.message || 'Failed to fetch loan details' }, { status: 500 });
     }
 }

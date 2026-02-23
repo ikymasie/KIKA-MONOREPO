@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { AuditorService } from '@/src/services/AuditorService';
+import { getGeneralLedger } from '@/src/db/services/AccountingService';
 
 export const dynamic = 'force-dynamic';
 export async function GET(
@@ -6,22 +9,12 @@ export async function GET(
     { params }: { params: { tenantId: string } }
 ) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { AuditorService } = await import('@/src/services/AuditorService');
-        const { AccountingService } = await import('@/src/services/AccountingService');
-        const { UserRole } = await import('@/src/entities/User');
-
-
         const user = await getUserFromRequest(request);
         const { tenantId } = params;
 
-        if (!user || user.role !== UserRole.EXTERNAL_AUDITOR) {
+        if (!user || user.role !== 'external_auditor') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
-
-        if (!AppDataSource.isInitialized) await AppDataSource.initialize();
 
         const auditorService = new AuditorService();
         const hasAccess = await auditorService.hasActiveAccess(user.id, tenantId);
@@ -35,15 +28,15 @@ export async function GET(
         const startDateParam = searchParams.get('startDate');
         const endDateParam = searchParams.get('endDate');
 
-        const startDate = startDateParam ? new Date(startDateParam) : undefined;
-        const endDate = endDateParam ? new Date(endDateParam) : undefined;
+        const startDate = startDateParam ? new Date(startDateParam).toISOString() : undefined;
+        const endDate = endDateParam ? new Date(endDateParam).toISOString() : undefined;
 
-        const accountingService = new AccountingService();
-        const entries = await accountingService.getGeneralLedger(tenantId, {
-            accountId,
+        const entries = await getGeneralLedger(
+            tenantId,
             startDate,
-            endDate
-        });
+            endDate,
+            accountId
+        );
 
         return NextResponse.json(entries);
     } catch (error: any) {

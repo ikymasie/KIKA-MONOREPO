@@ -7,20 +7,21 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
-import { SocietyApplication, ApplicationStatus } from './SocietyApplication';
-import { User } from './User';
+import type { SocietyApplication } from './SocietyApplication';
+import { ApplicationStatus } from './SocietyApplication';
+import type { User } from './User';
 
 @Entity('application_workflow_logs')
 @Index(['applicationId'])
 @Index(['createdAt'])
 export class ApplicationWorkflowLog {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    applicationId!: string;
+    applicationId?: string;
 
-    @ManyToOne(() => SocietyApplication)
+    @ManyToOne('SocietyApplication')
     @JoinColumn({ name: 'applicationId' })
     application?: SocietyApplication;
 
@@ -28,12 +29,12 @@ export class ApplicationWorkflowLog {
     fromStatus?: ApplicationStatus;
 
     @Column({ type: 'enum', enum: ApplicationStatus })
-    toStatus!: ApplicationStatus;
+    toStatus?: ApplicationStatus;
 
     @Column({ type: 'uuid' })
-    performedBy!: string;
+    performedBy?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'performedBy' })
     performer?: User;
 
@@ -41,12 +42,11 @@ export class ApplicationWorkflowLog {
     notes?: string;
 
     @Column({ type: 'json', nullable: true })
-    metadata?: Record<string, any>; // Additional context (e.g., rejection reasons, appeal details)
+    metadata?: Record<string, any>;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
-    // Helper methods
     get isApproval(): boolean {
         return this.toStatus === ApplicationStatus.APPROVED ||
             this.toStatus === ApplicationStatus.APPEAL_APPROVED;
@@ -69,8 +69,6 @@ export class ApplicationWorkflowLog {
                 return 'File number assigned, routed for review';
             case ApplicationStatus.SECURITY_VETTING:
                 return 'Routed to security vetting';
-            case ApplicationStatus.SECURITY_VETTING:
-                return 'Security clearance in progress';
             case ApplicationStatus.SECURITY_FAILED:
                 return 'Security clearance failed';
             case ApplicationStatus.LEGAL_REVIEW:

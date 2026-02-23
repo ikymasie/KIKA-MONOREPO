@@ -1,38 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { listClaims } from '@/src/db/services/InsuranceService';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { InsuranceClaim } = await import('@/src/entities/InsuranceClaim');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-    
         const user = await getUserFromRequest(request);
         if (!user || (!user.isTenantAdmin() && !user.isRegulator() && !user.isGovernmentOfficer())) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const { searchParams } = new URL(request.url);
-        const status = searchParams.get('status');
+        const status = searchParams.get('status') || undefined;
 
-        const db = await getDb();
-        const claimRepo = db.getRepository(InsuranceClaim);
+        let claims = await listClaims(user.tenantId);
 
-        const where: any = {};
-        if (user.tenantId) {
-            where.tenantId = user.tenantId;
-        }
         if (status) {
-            where.status = status;
+            claims = claims.filter(c => c.status === status);
         }
-
-        const claims = await claimRepo.find({
-            where,
-            relations: ['policy', 'policy.member', 'policy.product'],
-            order: { createdAt: 'DESC' }
-        });
 
         return NextResponse.json(claims);
     } catch (error: any) {

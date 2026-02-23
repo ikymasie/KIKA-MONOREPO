@@ -1,80 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { getClaim, updateClaim } from '@/src/db/services/InsuranceService';
 import { sendClaimNotification } from '@/lib/notifications';
+import { ClaimStatus } from '@/src/interfaces/IInsurance';
 
 export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { InsuranceClaim, ClaimStatus } = await import('@/src/entities/InsuranceClaim');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { UserRole } = await import('@/src/entities/User');
-
         const user = await getUserFromRequest(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const { id } = params;
-        const body = await request.json();
-        const { action, notes, approvedAmount, rejectionReason, queryReason } = body;
+        const { action, notes, approvedAmount, rejectionReason, queryReason } = await request.json();
 
-        const db = await getDb();
-        const claimRepo = db.getRepository(InsuranceClaim);
-        const claim = await claimRepo.findOne({
-            where: { id },
-            relations: ['policy', 'policy.member']
-        });
-
-        if (!claim) {
-            return NextResponse.json({ error: 'Claim not found' }, { status: 404 });
-        }
+        const claim = await getClaim(id, user.tenantId);
+        if (!claim) return NextResponse.json({ error: 'Claim not found' }, { status: 404 });
 
         const now = new Date();
+        const updates: any = {};
 
         switch (action) {
             case 'VERIFY':
-                if (user.role !== UserRole.MEMBER_SERVICE_REP && user.role !== UserRole.SACCOS_ADMIN) {
+                if (user.role !== 'member_service_rep' && user.role !== 'saccos_admin') {
                     return NextResponse.json({ error: 'Only Claims Clerks or Admins can verify' }, { status: 403 });
                 }
-                claim.status = ClaimStatus.IN_REVIEW;
-                claim.verifiedBy = user.id;
-                claim.verifiedAt = now;
+                updates.status = ClaimStatus.IN_REVIEW;
+                updates.verifiedBy = user.id;
+                updates.verifiedAt = now;
                 break;
 
             case 'QUERY':
-                claim.status = ClaimStatus.QUERIED;
-                claim.queryReason = queryReason || notes;
+                updates.status = ClaimStatus.QUERIED;
+                updates.queryReason = queryReason || notes;
                 break;
 
             case 'APPROVE':
-                if (user.role !== UserRole.SACCOS_ADMIN) {
+                if (user.role !== 'saccos_admin') {
                     return NextResponse.json({ error: 'Only Managers can approve claims' }, { status: 403 });
                 }
-                claim.status = ClaimStatus.APPROVED;
-                claim.adjudicatedBy = user.id;
-                claim.adjudicatedAt = now;
-                claim.approvedAmount = approvedAmount || claim.claimAmount;
+                updates.status = ClaimStatus.APPROVED;
+                updates.adjudicatedBy = user.id;
+                updates.adjudicatedAt = now;
+                updates.approvedAmount = approvedAmount || claim.claimAmount;
                 break;
 
             case 'REJECT':
-                if (user.role !== UserRole.SACCOS_ADMIN) {
+                if (user.role !== 'saccos_admin') {
                     return NextResponse.json({ error: 'Only Managers can reject claims' }, { status: 403 });
                 }
-                claim.status = ClaimStatus.REJECTED;
-                claim.adjudicatedBy = user.id;
-                claim.adjudicatedAt = now;
-                claim.rejectionReason = rejectionReason || notes;
+                updates.status = ClaimStatus.REJECTED;
+                updates.adjudicatedBy = user.id;
+                updates.adjudicatedAt = now;
+                updates.rejectionReason = rejectionReason || notes;
                 break;
 
             case 'DISBURSE':
-                if (user.role !== UserRole.ACCOUNTANT && user.role !== UserRole.SACCOS_ADMIN) {
+                if (user.role !== 'accountant' && user.role !== 'saccos_admin') {
                     return NextResponse.json({ error: 'Only Accountants can disburse payments' }, { status: 403 });
                 }
-                claim.status = ClaimStatus.PAID;
-                claim.disbursedBy = user.id;
-                claim.disbursedAt = now;
-                claim.paidAt = now;
+                updates.status = ClaimStatus.PAID;
+                updates.disbursedBy = user.id;
+                updates.disbursedAt = now;
+                updates.paidAt = now;
                 break;
 
             default:
@@ -82,23 +69,25 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         }
 
         if (notes) {
-            // Append notes if needed or use a specific field
-            claim.committeeReviewNotes = (claim.committeeReviewNotes || '') + `\n[${now.toISOString()}] ${user.role}: ${notes}`;
+            updates.committeeReviewNotes = (claim.committeeReviewNotes || '') + `\n[${now.toISOString()}] ${user.role}: ${notes}`;
         }
 
-        await claimRepo.save(claim);
+        const updatedClaim = await updateClaim(id, user.tenantId, updates);
 
-        // Notify member of status change
-        if (claim.policy?.member?.phone) {
+        // Fetch user phone to notify
+        const { queryOne } = await import('@/src/db/query');
+        const policyData = await queryOne('SELECT m.phone FROM insurance_policies ip INNER JOIN members m ON m.id = ip.memberId WHERE ip.id = ?', [claim.policyId]) as any;
+
+        if (policyData && policyData.phone) {
             await sendClaimNotification(
-                claim.policy.member.phone,
-                claim.claimNumber,
-                claim.status,
-                claim.approvedAmount || claim.claimAmount
+                policyData.phone,
+                updatedClaim.claimNumber!,
+                updatedClaim.status!,
+                updatedClaim.approvedAmount || updatedClaim.claimAmount
             );
         }
 
-        return NextResponse.json(claim);
+        return NextResponse.json(updatedClaim);
     } catch (error: any) {
         console.error('Error processing claim action:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

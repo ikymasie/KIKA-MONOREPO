@@ -1,42 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { queryOne } from '@/src/db/query';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { InsurancePolicy } = await import('@/src/entities/InsurancePolicy');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-    
         const user = await getUserFromRequest(request);
-        if (!user || user.role !== 'member') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user || user.role !== 'member') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
         const { searchParams } = new URL(request.url);
         const policyId = searchParams.get('policyId');
+        if (!policyId) return NextResponse.json({ error: 'Policy ID is required' }, { status: 400 });
 
-        if (!policyId) {
-            return NextResponse.json({ error: 'Policy ID is required' }, { status: 400 });
-        }
+        const policy = await queryOne(`
+            SELECT ip.*, pr.name AS productName, m.firstName, m.lastName
+            FROM insurance_policies ip
+            INNER JOIN insurance_products pr ON pr.id = ip.productId
+            INNER JOIN members m ON m.id = ip.memberId
+            WHERE ip.id = ? AND ip.memberId = ? AND ip.tenantId = ?
+        `, [policyId, user.id, user.tenantId]) as any;
 
-        const db = await getDb();
-        const policyRepo = db.getRepository(InsurancePolicy);
-
-        const policy = await policyRepo.findOne({
-            where: { id: policyId, memberId: user.id },
-            relations: ['product', 'member']
-        });
-
-        if (!policy) {
-            return NextResponse.json({ error: 'Policy not found' }, { status: 404 });
-        }
+        if (!policy) return NextResponse.json({ error: 'Policy not found' }, { status: 404 });
 
         return NextResponse.json({
             certificateNumber: `CERT-${policy.policyNumber}`,
-            issuedTo: `${policy.member?.firstName} ${policy.member?.lastName}`,
-            policyName: policy.product?.name,
+            issuedTo: `${policy.firstName} ${policy.lastName}`,
+            policyName: policy.productName,
             coverageAmount: policy.coverageAmount,
             startDate: policy.startDate,
             expiryDate: policy.endDate,

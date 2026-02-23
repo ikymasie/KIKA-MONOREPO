@@ -22,32 +22,32 @@ export enum DeductionRequestStatus {
 @Entity('deduction_requests')
 export class DeductionRequest {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant, (tenant: Tenant) => tenant.deductionRequests)
+    @ManyToOne('Tenant', 'deductionRequests')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column()
-    batchNumber!: string;
+    batchNumber?: string;
 
     @Column({ type: 'int' })
-    month!: number;
+    month?: number;
 
     @Column({ type: 'int' })
-    year!: number;
+    year?: number;
 
     @Column({ type: 'int', default: 0 })
-    totalMembers!: number;
+    totalMembers?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    totalAmount!: number;
+    totalAmount?: number;
 
     @Column({ type: 'enum', enum: DeductionRequestStatus, default: DeductionRequestStatus.DRAFT })
-    status!: DeductionRequestStatus;
+    status?: DeductionRequestStatus;
 
     @Column({ nullable: true })
     csvFileUrl?: string;
@@ -61,12 +61,12 @@ export class DeductionRequest {
     @Column({ type: 'text', nullable: true })
     notes?: string;
 
-    @OneToMany(() => require('./DeductionItem').DeductionItem, (item: DeductionItem) => item.request, { cascade: true })
-    items!: DeductionItem[];
+    @OneToMany('DeductionItem', 'request', { cascade: true })
+    items?: DeductionItem[];
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

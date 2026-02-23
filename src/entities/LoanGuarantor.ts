@@ -19,27 +19,27 @@ export enum GuarantorStatus {
 @Entity('loan_guarantors')
 export class LoanGuarantor {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    loanId!: string;
+    loanId?: string;
 
-    @ManyToOne(() => require('./Loan').Loan, (loan: Loan) => loan.guarantors)
+    @ManyToOne('Loan', 'guarantors')
     @JoinColumn({ name: 'loanId' })
-    loan!: Loan;
+    loan?: Loan;
 
     @Column({ type: 'uuid' })
-    guarantorMemberId!: string;
+    guarantorMemberId?: string;
 
-    @ManyToOne(() => require('./Member').Member)
+    @ManyToOne('Member')
     @JoinColumn({ name: 'guarantorMemberId' })
-    guarantorMember!: Member;
+    guarantorMember?: Member;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    guaranteedAmount!: number;
+    guaranteedAmount?: number;
 
     @Column({ type: 'enum', enum: GuarantorStatus, default: GuarantorStatus.PENDING })
-    status!: GuarantorStatus;
+    status?: GuarantorStatus;
 
     @Column({ type: 'timestamp', nullable: true })
     acceptedAt?: Date;
@@ -66,8 +66,8 @@ export class LoanGuarantor {
     notificationMethod?: string;
 
     @Column({ type: 'int', default: 0 })
-    notificationAttempts!: number;
+    notificationAttempts?: number;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 }

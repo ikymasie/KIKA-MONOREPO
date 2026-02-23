@@ -53,13 +53,13 @@ export const GET = asyncHandler(async (request: NextRequest) => {
 
     const formattedTasks = tasks.map(loan => {
         // Calculate urgency based on application date
-        const daysPending = Math.floor((new Date().getTime() - new Date(loan.applicationDate || loan.createdAt).getTime()) / (1000 * 3600 * 24));
+        const daysPending = Math.floor((new Date().getTime() - new Date(loan.applicationDate || loan.createdAt || new Date()).getTime()) / (1000 * 3600 * 24));
 
         return {
             id: loan.id,
             loanNumber: loan.loanNumber,
-            memberName: `${loan.member.firstName} ${loan.member.lastName}`,
-            productName: loan.product.name,
+            memberName: loan.member ? `${loan.member.firstName} ${loan.member.lastName}` : 'Unknown',
+            productName: loan.product?.name || 'Unknown',
             amount: Number(loan.principalAmount),
             status: loan.status,
             stage: loan.workflowStage,

@@ -26,8 +26,8 @@ export default function GovernancePage() {
             const endpoint = activeTab === 'agm' ? '/api/admin/governance/agm' : '/api/admin/governance/board-meetings';
             const res = await fetch(endpoint);
             const data = await res.json();
-            if (activeTab === 'agm') setAgmResolutions(data);
-            else setBoardMinutes(data);
+            if (activeTab === 'agm') setAgmResolutions(Array.isArray(data) ? data : []);
+            else setBoardMinutes(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error(err);
         } finally {

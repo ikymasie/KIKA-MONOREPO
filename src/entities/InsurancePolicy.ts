@@ -22,33 +22,33 @@ export enum PolicyStatus {
 @Entity('insurance_policies')
 export class InsurancePolicy {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column()
-    policyNumber!: string;
+    policyNumber?: string;
 
     @Column({ type: 'uuid' })
-    memberId!: string;
+    memberId?: string;
 
-    @ManyToOne(() => require('./Member').Member, (member: Member) => member.insurancePolicies)
+    @ManyToOne('Member', 'insurancePolicies')
     @JoinColumn({ name: 'memberId' })
-    member!: Member;
+    member?: Member;
 
     @Column({ type: 'uuid' })
-    productId!: string;
+    productId?: string;
 
-    @ManyToOne(() => require('./InsuranceProduct').InsuranceProduct)
+    @ManyToOne('InsuranceProduct')
     @JoinColumn({ name: 'productId' })
-    product!: InsuranceProduct;
+    product?: InsuranceProduct;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    monthlyPremium!: number;
+    monthlyPremium?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    coverageAmount!: number;
+    coverageAmount?: number;
 
     @Column({ type: 'date' })
-    startDate!: Date;
+    startDate?: Date;
 
     @Column({ type: 'date', nullable: true })
     endDate?: Date;
@@ -57,19 +57,19 @@ export class InsurancePolicy {
     waitingPeriodEndDate?: Date;
 
     @Column({ type: 'enum', enum: PolicyStatus, default: PolicyStatus.WAITING_PERIOD })
-    status!: PolicyStatus;
+    status?: PolicyStatus;
 
     @Column({ type: 'int', default: 0 })
-    monthsPaid!: number;
+    monthsPaid?: number;
 
-    @OneToMany(() => require('./InsuranceClaim').InsuranceClaim, (claim: InsuranceClaim) => claim.policy)
-    claims!: InsuranceClaim[];
+    @OneToMany('InsuranceClaim', 'policy')
+    claims?: InsuranceClaim[];
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 
     get isInWaitingPeriod(): boolean {
         if (!this.waitingPeriodEndDate) return false;

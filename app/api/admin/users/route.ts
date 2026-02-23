@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { syncUserWithFirebase } from '@/lib/firebase-auth';
+import {
+    listUsersByTenant,
+    createUser,
+    emailExists,
+    UserRole,
+    UserStatus,
+    getDefaultPermissions,
+} from '@/src/db/services/UserService';
+import type { IUserCreateInput } from '@/src/interfaces/IUser';
+import { CREATABLE_STAFF_ROLES } from '@/src/interfaces/IUser';
 
 export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { User, UserRole, UserStatus } = await import('@/src/entities/User');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
-
         const user = await getUserFromRequest(request);
-        if (!user || user.role !== UserRole.SACCOS_ADMIN) {
+        if (!user || user.role !== ('saccos_admin' as UserRole)) {
             return NextResponse.json({ error: 'Unauthorized or insufficient permissions' }, { status: 401 });
         }
 
@@ -19,22 +26,14 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'No tenant associated with user' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const users = await listUsersByTenant(user.tenantId);
 
-        const userRepository = AppDataSource.getRepository(User);
-        const users = await userRepository.find({
-            where: { tenantId: user.tenantId },
-            order: { createdAt: 'DESC' }
-        });
-
-        const formattedUsers = users.map(u => ({
+        const formattedUsers = users.map((u) => ({
             id: u.id,
             email: u.email,
             firstName: u.firstName,
             lastName: u.lastName,
-            fullName: u.fullName,
+            fullName: `${u.firstName} ${u.lastName}`,
             role: u.role,
             status: u.status,
             createdAt: u.createdAt,
@@ -43,22 +42,16 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ users: formattedUsers });
     } catch (error: any) {
         console.error('List Users API error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to fetch users' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error.message || 'Failed to fetch users' }, { status: 500 });
     }
 }
 
 export async function POST(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { AppDataSource } = await import('@/src/config/database');
-        const { User, UserRole, UserStatus } = await import('@/src/entities/User');
 
         const currentUser = await getUserFromRequest(request);
-        if (!currentUser || currentUser.role !== UserRole.SACCOS_ADMIN) {
+        if (!currentUser || currentUser.role !== ('saccos_admin' as UserRole)) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -74,91 +67,30 @@ export async function POST(request: NextRequest) {
         }
 
         // Only allow SACCOS staff roles to be created
-        const allowedRoles = [
-            UserRole.LOAN_OFFICER,
-            UserRole.ACCOUNTANT,
-            UserRole.MEMBER_SERVICE_REP,
-            UserRole.CREDIT_COMMITTEE,
-        ];
-
-        if (!allowedRoles.includes(role as any)) {
-            return NextResponse.json({ error: 'Invalid role for organization staff' }, { status: 400 });
+        if (!CREATABLE_STAFF_ROLES.includes(role as UserRole)) {
+            return NextResponse.json({ error: 'Invalid role for organisation staff' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const userRepository = AppDataSource.getRepository(User);
-
-        // Check if user already exists
-        const existingUser = await userRepository.findOne({
-            where: { email },
-        });
-
-        if (existingUser) {
+        if (await emailExists(email)) {
             return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 });
         }
 
-        function getDefaultPermissions(role: any): Record<string, boolean> {
-            switch (role) {
-                case UserRole.SACCOS_ADMIN:
-                    return {
-                        'system:manage': false,
-                        'users:manage': true,
-                        'members:manage': true,
-                        'loans:manage': true,
-                        'savings:manage': true,
-                        'reports:view': true,
-                        'settings:manage': true,
-                    };
-                case UserRole.LOAN_OFFICER:
-                    return {
-                        'members:view': true,
-                        'loans:manage': true,
-                        'guarantors:manage': true,
-                    };
-                case UserRole.ACCOUNTANT:
-                    return {
-                        'finance:manage': true,
-                        'gl:manage': true,
-                        'payments:manage': true,
-                        'reports:view': true,
-                    };
-                case UserRole.MEMBER_SERVICE_REP:
-                    return {
-                        'members:manage': true,
-                        'kyc:update': true,
-                        'insurance_claims:initiate': true,
-                    };
-                case UserRole.CREDIT_COMMITTEE:
-                    return {
-                        'loans:view': true,
-                        'loans:approve': true,
-                    };
-                default:
-                    return {};
-            }
-        }
-
-        // Create new user
-        const newUser = userRepository.create({
+        const input: IUserCreateInput = {
             email,
             firstName,
             lastName,
-            role: role as any,
+            role: role as UserRole,
             tenantId: currentUser.tenantId,
             status: UserStatus.ACTIVE,
             mfaEnabled: false,
-            permissions: getDefaultPermissions(role),
-        });
+            permissions: getDefaultPermissions(role as UserRole),
+        };
 
-        await userRepository.save(newUser);
+        const newUser = await createUser(input);
 
         // Sync with Firebase
-        // Default password for new staff if not provided (should be changed on first login)
         const staffPassword = password || 'Welcome123!';
-        await syncUserWithFirebase(email, staffPassword, newUser);
+        await syncUserWithFirebase(email, staffPassword, newUser as any);
 
         return NextResponse.json({
             message: 'User created successfully',
@@ -168,14 +100,10 @@ export async function POST(request: NextRequest) {
                 firstName: newUser.firstName,
                 lastName: newUser.lastName,
                 role: newUser.role,
-            }
+            },
         });
-
     } catch (error: any) {
         console.error('Create User API error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to create user' },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: error.message || 'Failed to create user' }, { status: 500 });
     }
 }

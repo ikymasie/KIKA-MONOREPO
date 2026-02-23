@@ -26,9 +26,9 @@ export async function syncUserWithFirebase(
 
         // Set custom claims for RBAC
         await setUserClaims(firebaseUser.uid, {
-            role: user.role,
+            role: user.role!,
             tenantId: user.tenantId || null,
-            userId: user.id,
+            userId: user.id!,
         });
 
         // Update MySQL user with Firebase UID
@@ -43,9 +43,9 @@ export async function syncUserWithFirebase(
 
             // Update custom claims
             await setUserClaims(firebaseUser.uid, {
-                role: user.role,
+                role: user.role!,
                 tenantId: user.tenantId || null,
-                userId: user.id,
+                userId: user.id!,
             });
 
             // Update MySQL user with Firebase UID

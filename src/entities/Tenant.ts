@@ -24,16 +24,16 @@ export enum TenantStatus {
 @Entity('tenants')
 export class Tenant {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ unique: true })
-    name!: string;
+    name?: string;
 
     @Column({ unique: true })
-    code!: string;
+    code?: string;
 
     @Column({ type: 'enum', enum: TenantStatus, default: TenantStatus.ACTIVE })
-    status!: TenantStatus;
+    status?: TenantStatus;
 
     @Column({ nullable: true })
     registrationNumber?: string;
@@ -54,16 +54,16 @@ export class Tenant {
     bylaws?: Record<string, any>;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
-    maxBorrowingLimit!: number;
+    maxBorrowingLimit?: number;
 
     @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
     regulatorDeductionCap?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 40.00 })
-    maxDeductionPercentage!: number;
+    maxDeductionPercentage?: number;
 
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 10 })
-    liquidityRatioTarget!: number;
+    liquidityRatioTarget?: number;
 
     @Column({ type: 'json', nullable: true })
     kycConfiguration?: {
@@ -103,35 +103,35 @@ export class Tenant {
     lastComplianceReviewDate?: Date;
 
     @Column({ type: 'boolean', default: false })
-    isMaintenanceMode!: boolean;
+    isMaintenanceMode?: boolean;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 
-    @OneToMany(() => require('./User').User, (user: any) => user.tenant)
-    users!: User[];
+    @OneToMany('User', 'tenant')
+    users?: User[];
 
-    @OneToMany(() => require('./Member').Member, (member: any) => member.tenant)
-    members!: Member[];
+    @OneToMany('Member', 'tenant')
+    members?: Member[];
 
-    @OneToMany(() => require('./SavingsProduct').SavingsProduct, (product: any) => product.tenant)
-    savingsProducts!: SavingsProduct[];
+    @OneToMany('SavingsProduct', 'tenant')
+    savingsProducts?: SavingsProduct[];
 
-    @OneToMany(() => require('./LoanProduct').LoanProduct, (product: any) => product.tenant)
-    loanProducts!: LoanProduct[];
+    @OneToMany('LoanProduct', 'tenant')
+    loanProducts?: LoanProduct[];
 
-    @OneToMany(() => require('./InsuranceProduct').InsuranceProduct, (product: any) => product.tenant)
-    insuranceProducts!: InsuranceProduct[];
+    @OneToMany('InsuranceProduct', 'tenant')
+    insuranceProducts?: InsuranceProduct[];
 
-    @OneToMany(() => require('./MerchandiseProduct').MerchandiseProduct, (product: any) => product.tenant)
-    merchandiseProducts!: MerchandiseProduct[];
+    @OneToMany('MerchandiseProduct', 'tenant')
+    merchandiseProducts?: MerchandiseProduct[];
 
-    @OneToMany(() => require('./DeductionRequest').DeductionRequest, (request: any) => request.tenant)
-    deductionRequests!: DeductionRequest[];
+    @OneToMany('DeductionRequest', 'tenant')
+    deductionRequests?: DeductionRequest[];
 
-    @OneToMany(() => require('./Account').Account, (account: any) => account.tenant)
-    accounts!: Account[];
+    @OneToMany('Account', 'tenant')
+    accounts?: Account[];
 }

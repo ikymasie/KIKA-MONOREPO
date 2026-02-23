@@ -1,29 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { listMerchandiseProducts, createMerchandiseProduct } from '@/src/db/services/MerchandiseService';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { MerchandiseProduct } = await import('@/src/entities/MerchandiseProduct');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-
         const user = await getUserFromRequest(request);
         if (!user || !user.isTenantAdmin()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const productRepo = AppDataSource.getRepository(MerchandiseProduct);
-        const products = await productRepo.find({
-            where: { tenantId: user.tenantId },
-            order: { createdAt: 'DESC' }
-        });
-
+        const products = await listMerchandiseProducts(user.tenantId);
         return NextResponse.json(products);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
@@ -32,28 +19,14 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { AppDataSource } = await import('@/src/config/database');
-        const { MerchandiseProduct } = await import('@/src/entities/MerchandiseProduct');
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         const body = await request.json();
+        const product = await createMerchandiseProduct(user.tenantId, body);
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const productRepo = AppDataSource.getRepository(MerchandiseProduct);
-        const product = productRepo.create({
-            ...body,
-            tenantId: user.tenantId
-        });
-
-        await productRepo.save(product);
         return NextResponse.json(product);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

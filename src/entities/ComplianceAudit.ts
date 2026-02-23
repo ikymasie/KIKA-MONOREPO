@@ -7,8 +7,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { Tenant } from './Tenant';
-import { User } from './User';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 export enum AuditStatus {
     PENDING = 'pending',
@@ -20,30 +20,30 @@ export enum AuditStatus {
 @Entity('compliance_audits')
 export class ComplianceAudit {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({ type: 'timestamp' })
-    scheduledDate!: Date;
+    scheduledDate?: Date;
 
     @Column({ type: 'timestamp', nullable: true })
     completedDate?: Date;
 
     @Column({ type: 'enum', enum: AuditStatus, default: AuditStatus.PENDING })
-    status!: AuditStatus;
+    status?: AuditStatus;
 
     @Column({ type: 'uuid' })
-    auditorId!: string;
+    auditorId?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'auditorId' })
-    auditor!: User;
+    auditor?: User;
 
     @Column({ type: 'text', nullable: true })
     findings?: string;
@@ -52,8 +52,8 @@ export class ComplianceAudit {
     complianceScoreAtTime?: number;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

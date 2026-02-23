@@ -7,8 +7,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { User } from './User';
-import { Tenant } from './Tenant';
+import type { User } from './User';
+import type { Tenant } from './Tenant';
 
 export enum AccessRequestStatus {
     PENDING = 'pending',
@@ -20,48 +20,48 @@ export enum AccessRequestStatus {
 @Entity('auditor_access_requests')
 export class AuditorAccessRequest {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    auditorId!: string;
+    auditorId?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'auditorId' })
-    auditor!: User;
+    auditor?: User;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column({
         type: 'enum',
         enum: AccessRequestStatus,
         default: AccessRequestStatus.PENDING,
     })
-    status!: AccessRequestStatus;
+    status?: AccessRequestStatus;
 
     @Column({ type: 'timestamp' })
-    startDate!: Date;
+    startDate?: Date;
 
     @Column({ type: 'timestamp' })
-    endDate!: Date;
+    endDate?: Date;
 
     @Column({ type: 'text' })
-    purpose!: string;
+    purpose?: string;
 
     @Column({ type: 'uuid', nullable: true })
     approvedById?: string;
 
-    @ManyToOne(() => User, { nullable: true })
+    @ManyToOne('User', { nullable: true })
     @JoinColumn({ name: 'approvedById' })
     approvedBy?: User;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

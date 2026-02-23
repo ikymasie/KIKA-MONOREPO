@@ -4,7 +4,7 @@ import { formatMemberNumber, daysUntil } from '@/lib/dashboard-utils';
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
+        // Dynamic imports to avoid circular dependencies
         const { AppDataSource } = await import('@/src/config/database');
         const { Member } = await import('@/src/entities/Member');
         const { Loan, LoanStatus } = await import('@/src/entities/Loan');
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
         const { Transaction } = await import('@/src/entities/Transaction');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
-    
+
         // Authenticate user
         const user = await getUserFromRequest(request);
         if (!user) {
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             member: {
                 name: `${member.firstName} ${member.lastName}`,
-                memberNumber: formatMemberNumber(member.memberNumber || member.id, member.tenant?.code || 'GGE'),
+                memberNumber: formatMemberNumber(member.memberNumber || member.id!, member.tenant?.code || 'GGE'),
             },
             accounts: {
                 totalSavings,

@@ -6,8 +6,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { Loan } from './Loan';
-import { User } from './User';
+import type { Loan } from './Loan';
+import type { User } from './User';
 
 export enum WorkflowActionType {
     ELIGIBILITY_CHECK = 'eligibility_check',
@@ -24,14 +24,14 @@ export enum WorkflowActionType {
 @Entity('loan_workflow_logs')
 export class LoanWorkflowLog {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    loanId!: string;
+    loanId?: string;
 
-    @ManyToOne(() => Loan)
+    @ManyToOne('Loan')
     @JoinColumn({ name: 'loanId' })
-    loan!: Loan;
+    loan?: Loan;
 
     @Column({ nullable: true })
     fromStatus?: string;
@@ -40,12 +40,12 @@ export class LoanWorkflowLog {
     toStatus?: string;
 
     @Column({ type: 'enum', enum: WorkflowActionType })
-    actionType!: WorkflowActionType;
+    actionType?: WorkflowActionType;
 
     @Column({ type: 'uuid', nullable: true })
     actionBy?: string;
 
-    @ManyToOne(() => User, { nullable: true })
+    @ManyToOne('User', { nullable: true })
     @JoinColumn({ name: 'actionBy' })
     actionByUser?: User;
 
@@ -62,5 +62,5 @@ export class LoanWorkflowLog {
     };
 
     @CreateDateColumn()
-    timestamp!: Date;
+    timestamp?: Date;
 }

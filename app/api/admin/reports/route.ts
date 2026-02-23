@@ -4,14 +4,14 @@ import { In } from 'typeorm';
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
+        // Dynamic imports to avoid circular dependencies
         const { AppDataSource } = await import('@/src/config/database');
         const { Loan, LoanStatus } = await import('@/src/entities/Loan');
         const { Transaction, TransactionType, TransactionStatus } = await import('@/src/entities/Transaction');
         const { Asset } = await import('@/src/entities/Asset');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
-    
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
                 order: { transactionDate: 'DESC' },
             });
 
-            const lastDate = lastRepayment ? new Date(lastRepayment.transactionDate) : new Date(loan.disbursementDate || loan.createdAt);
+            const lastDate = lastRepayment ? new Date(lastRepayment.transactionDate!) : (loan.disbursementDate ?? loan.createdAt ?? new Date());
             const diffDays = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
 
             // If more than 30 days since last payment, it's at risk
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
             count: pendingLoans.length,
             categories: {
                 pending: pendingLoans.filter(l => l.status === LoanStatus.PENDING).length,
-                approved: pendingLoans.filter(l => [LoanStatus.APPROVED, LoanStatus.COMMITTEE_APPROVED].includes(l.status)).length,
+                approved: pendingLoans.filter(l => [LoanStatus.APPROVED, LoanStatus.COMMITTEE_APPROVED].includes(l.status!)).length,
             }
         };
 

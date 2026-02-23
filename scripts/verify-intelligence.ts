@@ -47,7 +47,7 @@ async function verifyIntelligenceModule() {
         // 3. Add a risk flag
         const screeningResult = await SocietyApplicationService.submitSecurityClearance(
             application.id,
-            officer.id,
+            officer.id!,
             false,
             'Initial findings: suspicious linkages found.',
             RiskLevel.MEDIUM
@@ -57,19 +57,19 @@ async function verifyIntelligenceModule() {
         const screening = await SocietyApplicationService.getSecurityScreening(application.id);
         if (!screening) throw new Error('Screening record not created');
 
-        const flag = await SocietyApplicationService.addRiskFlag(screening.id, {
+        const flag = await SocietyApplicationService.addRiskFlag(screening.id!, {
             type: 'financial' as any,
             description: 'Unexplained source of wealth for board member X'
         });
         console.log('✅ Risk flag added:', flag.id);
 
         // 4. Resolve flag and clear application
-        await SocietyApplicationService.resolveRiskFlag(flag.id, officer.id);
+        await SocietyApplicationService.resolveRiskFlag(flag.id!, officer.id!);
         console.log('✅ Risk flag resolved');
 
         await SocietyApplicationService.submitSecurityClearance(
             application.id,
-            officer.id,
+            officer.id!,
             true,
             'All issues resolved. Background check results are clear.',
             RiskLevel.LOW

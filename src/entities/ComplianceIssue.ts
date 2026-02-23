@@ -8,6 +8,8 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
+import type { Tenant } from './Tenant';
+import type { User } from './User';
 
 export enum ComplianceIssueType {
     BYLAW_VIOLATION = 'bylaw_violation',
@@ -38,36 +40,36 @@ export enum ComplianceIssueStatus {
 @Index(['severity'])
 export class ComplianceIssue {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne('Tenant', { nullable: false })
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: any;
+    tenant?: Tenant;
 
     @Column({ type: 'enum', enum: ComplianceIssueType })
-    issueType!: ComplianceIssueType;
+    issueType?: ComplianceIssueType;
 
     @Column({ type: 'enum', enum: ComplianceIssueSeverity })
-    severity!: ComplianceIssueSeverity;
+    severity?: ComplianceIssueSeverity;
 
     @Column({ type: 'enum', enum: ComplianceIssueStatus, default: ComplianceIssueStatus.OPEN })
-    status!: ComplianceIssueStatus;
+    status?: ComplianceIssueStatus;
 
     @Column({ type: 'text' })
-    description!: string;
+    description?: string;
 
     @Column({ type: 'uuid' })
-    identifiedBy!: string;
+    identifiedBy?: string;
 
-    @ManyToOne('User', { nullable: false })
+    @ManyToOne('User')
     @JoinColumn({ name: 'identifiedBy' })
-    identifier!: any;
+    identifier?: User;
 
     @Column({ type: 'timestamp' })
-    identifiedDate!: Date;
+    identifiedDate?: Date;
 
     @Column({ type: 'timestamp', nullable: true })
     resolutionDate?: Date;
@@ -79,8 +81,8 @@ export class ComplianceIssue {
     attachments?: string[];
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

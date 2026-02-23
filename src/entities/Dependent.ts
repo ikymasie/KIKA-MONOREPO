@@ -20,43 +20,44 @@ export enum DependentRelationship {
 @Entity('dependents')
 export class Dependent {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    memberId!: string;
+    memberId?: string;
 
-    @ManyToOne(() => require('./Member').Member, (member: any) => member.dependents)
+    @ManyToOne('Member', 'dependents')
     @JoinColumn({ name: 'memberId' })
-    member!: Member;
+    member?: Member;
 
     @Column()
-    firstName!: string;
+    firstName?: string;
 
     @Column()
-    lastName!: string;
+    lastName?: string;
 
     @Column({ type: 'enum', enum: DependentRelationship })
-    relationship!: DependentRelationship;
+    relationship?: DependentRelationship;
 
     @Column({ type: 'date' })
-    dateOfBirth!: Date;
+    dateOfBirth?: Date;
 
     @Column({ nullable: true })
     nationalId?: string;
 
     @Column()
-    gender!: string;
+    gender?: string;
 
     @Column({ default: true })
-    isActive!: boolean;
+    isActive?: boolean;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 
-    get age(): number {
+    get age(): number | null {
+        if (!this.dateOfBirth) return null;
         const today = new Date();
         const birthDate = new Date(this.dateOfBirth);
         let age = today.getFullYear() - birthDate.getFullYear();

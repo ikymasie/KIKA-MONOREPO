@@ -149,7 +149,7 @@ export class AccountingService {
 
         // Update account balances
         for (const entry of savedEntries) {
-            await this.updateAccountBalance(entry.accountId, entry.entryType, entry.amount);
+            await this.updateAccountBalance(entry.accountId!, entry.entryType!, Number(entry.amount));
         }
 
         return savedEntries;
@@ -160,7 +160,7 @@ export class AccountingService {
         if (account) {
             const amt = Number(amount);
             const isDebit = entryType === EntryType.DEBIT;
-            const increasesOnDebit = [AccountType.ASSET, AccountType.EXPENSE].includes(account.accountType);
+            const increasesOnDebit = [AccountType.ASSET, AccountType.EXPENSE].includes(account.accountType!);
 
             if (isDebit === increasesOnDebit) {
                 account.balance = Number(account.balance) + amt;
@@ -207,8 +207,8 @@ export class AccountingService {
             code: acc.code,
             name: acc.name,
             type: acc.accountType,
-            debit: [AccountType.ASSET, AccountType.EXPENSE].includes(acc.accountType) ? (acc.balance > 0 ? acc.balance : 0) : (acc.balance < 0 ? Math.abs(acc.balance) : 0),
-            credit: [AccountType.LIABILITY, AccountType.EQUITY, AccountType.REVENUE].includes(acc.accountType) ? (acc.balance > 0 ? acc.balance : 0) : (acc.balance < 0 ? Math.abs(acc.balance) : 0)
+            debit: [AccountType.ASSET, AccountType.EXPENSE].includes(acc.accountType!) ? (Number(acc.balance) > 0 ? Number(acc.balance) : 0) : (Number(acc.balance) < 0 ? Math.abs(Number(acc.balance)) : 0),
+            credit: [AccountType.LIABILITY, AccountType.EQUITY, AccountType.REVENUE].includes(acc.accountType!) ? (Number(acc.balance) > 0 ? Number(acc.balance) : 0) : (Number(acc.balance) < 0 ? Math.abs(Number(acc.balance)) : 0)
         }));
     }
 
@@ -250,7 +250,7 @@ export class AccountingService {
 
         // Update balances
         for (const entry of savedEntries) {
-            await this.updateAccountBalance(entry.accountId, entry.entryType, entry.amount);
+            await this.updateAccountBalance(entry.accountId as string, entry.entryType as EntryType, Number(entry.amount));
         }
 
         return savedEntries;
@@ -285,7 +285,7 @@ export class AccountingService {
 
         const savedEntries = await this.journalRepo.save(entries);
         for (const entry of savedEntries) {
-            await this.updateAccountBalance(entry.accountId, entry.entryType, entry.amount);
+            await this.updateAccountBalance(entry.accountId as string, entry.entryType as EntryType, Number(entry.amount));
         }
 
         return savedEntries;
@@ -308,7 +308,7 @@ export class AccountingService {
             transactionNumber: `INS-${Date.now()}`,
             transactionDate: new Date(),
             amount,
-            description: `Insurance payout for ${policy.member.firstName} ${policy.member.lastName}: ${description}`,
+            description: `Insurance payout for ${policy.member?.firstName} ${policy.member?.lastName}: ${description}`,
             status: TransactionStatus.COMPLETED
         });
         await this.transactionRepo.save(transaction);
@@ -320,7 +320,7 @@ export class AccountingService {
 
         const savedEntries = await this.journalRepo.save(entries);
         for (const entry of savedEntries) {
-            await this.updateAccountBalance(entry.accountId, entry.entryType, entry.amount);
+            await this.updateAccountBalance(entry.accountId as string, entry.entryType as EntryType, Number(entry.amount));
         }
 
         return savedEntries;

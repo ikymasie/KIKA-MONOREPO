@@ -7,8 +7,8 @@ import {
     JoinColumn,
     Index,
 } from 'typeorm';
-import { SocietyApplication } from './SocietyApplication';
-import { User } from './User';
+import type { SocietyApplication } from './SocietyApplication';
+import type { User } from './User';
 
 export enum CommunicationType {
     CALL = 'call',
@@ -30,34 +30,34 @@ export enum CommunicationDirection {
 @Index(['createdAt'])
 export class ApplicationCommunication {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    applicationId!: string;
+    applicationId?: string;
 
-    @ManyToOne(() => SocietyApplication)
+    @ManyToOne('SocietyApplication')
     @JoinColumn({ name: 'applicationId' })
     application?: SocietyApplication;
 
     @Column({ type: 'enum', enum: CommunicationType })
-    type!: CommunicationType;
+    type?: CommunicationType;
 
     @Column({ type: 'enum', enum: CommunicationDirection })
-    direction!: CommunicationDirection;
+    direction?: CommunicationDirection;
 
     @Column({ nullable: true })
     subject?: string;
 
     @Column({ type: 'text' })
-    content!: string;
+    content?: string;
 
     @Column({ type: 'uuid' })
-    recordedById!: string;
+    recordedById?: string;
 
-    @ManyToOne(() => User)
+    @ManyToOne('User')
     @JoinColumn({ name: 'recordedById' })
-    recordedBy!: User;
+    recordedBy?: User;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 }

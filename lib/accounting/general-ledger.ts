@@ -80,16 +80,16 @@ export class GeneralLedger {
             const account = await accountRepo.findOne({ where: { id: entry.accountId } });
             if (account) {
                 if (entry.entryType === EntryType.DEBIT) {
-                    if ([AccountType.ASSET, AccountType.EXPENSE].includes(account.accountType)) {
-                        account.balance += entry.amount;
+                    if ([AccountType.ASSET, AccountType.EXPENSE].includes(account.accountType!)) {
+                        account.balance = (account.balance || 0) + entry.amount;
                     } else {
-                        account.balance -= entry.amount;
+                        account.balance = (account.balance || 0) - entry.amount;
                     }
                 } else {
-                    if ([AccountType.LIABILITY, AccountType.EQUITY, AccountType.REVENUE].includes(account.accountType)) {
-                        account.balance += entry.amount;
+                    if ([AccountType.LIABILITY, AccountType.EQUITY, AccountType.REVENUE].includes(account.accountType!)) {
+                        account.balance = (account.balance || 0) + entry.amount;
                     } else {
-                        account.balance -= entry.amount;
+                        account.balance = (account.balance || 0) - entry.amount;
                     }
                 }
                 await accountRepo.save(account);
@@ -110,8 +110,8 @@ export class GeneralLedger {
 
         return accounts.map((account) => ({
             accountName: `${account.code} - ${account.name}`,
-            debit: account.balance >= 0 ? account.balance : 0,
-            credit: account.balance < 0 ? Math.abs(account.balance) : 0,
+            debit: (account.balance || 0) >= 0 ? (account.balance || 0) : 0,
+            credit: (account.balance || 0) < 0 ? Math.abs(account.balance || 0) : 0,
         }));
     }
 
@@ -132,15 +132,15 @@ export class GeneralLedger {
 
         const assets = accounts
             .filter((a) => a.accountType === AccountType.ASSET)
-            .map((a) => ({ name: a.name, amount: a.balance }));
+            .map((a) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
 
         const liabilities = accounts
             .filter((a) => a.accountType === AccountType.LIABILITY)
-            .map((a) => ({ name: a.name, amount: a.balance }));
+            .map((a) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
 
         const equity = accounts
             .filter((a) => a.accountType === AccountType.EQUITY)
-            .map((a) => ({ name: a.name, amount: a.balance }));
+            .map((a) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
 
         return {
             assets,
@@ -168,11 +168,11 @@ export class GeneralLedger {
 
         const revenue = accounts
             .filter((a) => a.accountType === AccountType.REVENUE)
-            .map((a) => ({ name: a.name, amount: a.balance }));
+            .map((a) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
 
         const expenses = accounts
             .filter((a) => a.accountType === AccountType.EXPENSE)
-            .map((a) => ({ name: a.name, amount: a.balance }));
+            .map((a) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
 
         const totalRevenue = revenue.reduce((sum, r) => sum + r.amount, 0);
         const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);

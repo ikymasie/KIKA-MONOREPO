@@ -15,13 +15,13 @@ export enum VendorStatus {
 @Entity('vendors')
 export class Vendor {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column()
-    name!: string;
+    name?: string;
 
     @Column()
-    code!: string;
+    code?: string;
 
     @Column({ nullable: true })
     registrationNumber?: string;
@@ -45,11 +45,11 @@ export class Vendor {
     bankAccountNumber?: string;
 
     @Column({ type: 'enum', enum: VendorStatus, default: VendorStatus.ACTIVE })
-    status!: VendorStatus;
+    status?: VendorStatus;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

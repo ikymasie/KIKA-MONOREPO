@@ -1,40 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { getSavingsPortfolioSummary } from '@/src/db/services/SavingsService';
+import { query } from '@/src/db/query';
+import { RowDataPacket } from 'mysql2/promise';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { MemberSavings } = await import('@/src/entities/MemberSavings');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-    
         const user = await getUserFromRequest(request);
-        if (!user || !user.isTenantAdmin()) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user || !user.isTenantAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const summary = await getSavingsPortfolioSummary(user.tenantId!);
 
-        const savingsRepo = AppDataSource.getRepository(MemberSavings);
-        const savings = await savingsRepo.find({
-            where: { product: { tenantId: user.tenantId } },
-            relations: ['member', 'product'],
-            order: { createdAt: 'DESC' }
-        });
-
-        // Calculate some aggregate metrics
-        const totalSavings = savings.reduce((sum, s) => sum + Number(s.balance), 0);
-        const activeAccounts = savings.filter(s => s.isActive).length;
+        // Fetch full savings rows with member + product info
+        const savings = await query<RowDataPacket>(
+            `SELECT ms.*,
+                    m.id AS memberId, m.firstName, m.lastName, m.memberNumber,
+                    sp.name AS productName, sp.code AS productCode, sp.isShareCapital
+             FROM member_savings ms
+             INNER JOIN members m ON m.id = ms.memberId
+             INNER JOIN savings_products sp ON sp.id = ms.productId
+             WHERE m.tenantId = ?
+             ORDER BY ms.createdAt DESC`,
+            [user.tenantId!]
+        );
 
         return NextResponse.json({
             savings,
             metrics: {
-                totalSavings,
-                activeAccounts
-            }
+                totalSavings: summary.totalBalance,
+                totalShareCapital: summary.totalShareCapital,
+                activeAccounts: summary.activeAccounts,
+                totalAccounts: summary.totalAccounts,
+            },
         });
     } catch (error: any) {
         console.error('Error fetching admin savings:', error);

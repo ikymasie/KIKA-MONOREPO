@@ -63,7 +63,7 @@ export class NotificationService {
                 });
 
                 await sendEmail({
-                    to: user.email,
+                    to: user.email!,
                     subject: emailContent.subject,
                     html: emailContent.html,
                     text: emailContent.text

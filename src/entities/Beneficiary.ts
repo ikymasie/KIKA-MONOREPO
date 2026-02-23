@@ -20,29 +20,29 @@ export enum BeneficiaryRelationship {
 @Entity('beneficiaries')
 export class Beneficiary {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id: string;
 
     @Column({ type: 'uuid' })
-    memberId!: string;
+    memberId?: string;
 
-    @ManyToOne(() => require('./Member').Member, (member: any) => member.beneficiaries)
+    @ManyToOne('Member', 'beneficiaries')
     @JoinColumn({ name: 'memberId' })
-    member!: Member;
+    member?: Member;
 
     @Column()
-    firstName!: string;
+    firstName?: string;
 
     @Column()
-    lastName!: string;
+    lastName?: string;
 
     @Column({ type: 'enum', enum: BeneficiaryRelationship })
-    relationship!: BeneficiaryRelationship;
+    relationship?: BeneficiaryRelationship;
 
     @Column({ type: 'date' })
-    dateOfBirth!: Date;
+    dateOfBirth?: Date;
 
     @Column()
-    nationalId!: string;
+    nationalId?: string;
 
     @Column({ nullable: true })
     phone?: string;
@@ -51,11 +51,11 @@ export class Beneficiary {
     address?: string;
 
     @Column({ type: 'decimal', precision: 5, scale: 2 })
-    allocationPercentage!: number;
+    allocationPercentage?: number;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

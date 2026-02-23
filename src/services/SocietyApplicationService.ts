@@ -31,22 +31,22 @@ export class SocietyApplicationService {
         let feeAmount = 0;
         switch (data.applicationType) {
             case ApplicationType.SACCOS:
-                feeAmount = settings.saccosApplicationFee;
+                feeAmount = settings.saccosApplicationFee!;
                 break;
             case ApplicationType.RELIGIOUS_SOCIETY:
-                feeAmount = settings.religiousSocietyApplicationFee;
+                feeAmount = settings.religiousSocietyApplicationFee!;
                 break;
             case ApplicationType.GENERAL_SOCIETY:
-                feeAmount = settings.generalSocietyApplicationFee;
+                feeAmount = settings.generalSocietyApplicationFee!;
                 break;
             case ApplicationType.BURIAL_SOCIETY:
-                feeAmount = settings.burialSocietyApplicationFee;
+                feeAmount = settings.burialSocietyApplicationFee!;
                 break;
             case ApplicationType.COOPERATIVE:
-                feeAmount = settings.cooperativeApplicationFee;
+                feeAmount = settings.cooperativeApplicationFee!;
                 break;
             default:
-                feeAmount = settings.generalSocietyApplicationFee;
+                feeAmount = settings.generalSocietyApplicationFee!;
         }
 
         const application = this.applicationRepo.create({
@@ -79,22 +79,22 @@ export class SocietyApplicationService {
         let feeAmount = 0;
         switch (application.applicationType) {
             case ApplicationType.SACCOS:
-                feeAmount = settings.saccosApplicationFee;
+                feeAmount = settings.saccosApplicationFee!;
                 break;
             case ApplicationType.RELIGIOUS_SOCIETY:
-                feeAmount = settings.religiousSocietyApplicationFee;
+                feeAmount = settings.religiousSocietyApplicationFee!;
                 break;
             case ApplicationType.GENERAL_SOCIETY:
-                feeAmount = settings.generalSocietyApplicationFee;
+                feeAmount = settings.generalSocietyApplicationFee!;
                 break;
             case ApplicationType.BURIAL_SOCIETY:
-                feeAmount = settings.burialSocietyApplicationFee;
+                feeAmount = settings.burialSocietyApplicationFee!;
                 break;
             case ApplicationType.COOPERATIVE:
-                feeAmount = settings.cooperativeApplicationFee;
+                feeAmount = settings.cooperativeApplicationFee!;
                 break;
             default:
-                feeAmount = settings.generalSocietyApplicationFee;
+                feeAmount = settings.generalSocietyApplicationFee!;
         }
 
         application.feeAmount = feeAmount;

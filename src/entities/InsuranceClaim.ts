@@ -10,7 +10,6 @@ import {
 import type { InsurancePolicy } from './InsurancePolicy';
 import type { Tenant } from './Tenant';
 
-
 export enum ClaimStatus {
     DRAFT = 'draft',
     SUBMITTED = 'submitted',
@@ -37,44 +36,43 @@ export enum ClaimType {
 @Entity('insurance_claims')
 export class InsuranceClaim {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    tenantId!: string;
+    tenantId?: string;
 
-    @ManyToOne(() => require('./Tenant').Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
-    tenant!: Tenant;
+    tenant?: Tenant;
 
     @Column()
-    claimNumber!: string;
+    claimNumber?: string;
 
     @Column({ type: 'uuid' })
-    policyId!: string;
+    policyId?: string;
 
-    @ManyToOne(() => require('./InsurancePolicy').InsurancePolicy, (policy: InsurancePolicy) => policy.claims)
+    @ManyToOne('InsurancePolicy', 'claims')
     @JoinColumn({ name: 'policyId' })
-    policy!: InsurancePolicy;
+    policy?: InsurancePolicy;
 
     @Column({ type: 'enum', enum: ClaimType })
-    claimType!: ClaimType;
+    claimType?: ClaimType;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    claimAmount!: number;
+    claimAmount?: number;
 
     @Column({ type: 'date' })
-    incidentDate!: Date;
+    incidentDate?: Date;
 
     @Column({ type: 'text' })
-    description!: string;
+    description?: string;
 
     @Column({ type: 'json', nullable: true })
     supportingDocuments?: string[];
 
     @Column({ type: 'enum', enum: ClaimStatus, default: ClaimStatus.SUBMITTED })
-    status!: ClaimStatus;
+    status?: ClaimStatus;
 
-    // Workflow Tracking
     @Column({ type: 'uuid', nullable: true })
     verifiedBy?: string;
 
@@ -93,7 +91,6 @@ export class InsuranceClaim {
     @Column({ type: 'timestamp', nullable: true })
     disbursedAt?: Date;
 
-    // Dispute Resolution
     @Column({ type: 'text', nullable: true })
     disputeReason?: string;
 
@@ -107,7 +104,7 @@ export class InsuranceClaim {
     regulatorRuling?: string;
 
     @Column({ type: 'boolean', default: false })
-    isExGratia!: boolean;
+    isExGratia?: boolean;
 
     @Column({ type: 'text', nullable: true })
     queryReason?: string;
@@ -122,8 +119,8 @@ export class InsuranceClaim {
     paidAt?: Date;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 
     @UpdateDateColumn()
-    updatedAt!: Date;
+    updatedAt?: Date;
 }

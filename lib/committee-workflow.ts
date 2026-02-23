@@ -205,11 +205,11 @@ export async function generateMinutes(
     const minutes = {
         loanNumber: loan.loanNumber,
         member: {
-            name: loan.member.fullName,
-            memberNumber: loan.member.memberNumber,
+            name: loan.member?.fullName || 'Unknown',
+            memberNumber: loan.member?.memberNumber || 'Unknown',
         },
         loanDetails: {
-            product: loan.product.name,
+            product: loan.product?.name || 'Unknown',
             principalAmount: Number(loan.principalAmount),
             termMonths: loan.termMonths,
             interestRate: Number(loan.interestRate),

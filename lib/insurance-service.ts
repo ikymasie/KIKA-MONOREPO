@@ -44,11 +44,11 @@ export class InsuranceService {
         const lapsedPolicies: InsurancePolicy[] = [];
 
         for (const policy of activePolicies) {
-            const startDate = new Date(policy.startDate);
+            const startDate = new Date(policy.startDate!);
             const monthsSinceStart = (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth());
 
             // Allow 2 months grace period
-            if (monthsSinceStart > policy.monthsPaid + 2) {
+            if (monthsSinceStart > (policy.monthsPaid || 0) + 2) {
                 policy.status = PolicyStatus.LAPSED;
                 lapsedPolicies.push(policy);
             }

@@ -38,19 +38,19 @@ export enum TransactionStatus {
 @Entity('transactions')
 export class Transaction {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column()
-    transactionNumber!: string;
+    transactionNumber?: string;
 
     @Column({ type: 'enum', enum: TransactionType })
-    transactionType!: TransactionType;
+    transactionType?: TransactionType;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    amount!: number;
+    amount?: number;
 
     @Column({ type: 'date' })
-    transactionDate!: Date;
+    transactionDate?: Date;
 
     @Column({ type: 'text', nullable: true })
     description?: string;
@@ -67,12 +67,12 @@ export class Transaction {
     @Column({ nullable: true })
     referenceType?: string;
 
-    @ManyToOne(() => require('./Member').Member)
+    @ManyToOne('Member')
     @JoinColumn({ name: 'memberId' })
     member?: Member;
 
     @Column({ type: 'enum', enum: TransactionStatus, default: TransactionStatus.PENDING })
-    status!: TransactionStatus;
+    status?: TransactionStatus;
 
     @Column({ type: 'uuid', nullable: true })
     createdBy?: string;
@@ -83,9 +83,9 @@ export class Transaction {
     @Column({ type: 'timestamp', nullable: true })
     approvedAt?: Date;
 
-    @OneToMany(() => require('./JournalEntry').JournalEntry, (entry: JournalEntry) => entry.transaction, { cascade: true })
-    journalEntries!: JournalEntry[];
+    @OneToMany('JournalEntry', 'transaction', { cascade: true })
+    journalEntries?: JournalEntry[];
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 }

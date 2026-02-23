@@ -95,7 +95,7 @@ export class ReconciliationEngine {
                 unmatchedCount++;
 
                 // Create suspense account entry for orphan deduction
-                await this.createSuspenseEntry(batch.id, mofRecord, member);
+                await this.createSuspenseEntry(batch.id!, mofRecord, member);
             } else if (Math.abs(variance) < 0.01) {
                 matchStatus = MatchStatus.MATCHED;
                 matchedCount++;
@@ -109,7 +109,7 @@ export class ReconciliationEngine {
             totalActual += actualAmount;
 
             const item = itemRepo.create({
-                batchId: batch.id,
+                batchId: batch.id!,
                 memberId: member?.id,
                 memberNumber: mofRecord.memberNumber,
                 nationalId: mofRecord.nationalId,
@@ -139,7 +139,7 @@ export class ReconciliationEngine {
                 totalExpected += deductionItem.currentAmount;
 
                 const item = itemRepo.create({
-                    batchId: batch.id,
+                    batchId: batch.id!,
                     memberId: deductionItem.memberId,
                     memberNumber: deductionItem.memberNumber,
                     nationalId: deductionItem.nationalId,

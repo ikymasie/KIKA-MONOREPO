@@ -7,8 +7,8 @@ import {
     ManyToOne,
     JoinColumn,
 } from 'typeorm';
-import { Tenant } from './Tenant';
-import { Member } from './Member';
+import type { Tenant } from './Tenant';
+import type { Member } from './Member';
 
 export enum SuspenseStatus {
     PENDING = 'pending',
@@ -25,7 +25,7 @@ export class SuspenseAccount {
     @Column({ type: 'uuid' })
     tenantId!: string;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne('Tenant')
     @JoinColumn({ name: 'tenantId' })
     tenant!: Tenant;
 
@@ -62,7 +62,7 @@ export class SuspenseAccount {
     @Column({ type: 'uuid', nullable: true })
     allocatedToMemberId?: string;
 
-    @ManyToOne(() => Member, { nullable: true })
+    @ManyToOne('Member', { nullable: true })
     @JoinColumn({ name: 'allocatedToMemberId' })
     allocatedToMember?: Member;
 

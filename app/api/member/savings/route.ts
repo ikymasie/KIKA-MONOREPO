@@ -1,40 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getUserFromRequest } from '@/lib/auth-server';
+import { queryOne } from '@/src/db/query';
+import { getMemberSavings, getMemberTotalSavings } from '@/src/db/services/SavingsService';
+import { RowDataPacket } from 'mysql2/promise';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { MemberSavings } = await import('@/src/entities/MemberSavings');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-
-    
         const user = await getUserFromRequest(request);
-        if (!user || user.role !== 'member') {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user || user.role !== 'member') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const member = await queryOne<RowDataPacket>('SELECT id FROM members WHERE userId = ? LIMIT 1', [user.id]);
+        if (!member) return NextResponse.json({ error: 'Member profile not found' }, { status: 404 });
 
-        // Find the member record for this user
-        const memberRepo = AppDataSource.getRepository('Member');
-        const member = await memberRepo.findOne({
-            where: { firebaseUid: user.firebaseUid }
-        });
-
-        if (!member) {
-            return NextResponse.json({ error: 'Member profile not found' }, { status: 404 });
-        }
-
-        const savingsRepo = AppDataSource.getRepository(MemberSavings);
-        const savings = await savingsRepo.find({
-            where: { memberId: member.id },
-            relations: ['product'],
-            order: { createdAt: 'DESC' }
-        });
-
+        const savings = await getMemberSavings(member.id);
         return NextResponse.json(savings);
     } catch (error: any) {
         console.error('Error fetching member savings:', error);

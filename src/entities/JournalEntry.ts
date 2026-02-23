@@ -17,31 +17,31 @@ export enum EntryType {
 @Entity('journal_entries')
 export class JournalEntry {
     @PrimaryGeneratedColumn('uuid')
-    id!: string;
+    id?: string;
 
     @Column({ type: 'uuid' })
-    transactionId!: string;
+    transactionId?: string;
 
-    @ManyToOne(() => require('./Transaction').Transaction, (transaction: Transaction) => transaction.journalEntries)
+    @ManyToOne('Transaction', 'journalEntries')
     @JoinColumn({ name: 'transactionId' })
-    transaction!: Transaction;
+    transaction?: Transaction;
 
     @Column({ type: 'uuid' })
-    accountId!: string;
+    accountId?: string;
 
-    @ManyToOne(() => require('./Account').Account, (account: Account) => account.journalEntries)
+    @ManyToOne('Account', 'journalEntries')
     @JoinColumn({ name: 'accountId' })
-    account!: Account;
+    account?: Account;
 
     @Column({ type: 'enum', enum: EntryType })
-    entryType!: EntryType;
+    entryType?: EntryType;
 
     @Column({ type: 'decimal', precision: 15, scale: 2 })
-    amount!: number;
+    amount?: number;
 
     @Column({ type: 'text', nullable: true })
     description?: string;
 
     @CreateDateColumn()
-    createdAt!: Date;
+    createdAt?: Date;
 }

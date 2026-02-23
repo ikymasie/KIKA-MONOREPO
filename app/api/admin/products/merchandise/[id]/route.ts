@@ -1,79 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { MerchandiseProduct } from '@/src/entities/MerchandiseProduct';
 import { getUserFromRequest } from '@/lib/auth-server';
-import { asyncHandler, UnauthorizedError, ForbiddenError, NotFoundError, BadRequestError } from '@/lib/errors';
+import { getMerchandiseProduct, updateMerchandiseProduct, deleteMerchandiseProduct } from '@/src/db/services/MerchandiseService';
 
 export const dynamic = 'force-dynamic';
-export const GET = asyncHandler(async (request: NextRequest, { params }: { params: { id: string } }) => {
-    const user = await getUserFromRequest(request);
-    if (!user || !user.isTenantAdmin()) {
-        throw new ForbiddenError('Unauthorized access');
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+    try {
+        const user = await getUserFromRequest(request);
+        if (!user || !user.isTenantAdmin()) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const product = await getMerchandiseProduct(params.id, user.tenantId);
+        if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+
+        return NextResponse.json(product);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
+}
 
-    if (!AppDataSource.isInitialized) {
-        await AppDataSource.initialize();
+export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+    try {
+        const user = await getUserFromRequest(request);
+        if (!user || user.role !== 'saccos_admin') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const body = await request.json();
+        const product = await updateMerchandiseProduct(params.id, user.tenantId, body);
+        return NextResponse.json(product);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
+}
 
-    const productRepo = AppDataSource.getRepository(MerchandiseProduct);
-    const product = await productRepo.findOne({
-        where: { id: params.id, tenantId: user.tenantId }
-    });
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+    try {
+        const user = await getUserFromRequest(request);
+        if (!user || user.role !== 'saccos_admin') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
 
-    if (!product) {
-        throw new NotFoundError('Product not found');
+        await deleteMerchandiseProduct(params.id, user.tenantId);
+        return NextResponse.json({ success: true, message: 'Product deleted successfully' });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    return NextResponse.json(product);
-});
-
-export const PATCH = asyncHandler(async (request: NextRequest, { params }: { params: { id: string } }) => {
-    const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'saccos_admin') {
-        throw new ForbiddenError('Unauthorized access');
-    }
-
-    const body = await request.json();
-
-    if (!AppDataSource.isInitialized) {
-        await AppDataSource.initialize();
-    }
-
-    const productRepo = AppDataSource.getRepository(MerchandiseProduct);
-    const product = await productRepo.findOne({
-        where: { id: params.id, tenantId: user.tenantId }
-    });
-
-    if (!product) {
-        throw new NotFoundError('Product not found');
-    }
-
-    Object.assign(product, body);
-    await productRepo.save(product);
-
-    return NextResponse.json(product);
-});
-
-export const DELETE = asyncHandler(async (request: NextRequest, { params }: { params: { id: string } }) => {
-    const user = await getUserFromRequest(request);
-    if (!user || user.role !== 'saccos_admin') {
-        throw new ForbiddenError('Unauthorized access');
-    }
-
-    if (!AppDataSource.isInitialized) {
-        await AppDataSource.initialize();
-    }
-
-    const productRepo = AppDataSource.getRepository(MerchandiseProduct);
-    const product = await productRepo.findOne({
-        where: { id: params.id, tenantId: user.tenantId }
-    });
-
-    if (!product) {
-        throw new NotFoundError('Product not found');
-    }
-
-    await productRepo.remove(product);
-
-    return NextResponse.json({ success: true, message: 'Product deleted successfully' });
-});
+}
