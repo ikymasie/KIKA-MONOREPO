@@ -13,7 +13,24 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         const order = await getMerchandiseOrder(params.id, user.tenantId);
         if (!order) return NextResponse.json({ error: 'Order not found' }, { status: 404 });
 
-        return NextResponse.json(order);
+        const formattedOrder = {
+            ...order,
+            member: {
+                firstName: (order as any).firstName || '',
+                lastName: (order as any).lastName || '',
+                memberNumber: (order as any).memberNumber || '',
+                email: (order as any).email || '',
+                phone: (order as any).phone || '',
+            },
+            product: {
+                id: (order as any).productId,
+                name: (order as any).productName || '',
+                sku: (order as any).sku || '',
+                stockQuantity: (order as any).stockQuantity || 0,
+            }
+        };
+
+        return NextResponse.json(formattedOrder);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

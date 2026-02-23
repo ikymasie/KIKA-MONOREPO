@@ -23,7 +23,21 @@ export async function GET(request: NextRequest) {
             memberId,
             { page, limit }
         );
-        return NextResponse.json(data);
+
+        const formattedOrders = data.orders.map((o: any) => ({
+            ...o,
+            member: {
+                firstName: o.firstName || '',
+                lastName: o.lastName || '',
+                memberNumber: o.memberNumber || '',
+            },
+            product: {
+                name: o.productName || '',
+                sku: o.sku || '',
+            }
+        }));
+
+        return NextResponse.json({ ...data, orders: formattedOrders });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
