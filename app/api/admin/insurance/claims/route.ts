@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
             { page, limit }
         );
 
+        
         return NextResponse.json(data);
     } catch (error: any) {
         console.error('Error fetching claims:', error);
