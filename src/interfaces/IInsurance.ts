@@ -115,6 +115,8 @@ export interface IInsuranceClaim {
 
     // Virtual joined fields
     policyNumber?: string;
+    productName?: string;
     memberFullName?: string;
+    memberEmail?: string;
     premiumAmount?: number;
 }

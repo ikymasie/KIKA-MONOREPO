@@ -14,16 +14,9 @@ interface Claim {
     claimAmount: number;
     status: string;
     claimType: string;
-    policy: {
-        policyNumber: string;
-        member: {
-            firstName: string;
-            lastName: string;
-        };
-        product: {
-            name: string;
-        }
-    };
+    policyNumber?: string;
+    productName?: string;
+    memberFullName?: string;
     createdAt: string;
 }
 
@@ -129,11 +122,11 @@ export default function AdminClaimsDashboard() {
                                             <p className="text-[10px] text-gray-400 font-bold mt-1">Filed: {format(new Date(claim.createdAt), 'MMM dd, yyyy')}</p>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <p className="font-bold text-gray-900">{claim.policy.member.firstName} {claim.policy.member.lastName}</p>
-                                            <p className="text-xs text-gray-500 font-medium"># {claim.policy.policyNumber}</p>
+                                            <p className="font-bold text-gray-900">{claim.memberFullName}</p>
+                                            <p className="text-xs text-gray-500 font-medium"># {claim.policyNumber}</p>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <p className="text-sm font-bold text-gray-900">{claim.policy.product.name}</p>
+                                            <p className="text-sm font-bold text-gray-900">{claim.productName}</p>
                                             <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">
                                                 {claim.claimType}
                                             </span>

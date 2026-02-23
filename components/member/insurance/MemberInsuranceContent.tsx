@@ -203,7 +203,7 @@ export default function MemberInsuranceContent() {
                                     <tr key={claim.id} className="hover:bg-gray-50/50 transition-colors">
                                         <td className="px-8 py-6">
                                             <p className="font-mono text-xs font-bold text-primary-600 tracking-tight">{claim.claimNumber}</p>
-                                            <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase">{claim.policy.product.name}</p>
+                                            <p className="text-[10px] text-gray-400 font-bold mt-1 uppercase">{claim.productName}</p>
                                         </td>
                                         <td className="px-8 py-6">
                                             <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">

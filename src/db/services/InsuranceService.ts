@@ -114,9 +114,10 @@ export async function listClaims(
     const total = parseInt(countRow?.total ?? '0', 10);
 
     const sql = `
-        SELECT ic.*, ip.policyNumber, CONCAT(m.firstName, ' ', m.lastName) AS memberFullName
+        SELECT ic.*, ip.policyNumber, pr.name AS productName, CONCAT(m.firstName, ' ', m.lastName) AS memberFullName, m.email AS memberEmail
         FROM insurance_claims ic
         INNER JOIN insurance_policies ip ON ip.id = ic.policyId
+        INNER JOIN insurance_products pr ON pr.id = ip.productId
         INNER JOIN members m ON m.id = ip.memberId
         ${baseWhere}
         ORDER BY ic.createdAt DESC
@@ -144,9 +145,10 @@ export async function listClaims(
 
 export async function getClaim(id: string, tenantId: string): Promise<IInsuranceClaim | null> {
     const row = await queryOne<RowDataPacket & IInsuranceClaim>(
-        `SELECT ic.*, ip.policyNumber, CONCAT(m.firstName, ' ', m.lastName) AS memberFullName 
+        `SELECT ic.*, ip.policyNumber, pr.name AS productName, CONCAT(m.firstName, ' ', m.lastName) AS memberFullName, m.email AS memberEmail
          FROM insurance_claims ic
          INNER JOIN insurance_policies ip ON ip.id = ic.policyId
+         INNER JOIN insurance_products pr ON pr.id = ip.productId
          INNER JOIN members m ON m.id = ip.memberId
          WHERE ic.id = ? AND ic.tenantId = ? LIMIT 1`,
         [id, tenantId]
