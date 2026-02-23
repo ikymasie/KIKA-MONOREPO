@@ -1,29 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Beneficiary } from '@/src/entities/Beneficiary';
-import { Member } from '@/src/entities/Member';
+import { query, execute, buildSetClause } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
 import { getUserFromRequest } from '@/lib/auth-server';
-import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, DatabaseError, NotFoundError } from '@/lib/errors';
-
-export const dynamic = 'force-dynamic';
-// Helper to initialize database
-async function initDB() {
-    if (!AppDataSource.isInitialized) {
-        try {
-            await AppDataSource.initialize();
-        } catch (error) {
-            throw new DatabaseError('Failed to initialize database connection');
-        }
-    }
-}
+import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, NotFoundError } from '@/lib/errors';
 
 // POST: Add a new beneficiary
 export const POST = asyncHandler(async (request: NextRequest) => {
     const user = await getUserFromRequest(request);
     if (!user) throw new UnauthorizedError('User not authenticated');
     if (!user.isTenantAdmin()) throw new ForbiddenError('Admin access required');
-
-    await initDB();
 
     const body = await request.json();
     const { memberId, firstName, lastName, relationship, dateOfBirth, nationalId, phone, address, allocationPercentage } = body;
@@ -32,32 +17,24 @@ export const POST = asyncHandler(async (request: NextRequest) => {
         throw new BadRequestError('Missing required fields');
     }
 
-    const memberRepo = AppDataSource.getRepository(Member);
-    const member = await memberRepo.findOne({ where: { id: memberId, tenantId: user.tenantId } });
+    const [[member]] = await query('SELECT id FROM members WHERE id = ? AND tenantId = ? LIMIT 1', [memberId, user.tenantId]) as any;
     if (!member) throw new NotFoundError('Member not found');
 
-    const beneficiaryRepo = AppDataSource.getRepository(Beneficiary);
-
     // Check total allocation percentage
-    const existingBeneficiaries = await beneficiaryRepo.find({ where: { memberId } });
+    const existingBeneficiaries = await query('SELECT allocationPercentage FROM beneficiaries WHERE memberId = ?', [memberId]) as any[];
     const currentTotal = existingBeneficiaries.reduce((sum, b) => sum + Number(b.allocationPercentage), 0);
     if (currentTotal + Number(allocationPercentage) > 100) {
         throw new BadRequestError(`Total allocation cannot exceed 100%. Current: ${currentTotal}%`);
     }
 
-    const beneficiary = beneficiaryRepo.create({
-        memberId,
-        firstName,
-        lastName,
-        relationship,
-        dateOfBirth: new Date(dateOfBirth),
-        nationalId,
-        phone,
-        address,
-        allocationPercentage: Number(allocationPercentage)
-    });
+    const newBeneficiaryId = uuidv4();
+    await execute(
+        `INSERT INTO beneficiaries (id, memberId, firstName, lastName, relationship, dateOfBirth, nationalId, phone, address, allocationPercentage, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [newBeneficiaryId, memberId, firstName, lastName, relationship, new Date(dateOfBirth), nationalId, phone || null, address || null, Number(allocationPercentage)]
+    );
 
-    await beneficiaryRepo.save(beneficiary);
+    const [[beneficiary]] = await query('SELECT * FROM beneficiaries WHERE id = ? LIMIT 1', [newBeneficiaryId]) as any;
 
     return NextResponse.json({
         success: true,
@@ -72,45 +49,41 @@ export const PATCH = asyncHandler(async (request: NextRequest) => {
     if (!user) throw new UnauthorizedError('User not authenticated');
     if (!user.isTenantAdmin()) throw new ForbiddenError('Admin access required');
 
-    await initDB();
-
     const body = await request.json();
     const { id, ...updates } = body;
 
     if (!id) throw new BadRequestError('Beneficiary ID is required');
 
-    const beneficiaryRepo = AppDataSource.getRepository(Beneficiary);
-    const beneficiary = await beneficiaryRepo.findOne({
-        where: { id },
-        relations: ['member']
-    });
+    const [[beneficiary]] = await query('SELECT b.*, m.tenantId FROM beneficiaries b JOIN members m ON m.id = b.memberId WHERE b.id = ? LIMIT 1', [id]) as any;
 
     if (!beneficiary) throw new NotFoundError('Beneficiary not found');
-    if (beneficiary.member?.tenantId !== user.tenantId) throw new ForbiddenError('Access denied');
+    if (beneficiary.tenantId !== user.tenantId) throw new ForbiddenError('Access denied');
 
     // If updating allocation, check total
     if (updates.allocationPercentage !== undefined) {
-        const otherBeneficiaries = await beneficiaryRepo.find({
-            where: { memberId: beneficiary.memberId }
-        });
+        const otherBeneficiaries = await query('SELECT id, allocationPercentage FROM beneficiaries WHERE memberId = ?', [beneficiary.memberId]) as any[];
         const currentTotal = otherBeneficiaries
-            .filter(b => b.id !== id)
-            .reduce((sum, b) => sum + Number(b.allocationPercentage), 0);
+            .filter((b: any) => b.id !== id)
+            .reduce((sum: number, b: any) => sum + Number(b.allocationPercentage), 0);
 
         if (currentTotal + Number(updates.allocationPercentage) > 100) {
             throw new BadRequestError(`Total allocation cannot exceed 100%. Other: ${currentTotal}%`);
         }
     }
 
-    Object.assign(beneficiary, updates);
-    if (updates.dateOfBirth) beneficiary.dateOfBirth = new Date(updates.dateOfBirth);
+    if (updates.dateOfBirth) updates.dateOfBirth = new Date(updates.dateOfBirth);
 
-    await beneficiaryRepo.save(beneficiary);
+    if (Object.keys(updates).length > 0) {
+        const { clause, values } = buildSetClause(updates);
+        await execute(`UPDATE beneficiaries SET ${clause}, updatedAt = NOW() WHERE id = ?`, [...values, id]);
+    }
+
+    const [[updatedBeneficiary]] = await query('SELECT * FROM beneficiaries WHERE id = ? LIMIT 1', [id]) as any;
 
     return NextResponse.json({
         success: true,
         message: 'Beneficiary updated successfully',
-        data: beneficiary
+        data: updatedBeneficiary
     });
 });
 
@@ -120,23 +93,17 @@ export const DELETE = asyncHandler(async (request: NextRequest) => {
     if (!user) throw new UnauthorizedError('User not authenticated');
     if (!user.isTenantAdmin()) throw new ForbiddenError('Admin access required');
 
-    await initDB();
-
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
     if (!id) throw new BadRequestError('Beneficiary ID is required');
 
-    const beneficiaryRepo = AppDataSource.getRepository(Beneficiary);
-    const beneficiary = await beneficiaryRepo.findOne({
-        where: { id },
-        relations: ['member']
-    });
+    const [[beneficiary]] = await query('SELECT b.*, m.tenantId FROM beneficiaries b JOIN members m ON m.id = b.memberId WHERE b.id = ? LIMIT 1', [id]) as any;
 
     if (!beneficiary) throw new NotFoundError('Beneficiary not found');
-    if (beneficiary.member?.tenantId !== user.tenantId) throw new ForbiddenError('Access denied');
+    if (beneficiary.tenantId !== user.tenantId) throw new ForbiddenError('Access denied');
 
-    await beneficiaryRepo.remove(beneficiary);
+    await execute('DELETE FROM beneficiaries WHERE id = ?', [id]);
 
     return NextResponse.json({
         success: true,

@@ -1,44 +1,48 @@
 import { NextResponse, NextRequest } from 'next/server';
-import { RegulatoryAlert } from '@/entities/RegulatoryAlert';
+import { query } from '@/src/db/query';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { AppDataSource } = await import('@/src/config/database');
         const { AlertGenerationService } = await import('@/src/services/AlertGenerationService');
-
 
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
         const { searchParams } = new URL(request.url);
         const severity = searchParams.get('severity');
         const isResolved = searchParams.get('resolved');
 
-        // Build query
-        const alertRepo = AppDataSource.getRepository(RegulatoryAlert);
-        let query = alertRepo.createQueryBuilder('alert')
-            .leftJoinAndSelect('alert.tenant', 'tenant')
-            .orderBy('alert.createdAt', 'DESC');
+        let sql = `
+            SELECT a.*, t.name as tenantName 
+            FROM regulatory_alerts a
+            LEFT JOIN tenants t ON t.id = a.tenantId
+        `;
+        const params: any[] = [];
+        const conditions: string[] = [];
 
         if (severity) {
-            query = query.andWhere('alert.severity = :severity', { severity });
+            conditions.push('a.severity = ?');
+            params.push(severity);
         }
 
         if (isResolved !== null) {
-            const resolved = isResolved === 'true';
-            query = query.andWhere('alert.isResolved = :isResolved', { isResolved: resolved });
+            const resolved = isResolved === 'true' ? 1 : 0;
+            conditions.push('a.isResolved = ?');
+            params.push(resolved);
         }
 
-        const alerts = await query.take(50).getMany();
+        if (conditions.length > 0) {
+            sql += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        sql += ' ORDER BY a.createdAt DESC LIMIT 50';
+
+        const alerts = await query(sql, params) as any[];
 
         return NextResponse.json(
             alerts.map(alert => ({
@@ -47,14 +51,14 @@ export async function GET(request: NextRequest) {
                 severity: alert.severity,
                 title: alert.title,
                 description: alert.description,
-                metadata: alert.metadata,
+                metadata: alert.metadata ? (typeof alert.metadata === 'string' ? JSON.parse(alert.metadata) : alert.metadata) : null,
                 isResolved: alert.isResolved,
                 resolvedAt: alert.resolvedAt,
                 createdAt: alert.createdAt,
-                tenant: {
-                    id: alert.tenant?.id,
-                    name: alert.tenant?.name
-                }
+                tenant: alert.tenantName ? {
+                    id: alert.tenantId,
+                    name: alert.tenantName
+                } : null
             }))
         );
 

@@ -23,7 +23,7 @@ export const GET = asyncHandler(async (
     const member = await getMemberProfile(id, user.tenantId);
     if (!member) throw new NotFoundError('Member not found');
 
-    const [kyc, loans, savings, beneficiaries, insurancePolicies] = await Promise.all([
+    const [kyc, loans, savingsRes, beneficiaries, insurancePolicies] = await Promise.all([
         getKYCByMemberId(id),
         getLoansByMember(id, user.tenantId),
         getMemberSavings(id),
@@ -37,6 +37,6 @@ export const GET = asyncHandler(async (
 
     return NextResponse.json({
         success: true,
-        data: { ...member, kyc, loans, savings, beneficiaries, insurancePolicies },
+        data: { ...member, kyc, loans, savings: savingsRes.savings, beneficiaries, insurancePolicies },
     });
 });

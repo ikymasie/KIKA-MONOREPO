@@ -5,11 +5,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Member } = await import('@/src/entities/Member');
-        const { Loan, LoanStatus } = await import('@/src/entities/Loan');
-        const { MemberSavings } = await import('@/src/entities/MemberSavings');
-        const { Transaction } = await import('@/src/entities/Transaction');
+        const { query } = await import('@/src/db/query');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
 
@@ -24,51 +20,28 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden - Members only' }, { status: 403 });
         }
 
-        // Initialize database connection
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const memberRepo = AppDataSource.getRepository(Member);
-        const loanRepo = AppDataSource.getRepository(Loan);
-        const savingsRepo = AppDataSource.getRepository(MemberSavings);
-        const transactionRepo = AppDataSource.getRepository(Transaction);
-
         // Find member record by user ID
-        const member = await memberRepo.findOne({
-            where: { userId: user.id },
-            relations: ['tenant'],
-        });
+        const [[member]] = await query(
+            'SELECT m.*, t.code as tenantCode FROM members m LEFT JOIN tenants t ON t.id = m.tenantId WHERE m.userId = ? LIMIT 1',
+            [user.id]
+        ) as any[];
 
         if (!member) {
             return NextResponse.json({ error: 'Member record not found' }, { status: 404 });
         }
 
         // Fetch member data
-        const [savings, activeLoan, recentTransactions] = await Promise.all([
-            // Member's savings accounts
-            savingsRepo.find({
-                where: { memberId: member.id },
-                relations: ['product'],
-            }),
+        const [savings, activeLoans, recentTransactions] = await Promise.all([
+            query('SELECT s.*, p.isShareCapital FROM member_savings s LEFT JOIN savings_products p ON p.id = s.productId WHERE s.memberId = ?', [member.id]),
+            query('SELECT * FROM loans WHERE memberId = ? AND status = "active" ORDER BY createdAt DESC LIMIT 1', [member.id]),
+            query('SELECT * FROM transactions WHERE memberId = ? ORDER BY createdAt DESC LIMIT 10', [member.id]),
+        ]) as any[][];
 
-            // Active loan
-            loanRepo.findOne({
-                where: { memberId: member.id, status: LoanStatus.ACTIVE },
-                order: { createdAt: 'DESC' },
-            }),
-
-            // Recent transactions
-            transactionRepo.find({
-                where: { memberId: member.id },
-                order: { createdAt: 'DESC' },
-                take: 10,
-            }),
-        ]);
+        const activeLoan = activeLoans.length > 0 ? activeLoans[0] : null;
 
         // Calculate totals
-        const totalSavings = savings.reduce((sum, account) => sum + Number(account.balance), 0);
-        const shareCapital = savings.find(s => s.product?.isShareCapital)?.balance || 0;
+        const totalSavings = savings.reduce((sum: number, account: any) => sum + Number(account.balance), 0);
+        const shareCapital = savings.find((s: any) => s.isShareCapital)?.balance || 0;
 
         // Format active loan data
         let activeLoanData = null;
@@ -110,7 +83,7 @@ export async function GET(request: NextRequest) {
             };
 
         // Format recent activity
-        const recentActivity = recentTransactions.map(txn => ({
+        const recentActivity = recentTransactions.map((txn: any) => ({
             type: txn.transactionType,
             amount: Number(txn.amount),
             date: txn.createdAt,
@@ -120,7 +93,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
             member: {
                 name: `${member.firstName} ${member.lastName}`,
-                memberNumber: formatMemberNumber(member.memberNumber || member.id!, member.tenant?.code || 'GGE'),
+                memberNumber: formatMemberNumber(member.memberNumber || member.id!, member.tenantCode || 'GGE'),
             },
             accounts: {
                 totalSavings,

@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import Pagination from '@/components/ui/Pagination';
 
 interface Claim {
     id: string;
@@ -13,16 +14,9 @@ interface Claim {
     claimAmount: number;
     status: string;
     claimType: string;
-    policy: {
-        policyNumber: string;
-        member: {
-            firstName: string;
-            lastName: string;
-        };
-        product: {
-            name: string;
-        }
-    };
+    policyNumber?: string;
+    productName?: string;
+    memberFullName?: string;
     createdAt: string;
 }
 
@@ -30,17 +24,27 @@ export default function AdminClaimsDashboard() {
     const [claims, setClaims] = useState<Claim[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState('all');
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
 
-    const fetchClaims = async (status?: string) => {
+    const fetchClaims = async (status?: string, currentPage: number = 1) => {
         setLoading(true);
         try {
-            const url = status && status !== 'all'
-                ? `/api/admin/insurance/claims?status=${status}`
-                : '/api/admin/insurance/claims';
+            const queryParams = new URLSearchParams({
+                page: currentPage.toString(),
+                limit: '50'
+            });
+
+            if (status && status !== 'all') {
+                queryParams.append('status', status);
+            }
+
+            const url = `/api/admin/insurance/claims?${queryParams.toString()}`;
             const res = await fetch(url);
             if (res.ok) {
                 const data = await res.json();
-                setClaims(data);
+                setClaims(data.claims || []);
+                setPagination(data.pagination);
             }
         } catch (error) {
             console.error('Failed to fetch claims:', error);
@@ -50,8 +54,8 @@ export default function AdminClaimsDashboard() {
     };
 
     useEffect(() => {
-        fetchClaims(filter);
-    }, [filter]);
+        fetchClaims(filter, page);
+    }, [filter, page]);
 
     const statusTabs = [
         { label: 'All queue', value: 'all' },
@@ -76,10 +80,10 @@ export default function AdminClaimsDashboard() {
                     {statusTabs.map((tab) => (
                         <button
                             key={tab.value}
-                            onClick={() => setFilter(tab.value)}
+                            onClick={() => { setFilter(tab.value); setPage(1); }}
                             className={`px-6 py-3 rounded-xl text-sm font-black transition-all ${filter === tab.value
-                                    ? 'bg-white text-primary-600 shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-700'
+                                ? 'bg-white text-primary-600 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-700'
                                 }`}
                         >
                             {tab.label}
@@ -118,11 +122,11 @@ export default function AdminClaimsDashboard() {
                                             <p className="text-[10px] text-gray-400 font-bold mt-1">Filed: {format(new Date(claim.createdAt), 'MMM dd, yyyy')}</p>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <p className="font-bold text-gray-900">{claim.policy.member.firstName} {claim.policy.member.lastName}</p>
-                                            <p className="text-xs text-gray-500 font-medium"># {claim.policy.policyNumber}</p>
+                                            <p className="font-bold text-gray-900">{claim.memberFullName}</p>
+                                            <p className="text-xs text-gray-500 font-medium"># {claim.policyNumber}</p>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <p className="text-sm font-bold text-gray-900">{claim.policy.product.name}</p>
+                                            <p className="text-sm font-bold text-gray-900">{claim.productName}</p>
                                             <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-full">
                                                 {claim.claimType}
                                             </span>
@@ -132,10 +136,10 @@ export default function AdminClaimsDashboard() {
                                         </td>
                                         <td className="px-8 py-6">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${claim.status === 'paid' ? 'bg-success-50 text-success-700 border-success-100' :
-                                                    claim.status === 'approved' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
-                                                        claim.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-100' :
-                                                            claim.status === 'under_appeal' ? 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse' :
-                                                                'bg-gray-50 text-gray-600 border-gray-100'
+                                                claim.status === 'approved' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' :
+                                                    claim.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-100' :
+                                                        claim.status === 'under_appeal' ? 'bg-amber-50 text-amber-700 border-amber-100 animate-pulse' :
+                                                            'bg-gray-50 text-gray-600 border-gray-100'
                                                 }`}>
                                                 {claim.status.replace('_', ' ')}
                                             </span>
@@ -152,6 +156,18 @@ export default function AdminClaimsDashboard() {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {pagination && pagination.totalPages > 1 && (
+                    <div className="mt-6">
+                        <Pagination
+                            currentPage={pagination.page}
+                            totalPages={pagination.totalPages}
+                            totalItems={pagination.total}
+                            itemsPerPage={pagination.limit}
+                            onPageChange={setPage}
+                        />
                     </div>
                 )}
             </div>

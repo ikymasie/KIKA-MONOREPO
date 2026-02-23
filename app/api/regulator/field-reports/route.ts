@@ -6,9 +6,7 @@ export async function GET(request: NextRequest) {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
         const { FieldOfficerService } = await import('@/src/services/FieldOfficerService');
-        const { AppDataSource } = await import('@/src/config/database');
-        const { FieldReport } = await import('@/src/entities/FieldReport');
-
+        const { query } = await import('@/src/db/query');
 
         const user = await getUserFromRequest(request);
         if (!user) {
@@ -22,16 +20,34 @@ export async function GET(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const tenantId = searchParams.get('tenantId') || undefined;
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
+        let sql = `
+            SELECT fr.*, 
+                   t.name as tenantName, 
+                   u.firstName as submittedByFirstName, u.lastName as submittedByLastName, u.email as submittedByEmail,
+                   v.scheduledDate as visitScheduledDate, v.status as visitStatus
+            FROM field_reports fr
+            LEFT JOIN tenants t ON t.id = fr.tenantId
+            LEFT JOIN users u ON u.id = fr.submittedById
+            LEFT JOIN field_visits v ON v.id = fr.visitId
+        `;
+        const params: any[] = [];
+
+        if (tenantId) {
+            sql += ' WHERE fr.tenantId = ?';
+            params.push(tenantId);
         }
 
-        const reportRepo = AppDataSource.getRepository(FieldReport);
-        const reports = await reportRepo.find({
-            where: tenantId ? { tenantId } : {},
-            relations: ['tenant', 'submittedBy', 'visit'],
-            order: { createdAt: 'DESC' },
-        });
+        sql += ' ORDER BY fr.createdAt DESC';
+
+        const results = await query(sql, params) as any[];
+
+        // Map back to expected structure
+        const reports = results.map(r => ({
+            ...r,
+            tenant: r.tenantName ? { id: r.tenantId, name: r.tenantName } : null,
+            submittedBy: r.submittedByFirstName ? { id: r.submittedById, firstName: r.submittedByFirstName, lastName: r.submittedByLastName, email: r.submittedByEmail } : null,
+            visit: r.visitId ? { id: r.visitId, scheduledDate: r.visitScheduledDate, status: r.visitStatus } : null,
+        }));
 
         return NextResponse.json(reports);
     } catch (error: any) {

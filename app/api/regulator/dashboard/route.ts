@@ -1,58 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/lib/db';
-import { Tenant } from '@/entities/Tenant';
-import { Member } from '@/entities/Member';
-import { Account } from '@/entities/Account';
-import { Loan } from '@/entities/Loan';
-import { SocietyApplication } from '@/entities/SocietyApplication';
+import { query } from '@/src/db/query';
 import { asyncHandler, DatabaseError } from '@/lib/errors';
 
 export const GET = asyncHandler(async (request: NextRequest) => {
     // Note: Authentication check can be added here if needed
     // For now, assuming regulator authentication is handled by middleware
 
-    // Initialize database connection
-    if (!AppDataSource.isInitialized) {
-        try {
-            await AppDataSource.initialize();
-        } catch (error) {
-            throw new DatabaseError('Failed to initialize database connection');
-        }
-    }
-
-    const tenantRepo = AppDataSource.getRepository(Tenant);
-    const memberRepo = AppDataSource.getRepository(Member);
-    const accountRepo = AppDataSource.getRepository(Account);
-    const loanRepo = AppDataSource.getRepository(Loan);
-    const applicationRepo = AppDataSource.getRepository(SocietyApplication);
-
     // 1. Total SACCOs/Societies
-    const totalSaccos = await tenantRepo.count();
+    const [[{ totalSaccos }]] = await query('SELECT COUNT(*) as totalSaccos FROM tenants') as any[];
 
     // 2. Total Members (across all tenants)
-    const totalMembers = await memberRepo.count();
+    const [[{ totalMembers }]] = await query('SELECT COUNT(*) as totalMembers FROM members') as any[];
 
     // 3. Total Savings (sum of all account balances)
-    const totalSavingsResult = await accountRepo
-        .createQueryBuilder('account')
-        .select('SUM(account.balance)', 'total')
-        .getRawOne();
+    const [[totalSavingsResult]] = await query('SELECT SUM(balance) as total FROM accounts') as any[];
     const totalSavings = parseFloat(totalSavingsResult?.total || '0');
 
     // 4. Outstanding Loans
-    const outstandingLoansResult = await loanRepo
-        .createQueryBuilder('loan')
-        .select('SUM(loan.outstandingBalance)', 'total')
-        .getRawOne();
+    const [[outstandingLoansResult]] = await query('SELECT SUM(outstandingBalance) as total FROM loans') as any[];
     const outstandingLoans = parseFloat(outstandingLoansResult?.total || '0');
 
     // 5. Portfolio at Risk (PAR)
     // PAR = (Outstanding balance of overdue loans) / Total outstanding loans * 100
-    const overdueLoansResult = await loanRepo
-        .createQueryBuilder('loan')
-        .select('SUM(loan.outstandingBalance)', 'total')
-        .where('loan.status = :status', { status: 'overdue' })
-        .getRawOne();
+    const [[overdueLoansResult]] = await query('SELECT SUM(outstandingBalance) as total FROM loans WHERE status = ?', ['overdue']) as any[];
 
     const overdueAmount = parseFloat(overdueLoansResult?.total || '0');
     const portfolioAtRisk = outstandingLoans > 0
@@ -60,12 +30,9 @@ export const GET = asyncHandler(async (request: NextRequest) => {
         : 0;
 
     // 6. Recent Activity (Applications)
-    const recentApplications = await applicationRepo.find({
-        take: 5,
-        order: { createdAt: 'DESC' }
-    });
+    const recentApplications = await query('SELECT * FROM society_applications ORDER BY createdAt DESC LIMIT 5') as any[];
 
-    const recentActivity = recentApplications.map(app => ({
+    const recentActivity = recentApplications.map((app: any) => ({
         type: 'Application',
         description: `New application: ${app.proposedName}`,
         date: app.createdAt,

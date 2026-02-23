@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { syncUserWithFirebase } from '@/lib/firebase-auth';
 import { adminAuth } from '@/lib/firebase-admin';
-import { UserRole as UserRoleType } from '@/src/entities/User';
-import { AppDataSource } from '@/src/config/database';
-import { User, UserRole, UserStatus } from '@/src/entities/User';
+import { UserRole as UserRoleType } from '@/src/interfaces/IUser';
+import { UserRole, UserStatus } from '@/src/interfaces/IUser';
+import { getUserByEmail, createUser } from '@/src/db/services/UserService';
 
 export async function POST(request: NextRequest) {
     try {
@@ -21,20 +21,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid role for registration' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const userRepository = AppDataSource.getRepository(User);
-
         // Check if user already exists
-        const existingUser = await userRepository.findOne({ where: { email } });
+        const existingUser = await getUserByEmail(email);
         if (existingUser) {
             return NextResponse.json({ error: 'User with this email already exists' }, { status: 400 });
         }
 
         // Create new user in MySQL
-        const newUser = userRepository.create({
+        const newUser = await createUser({
             email,
             firstName,
             lastName,
@@ -43,8 +37,6 @@ export async function POST(request: NextRequest) {
             mfaEnabled: false,
             mustChangePassword: false,
         });
-
-        await userRepository.save(newUser);
 
         // Create user in Firebase and set claims
         const firebaseUid = await syncUserWithFirebase(email, password, newUser);

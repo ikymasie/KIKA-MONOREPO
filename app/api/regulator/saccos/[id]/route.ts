@@ -7,12 +7,7 @@ export async function GET(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Tenant } = await import('@/src/entities/Tenant');
-        const { Member } = await import('@/src/entities/Member');
-        const { Account } = await import('@/src/entities/Account');
-        const { Loan, LoanStatus } = await import('@/src/entities/Loan');
-        const { Transaction } = await import('@/src/entities/Transaction');
+        const { query } = await import('@/src/db/query');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
 
@@ -21,96 +16,70 @@ export async function GET(
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
         const { id } = params;
 
         // Fetch SACCO details
-        const tenantRepo = AppDataSource.getRepository(Tenant);
-        const sacco = await tenantRepo.findOne({
-            where: { id },
-            relations: ['users']
-        });
+        const saccos = await query(`
+            SELECT t.*, u.email as contactEmail, u.phone as contactPhone 
+            FROM tenants t 
+            LEFT JOIN users u ON u.tenantId = t.id AND u.role = 'admin' 
+            WHERE t.id = ?
+            GROUP BY t.id
+        `, [id]) as any[];
+        const sacco = saccos[0];
 
         if (!sacco) {
             return NextResponse.json({ error: 'SACCO not found' }, { status: 404 });
         }
 
         // Get member statistics
-        const memberRepo = AppDataSource.getRepository(Member);
-        const totalMembers = await memberRepo.count({ where: { tenantId: id } });
+        const [[{ totalMembers }]] = await query('SELECT COUNT(*) as totalMembers FROM members WHERE tenantId = ?', [id]) as any[];
 
-        const membersByStatus = await memberRepo
-            .createQueryBuilder('member')
-            .select('member.status', 'status')
-            .addSelect('COUNT(*)', 'count')
-            .where('member.tenantId = :tenantId', { tenantId: id })
-            .groupBy('member.status')
-            .getRawMany();
+        const membersByStatus = await query(
+            'SELECT status, COUNT(*) as count FROM members WHERE tenantId = ? GROUP BY status',
+            [id]
+        ) as any[];
 
         // Get financial metrics
-        const accountRepo = AppDataSource.getRepository(Account);
-
         // Total savings
-        const savingsResult = await accountRepo
-            .createQueryBuilder('account')
-            .select('SUM(account.balance)', 'total')
-            .where('account.tenantId = :tenantId', { tenantId: id })
-            .getRawOne();
+        const [[savingsResult]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [id]) as any[];
         const totalSavings = parseFloat(savingsResult?.total || '0');
 
         // Account breakdown
-        const accountsByType = await accountRepo
-            .createQueryBuilder('account')
-            .select('account.accountType', 'type')
-            .addSelect('COUNT(*)', 'count')
-            .addSelect('SUM(account.balance)', 'total')
-            .where('account.tenantId = :tenantId', { tenantId: id })
-            .groupBy('account.accountType')
-            .getRawMany();
+        const accountsByType = await query(
+            'SELECT accountType as type, COUNT(*) as count, SUM(balance) as total FROM accounts WHERE tenantId = ? GROUP BY accountType',
+            [id]
+        ) as any[];
 
         // Loan statistics
-        const loanRepo = AppDataSource.getRepository(Loan);
+        const [[loanStats]] = await query(
+            'SELECT COUNT(*) as totalLoans, SUM(principalAmount) as totalDisbursed, SUM(outstandingBalance) as totalOutstanding FROM loans WHERE tenantId = ?',
+            [id]
+        ) as any[];
 
-        const loanStats = await loanRepo
-            .createQueryBuilder('loan')
-            .select('COUNT(*)', 'totalLoans')
-            .addSelect('SUM(loan.principalAmount)', 'totalDisbursed')
-            .addSelect('SUM(loan.outstandingBalance)', 'totalOutstanding')
-            .where('loan.tenantId = :tenantId', { tenantId: id })
-            .getRawOne();
-
-        const activeLoans = await loanRepo.count({
-            where: { tenantId: id, status: LoanStatus.ACTIVE }
-        });
+        const [[{ activeLoans }]] = await query('SELECT COUNT(*) as activeLoans FROM loans WHERE tenantId = ? AND status = ?', [id, 'active']) as any[];
 
         // Calculate Portfolio at Risk (loans overdue > 30 days)
-        const overdueLoans = await loanRepo
-            .createQueryBuilder('loan')
-            .select('SUM(loan.outstandingBalance)', 'total')
-            .where('loan.tenantId = :tenantId', { tenantId: id })
-            .andWhere('loan.status = :status', { status: 'overdue' })
-            .getRawOne();
+        const [[overdueLoans]] = await query('SELECT SUM(outstandingBalance) as total FROM loans WHERE tenantId = ? AND status = ?', [id, 'overdue']) as any[];
 
-        const portfolioAtRisk = loanStats.totalOutstanding > 0
+        const portfolioAtRisk = parseFloat(loanStats?.totalOutstanding || '0') > 0
             ? ((parseFloat(overdueLoans?.total || '0') / parseFloat(loanStats.totalOutstanding)) * 100).toFixed(2)
             : '0.00';
 
         // Recent transactions
-        const transactionRepo = AppDataSource.getRepository(Transaction);
-        const recentTransactions = await transactionRepo.find({
-            where: { tenantId: id },
-            order: { createdAt: 'DESC' },
-            take: 10,
-            relations: ['member']
-        });
+        const recentTransactions = await query(`
+            SELECT t.*, m.firstName, m.lastName 
+            FROM transactions t
+            LEFT JOIN members m ON m.id = t.memberId
+            WHERE t.tenantId = ?
+            ORDER BY t.createdAt DESC
+            LIMIT 10
+        `, [id]) as any[];
 
         // Compliance metrics
         const complianceStatus = {
             hasActiveRegistration: sacco.status === 'active',
-            liquidityRatio: calculateLiquidityRatio(totalSavings, parseFloat(loanStats.totalOutstanding || '0')),
+            liquidityRatio: calculateLiquidityRatio(totalSavings, parseFloat(loanStats?.totalOutstanding || '0')),
             capitalAdequacy: 'N/A', // Would need capital data
             lastAuditDate: null, // Would need audit records
             isCompliant: sacco.status === 'active'
@@ -124,8 +93,8 @@ export async function GET(
                 status: sacco.status,
                 createdAt: sacco.createdAt,
                 address: sacco.address,
-                contactEmail: sacco.users?.[0]?.email || null,
-                contactPhone: sacco.users?.[0]?.phone || null
+                contactEmail: sacco.contactEmail || null,
+                contactPhone: sacco.contactPhone || null
             },
             members: {
                 total: totalMembers,
@@ -135,10 +104,10 @@ export async function GET(
                 totalSavings,
                 accountsByType,
                 loans: {
-                    total: parseInt(loanStats.totalLoans || '0'),
-                    active: activeLoans,
-                    totalDisbursed: parseFloat(loanStats.totalDisbursed || '0'),
-                    totalOutstanding: parseFloat(loanStats.totalOutstanding || '0'),
+                    total: parseInt(loanStats?.totalLoans || '0'),
+                    active: parseInt(activeLoans || '0'),
+                    totalDisbursed: parseFloat(loanStats?.totalDisbursed || '0'),
+                    totalOutstanding: parseFloat(loanStats?.totalOutstanding || '0'),
                     portfolioAtRisk: parseFloat(portfolioAtRisk)
                 }
             },
@@ -148,7 +117,7 @@ export async function GET(
                 transactionType: tx.transactionType,
                 amount: tx.amount,
                 description: tx.description,
-                memberName: tx.member?.firstName + ' ' + tx.member?.lastName,
+                memberName: tx.firstName ? tx.firstName + ' ' + tx.lastName : null,
                 createdAt: tx.createdAt
             }))
         });

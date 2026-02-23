@@ -4,9 +4,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Bylaw } = await import('@/src/entities/Bylaw');
-        const { ByelawReview, ByelawReviewStatus } = await import('@/src/entities/ByelawReview');
+        const { query } = await import('@/src/db/query');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
         const user = await getUserFromRequest(request);
@@ -14,22 +12,9 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const bylawRepo = AppDataSource.getRepository(Bylaw);
-        const reviewRepo = AppDataSource.getRepository(ByelawReview);
-
         const [bylaws, reviews] = await Promise.all([
-            bylawRepo.find({
-                where: { tenantId: user.tenantId },
-                order: { createdAt: 'DESC' },
-            }),
-            reviewRepo.find({
-                where: { tenantId: user.tenantId },
-                order: { submittedAt: 'DESC' },
-            }),
+            query('SELECT * FROM bylaws WHERE tenantId = ? ORDER BY createdAt DESC', [user.tenantId]),
+            query('SELECT * FROM byelaw_reviews WHERE tenantId = ? ORDER BY submittedAt DESC', [user.tenantId]),
         ]);
 
         return NextResponse.json({ bylaws, reviews });
@@ -42,9 +27,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { ByelawReview, ByelawReviewStatus } = await import('@/src/entities/ByelawReview');
+        const { execute, query } = await import('@/src/db/query');
         const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { v4: uuidv4 } = await import('uuid');
 
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
@@ -58,22 +43,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Document URL and version are required' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
+        const reviewId = uuidv4();
+        await execute(
+            `INSERT INTO byelaw_reviews (id, tenantId, bylawDocumentUrl, version, submittedAt, status, reviewNotes, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, NOW(), 'pending', ?, NOW(), NOW())`,
+            [reviewId, user.tenantId, documentUrl, parseInt(version), notes || null]
+        );
 
-        const reviewRepo = AppDataSource.getRepository(ByelawReview);
-
-        const newReview = reviewRepo.create({
-            tenantId: user.tenantId,
-            bylawDocumentUrl: documentUrl,
-            version: parseInt(version),
-            submittedAt: new Date(),
-            status: ByelawReviewStatus.PENDING,
-            reviewNotes: notes,
-        });
-
-        await reviewRepo.save(newReview);
+        const [[newReview]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
 
         return NextResponse.json(newReview, { status: 201 });
     } catch (error: any) {

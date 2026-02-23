@@ -65,7 +65,20 @@ export async function getSavingsProductById(id: string, tenantId: string): Promi
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** All savings accounts for a member, joined with product details. */
-export async function getMemberSavings(memberId: string): Promise<IMemberSavings[]> {
+export async function getMemberSavings(
+    memberId: string,
+    pagination?: { page?: number; limit?: number }
+) {
+    const page = Math.max(1, pagination?.page ?? 1);
+    const limit = pagination?.limit ? Math.min(10000, Math.max(1, pagination.limit)) : 10000;
+    const offset = (page - 1) * limit;
+
+    const countRow = await queryOne<RowDataPacket & { total: string }>(
+        `SELECT COUNT(*) as total FROM member_savings WHERE memberId = ?`,
+        [memberId]
+    );
+    const total = parseInt(countRow?.total ?? '0', 10);
+
     const rows = await query<RowDataPacket>(
         `SELECT ms.*,
                 sp.name    AS productName,
@@ -75,10 +88,20 @@ export async function getMemberSavings(memberId: string): Promise<IMemberSavings
          FROM member_savings ms
          LEFT JOIN savings_products sp ON sp.id = ms.productId
          WHERE ms.memberId = ?
-         ORDER BY sp.isShareCapital DESC, ms.createdAt ASC`,
-        [memberId]
+         ORDER BY sp.isShareCapital DESC, ms.createdAt ASC
+         LIMIT ? OFFSET ?`,
+        [memberId, limit, offset]
     );
-    return rows.map(parseMemberSavings);
+
+    return {
+        savings: rows.map(parseMemberSavings),
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
 }
 
 export async function getMemberSavingsById(id: string, memberId: string): Promise<IMemberSavings | null> {

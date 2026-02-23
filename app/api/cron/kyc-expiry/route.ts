@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { KYC } from '@/src/entities/KYC';
-import { Member } from '@/src/entities/Member';
-import { User } from '@/src/entities/User';
-import { NotificationLog } from '@/src/entities/NotificationLog';
+import { query } from '@/src/db/query';
 import { notificationService } from '@/lib/notification-service';
-import { NotificationEvent, NotificationChannel, NotificationStatus } from '@/lib/notification-types';
-import { LessThanOrEqual, MoreThan, IsNull, Not, In } from 'typeorm';
+import { NotificationEvent } from '@/lib/notification-types';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes max for cron job
@@ -25,14 +20,6 @@ export const GET = async (request: NextRequest) => {
             return new NextResponse('Unauthorized', { status: 401 });
         }
     }
-
-    if (!AppDataSource.isInitialized) {
-        await AppDataSource.initialize();
-    }
-
-    const kycRepo = AppDataSource.getRepository(KYC);
-    const logRepo = AppDataSource.getRepository(NotificationLog);
-    const memberRepo = AppDataSource.getRepository(Member); // To get User details
 
     const results = {
         checked: 0,
@@ -64,103 +51,71 @@ export const GET = async (request: NextRequest) => {
             // We check separate queries for each doc type to keep logic clean, 
             // though a complex OR query is possible.
 
-            // 1. Omang
-            const expiringOmang = await kycRepo.find({
-                where: {
-                    omangExpiryDate: MoreThan(startOfDay) && LessThanOrEqual(endOfDay) as any // TypeORM date range syntax hint
-                    // Actually TypeORM 'Between' is better
-                } as any,
-                relations: ['member', 'member.user']
-            });
-            // TypeORM find options for dates can be tricky with exact matches, using raw query or Between is safer usually. 
-            // Let's use QueryBuilder for better control over dates
-
-            const qb = kycRepo.createQueryBuilder('kyc')
-                .leftJoinAndSelect('kyc.member', 'member')
-                .leftJoinAndSelect('member.user', 'user')
-                .where('member.status = :status', { status: 'active' });
-
-            // We want (expiry >= start AND expiry <= end)
-            // But doing this for all 3 doc types in one query implies ORs.
-
-            // Let's process the records in memory if the dataset isn't huge, 
-            // OR simply run 3 separate efficient queries for this specific day.
-
-            // Query 1: OMANG
-            const omangList = await kycRepo.createQueryBuilder('kyc')
-                .innerJoinAndSelect('kyc.member', 'member')
-                .leftJoinAndSelect('member.user', 'user')
-                .where('kyc.omangExpiryDate >= :start AND kyc.omangExpiryDate <= :end', { start: startOfDay, end: endOfDay })
-                .getMany();
+            const omangList = await query(
+                `SELECT k.*, m.firstName, m.lastName, m.email as memberEmail, m.phone as memberPhone, m.tenantId, u.id as userId, u.email as userEmail, u.phone as userPhone, u.role as userRole
+                 FROM kycs k
+                 INNER JOIN members m ON m.id = k.memberId
+                 LEFT JOIN users u ON u.id = m.userId
+                 WHERE m.status = 'active' AND k.omangExpiryDate >= ? AND k.omangExpiryDate <= ?`,
+                [startOfDay, endOfDay]
+            ) as any[];
 
             await processExpiryBatch(omangList, 'Omang / National ID', days);
 
             // Query 2: PASSPORT
-            const passportList = await kycRepo.createQueryBuilder('kyc')
-                .innerJoinAndSelect('kyc.member', 'member')
-                .leftJoinAndSelect('member.user', 'user')
-                .where('kyc.passportExpiryDate >= :start AND kyc.passportExpiryDate <= :end', { start: startOfDay, end: endOfDay })
-                .getMany();
+            const passportList = await query(
+                `SELECT k.*, m.firstName, m.lastName, m.email as memberEmail, m.phone as memberPhone, m.tenantId, u.id as userId, u.email as userEmail, u.phone as userPhone, u.role as userRole
+                 FROM kycs k
+                 INNER JOIN members m ON m.id = k.memberId
+                 LEFT JOIN users u ON u.id = m.userId
+                 WHERE m.status = 'active' AND k.passportExpiryDate >= ? AND k.passportExpiryDate <= ?`,
+                [startOfDay, endOfDay]
+            ) as any[];
 
             await processExpiryBatch(passportList, 'Passport', days);
 
             // Query 3: WORK PERMIT
-            const permitList = await kycRepo.createQueryBuilder('kyc')
-                .innerJoinAndSelect('kyc.member', 'member')
-                .leftJoinAndSelect('member.user', 'user')
-                .where('kyc.workPermitExpiryDate >= :start AND kyc.workPermitExpiryDate <= :end', { start: startOfDay, end: endOfDay })
-                .getMany();
+            const permitList = await query(
+                `SELECT k.*, m.firstName, m.lastName, m.email as memberEmail, m.phone as memberPhone, m.tenantId, u.id as userId, u.email as userEmail, u.phone as userPhone, u.role as userRole
+                 FROM kycs k
+                 INNER JOIN members m ON m.id = k.memberId
+                 LEFT JOIN users u ON u.id = m.userId
+                 WHERE m.status = 'active' AND k.workPermitExpiryDate >= ? AND k.workPermitExpiryDate <= ?`,
+                [startOfDay, endOfDay]
+            ) as any[];
 
             await processExpiryBatch(permitList, 'Work Permit', days);
         }
 
-        async function processExpiryBatch(list: KYC[], docType: string, daysRemaining: number) {
+        async function processExpiryBatch(list: any[], docType: string, daysRemaining: number) {
             results.checked += list.length;
 
-            for (const kyc of list) {
-                if (!kyc.member) continue;
-
-                // If member isn't linked to a User, we might send SMS to phone
-                // If they are linked, we have User properties (email etc)
-                const member = kyc.member;
-                const user = member.user;
-
+            for (const row of list) {
                 // Determine contact details
-                const phone = user?.phone || member.phone;
-                const email = user?.email || member.email;
-                const role = user?.role || 'member';
+                const phone = row.userPhone || row.memberPhone;
+                const email = row.userEmail || row.memberEmail;
+                const role = row.userRole || 'member';
 
                 const event = daysRemaining === 0
                     ? NotificationEvent.MEMBER_KYC_EXPIRED
                     : NotificationEvent.MEMBER_KYC_EXPIRY_WARNING;
 
-                // Check deduplication log
-                // Have we sent this specific event to this user for this doc type today?
-                // We can use a unique key in metadata or just check last sent time for this event
-                const alreadySent = await logRepo.findOne({
-                    where: {
-                        recipient: email || phone,
-                        event: event,
-                        metadata: { // JSON queries in TypeORM can be database specific, be careful
-                            // Ideally we store a hash or key. 
-                            // For now, let's just query by time + event + recipient
-                            // and filter in code if needed.
-                        } as any,
-                        sentAt: MoreThan(new Date(now.getTime() - 20 * 60 * 60 * 1000)) // Sent in last 20 hours
-                    } as any
-                });
+                const alreadySent = await query(
+                    'SELECT id FROM notification_logs WHERE recipient IN (?, ?) AND event = ? AND sentAt > ? LIMIT 1',
+                    [email || '', phone || '', event, new Date(now.getTime() - 20 * 60 * 60 * 1000)]
+                ) as any[];
 
-                if (alreadySent) continue;
+                if (alreadySent.length > 0) continue;
 
                 await notificationService.sendNotification({
                     event,
                     recipientRole: role,
                     recipientEmail: email,
                     recipientPhone: phone,
-                    userId: user?.id,
-                    tenantId: member.tenantId,
+                    userId: row.userId,
+                    tenantId: row.tenantId,
                     data: {
-                        firstName: member.firstName,
+                        firstName: row.firstName,
                         documentType: docType,
                         expiryDate: new Date(now.getTime() + daysRemaining * 86400000).toLocaleDateString(),
                         daysRemaining: daysRemaining,

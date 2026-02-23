@@ -82,37 +82,73 @@ export async function createPolicy(tenantId: string, data: Partial<IInsurancePol
     return policy;
 }
 
-export async function listClaims(tenantId: string, memberId?: string): Promise<IInsuranceClaim[]> {
-    let sql = `
-        SELECT ic.*, ip.policyNumber, CONCAT(m.firstName, ' ', m.lastName) AS memberFullName
-        FROM insurance_claims ic
-        INNER JOIN insurance_policies ip ON ip.id = ic.policyId
-        INNER JOIN members m ON m.id = ip.memberId
-        WHERE ic.tenantId = ?
-    `;
+export async function listClaims(
+    tenantId: string,
+    memberId?: string,
+    filter?: { status?: string },
+    pagination?: { page?: number; limit?: number }
+) {
+    const page = Math.max(1, pagination?.page ?? 1);
+    const limit = pagination?.limit ? Math.min(10000, Math.max(1, pagination.limit)) : 10000;
+    const offset = (page - 1) * limit;
+
+    let baseWhere = `WHERE ic.tenantId = ?`;
     const params: any[] = [tenantId];
 
     if (memberId) {
-        sql += ` AND ip.memberId = ?`;
+        baseWhere += ` AND ip.memberId = ?`;
         params.push(memberId);
     }
-    sql += ` ORDER BY ic.createdAt DESC`;
+    if (filter?.status) {
+        baseWhere += ` AND ic.status = ?`;
+        params.push(filter.status);
+    }
 
-    const rows = await query<RowDataPacket & IInsuranceClaim>(sql, params);
+    const countRow = await queryOne<RowDataPacket & { total: string }>(
+        `SELECT COUNT(*) as total 
+         FROM insurance_claims ic
+         INNER JOIN insurance_policies ip ON ip.id = ic.policyId
+         ${baseWhere}`,
+        params
+    );
+    const total = parseInt(countRow?.total ?? '0', 10);
 
-    // Parse JSON docs
-    return rows.map(r => ({
+    const sql = `
+        SELECT ic.*, ip.policyNumber, pr.name AS productName, CONCAT(m.firstName, ' ', m.lastName) AS memberFullName, m.email AS memberEmail
+        FROM insurance_claims ic
+        INNER JOIN insurance_policies ip ON ip.id = ic.policyId
+        INNER JOIN insurance_products pr ON pr.id = ip.productId
+        INNER JOIN members m ON m.id = ip.memberId
+        ${baseWhere}
+        ORDER BY ic.createdAt DESC
+        LIMIT ? OFFSET ?
+    `;
+
+    const rows = await query<RowDataPacket & IInsuranceClaim>(sql, [...params, limit, offset]);
+
+    const claims = rows.map(r => ({
         ...r,
         supportingDocuments: typeof r.supportingDocuments === 'string' ? JSON.parse(r.supportingDocuments) : r.supportingDocuments,
         disputeEvidenceUrls: typeof r.disputeEvidenceUrls === 'string' ? JSON.parse(r.disputeEvidenceUrls) : r.disputeEvidenceUrls
     }));
+
+    return {
+        claims,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
 }
 
 export async function getClaim(id: string, tenantId: string): Promise<IInsuranceClaim | null> {
     const row = await queryOne<RowDataPacket & IInsuranceClaim>(
-        `SELECT ic.*, ip.policyNumber, CONCAT(m.firstName, ' ', m.lastName) AS memberFullName 
+        `SELECT ic.*, ip.policyNumber, pr.name AS productName, CONCAT(m.firstName, ' ', m.lastName) AS memberFullName, m.email AS memberEmail
          FROM insurance_claims ic
          INNER JOIN insurance_policies ip ON ip.id = ic.policyId
+         INNER JOIN insurance_products pr ON pr.id = ip.productId
          INNER JOIN members m ON m.id = ip.memberId
          WHERE ic.id = ? AND ic.tenantId = ? LIMIT 1`,
         [id, tenantId]

@@ -16,19 +16,10 @@ interface Claim {
     claimType: string;
     description: string;
     supportingDocuments: string[];
-    policy: {
-        policyNumber: string;
-        member: {
-            id: string;
-            firstName: string;
-            lastName: string;
-            email: string;
-        };
-        product: {
-            name: string;
-            coverageAmount: number;
-        }
-    };
+    policyNumber?: string;
+    productName?: string;
+    memberFullName?: string;
+    memberEmail?: string;
     rejectionReason?: string;
     queryReason?: string;
     committeeReviewNotes?: string;
@@ -175,12 +166,12 @@ export default function ClaimDetailReview({ params }: { params: { id: string } }
                             <div className="space-y-4">
                                 <div>
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Claimant Member</p>
-                                    <p className="font-bold text-gray-900">{claim.policy.member.firstName} {claim.policy.member.lastName}</p>
-                                    <p className="text-xs text-gray-500">{claim.policy.member.email}</p>
+                                    <p className="font-bold text-gray-900">{claim.memberFullName}</p>
+                                    <p className="text-xs text-gray-500">{claim.memberEmail || 'No email'}</p>
                                 </div>
                                 <div className="pt-4 border-t border-gray-100">
                                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Insurance Product</p>
-                                    <p className="font-bold text-gray-900">{claim.policy.product.name}</p>
+                                    <p className="font-bold text-gray-900">{claim.productName}</p>
                                 </div>
                             </div>
                         </div>

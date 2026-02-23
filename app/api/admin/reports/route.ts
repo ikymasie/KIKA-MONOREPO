@@ -5,33 +5,20 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Loan, LoanStatus } = await import('@/src/entities/Loan');
-        const { Transaction, TransactionType, TransactionStatus } = await import('@/src/entities/Transaction');
-        const { Asset } = await import('@/src/entities/Asset');
+        const { query } = await import('@/src/db/query');
         const { getUserFromRequest } = await import('@/lib/auth-server');
-
 
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
 
-        const loanRepo = AppDataSource.getRepository(Loan);
-        const assetRepo = AppDataSource.getRepository(Asset);
-        const txnRepo = AppDataSource.getRepository(Transaction);
 
         const tenantId = user.tenantId;
 
         // 1. PAR Calculation (Simplified: Days since last repayment)
-        const activeLoans = await loanRepo.find({
-            where: { tenantId, status: LoanStatus.ACTIVE },
-            relations: ['member'],
-        });
+        const activeLoans = await query('SELECT * FROM loans WHERE tenantId = ? AND status = ?', [tenantId, 'active']) as any[];
 
         const parReport = {
             par30: 0,
@@ -45,16 +32,14 @@ export async function GET(request: NextRequest) {
             parReport.totalPortfolio += Number(loan.outstandingBalance);
 
             // Find last repayment
-            const lastRepayment = await txnRepo.findOne({
-                where: {
-                    referenceId: loan.id,
-                    transactionType: TransactionType.LOAN_REPAYMENT,
-                    status: TransactionStatus.COMPLETED
-                },
-                order: { transactionDate: 'DESC' },
-            });
+            const [lastRepayment] = await query(
+                `SELECT transactionDate FROM transactions 
+                 WHERE referenceId = ? AND transactionType = ? AND status = ? 
+                 ORDER BY transactionDate DESC LIMIT 1`,
+                [loan.id, 'loan_repayment', 'completed']
+            ) as any[];
 
-            const lastDate = lastRepayment ? new Date(lastRepayment.transactionDate!) : (loan.disbursementDate ?? loan.createdAt ?? new Date());
+            const lastDate = lastRepayment ? new Date(lastRepayment.transactionDate) : (loan.disbursementDate ? new Date(loan.disbursementDate) : (loan.createdAt ? new Date(loan.createdAt) : new Date()));
             const diffDays = Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
 
             // If more than 30 days since last payment, it's at risk
@@ -64,24 +49,22 @@ export async function GET(request: NextRequest) {
         }
 
         // 2. Demand Forecasting (Approved/Pending but Unfunded)
-        const pendingLoans = await loanRepo.find({
-            where: {
-                tenantId,
-                status: In([LoanStatus.PENDING, LoanStatus.APPROVED, LoanStatus.COMMITTEE_APPROVED])
-            }
-        });
+        const pendingLoans = await query(
+            'SELECT * FROM loans WHERE tenantId = ? AND status IN (?, ?, ?)',
+            [tenantId, 'pending', 'approved', 'committee_approved']
+        ) as any[];
 
         const demandForecasting = {
             totalAmount: pendingLoans.reduce((sum, loan) => sum + Number(loan.principalAmount), 0),
             count: pendingLoans.length,
             categories: {
-                pending: pendingLoans.filter(l => l.status === LoanStatus.PENDING).length,
-                approved: pendingLoans.filter(l => [LoanStatus.APPROVED, LoanStatus.COMMITTEE_APPROVED].includes(l.status!)).length,
+                pending: pendingLoans.filter(l => l.status === 'pending').length,
+                approved: pendingLoans.filter(l => ['approved', 'committee_approved'].includes(l.status)).length,
             }
         };
 
         // 3. Asset Registry Summary
-        const assets = await assetRepo.find({ where: { tenantId } });
+        const assets = await query('SELECT * FROM assets WHERE tenantId = ?', [tenantId]) as any[];
         const assetSummary = {
             totalValuation: assets.reduce((sum, a) => sum + Number(a.currentValuation), 0),
             count: assets.length,

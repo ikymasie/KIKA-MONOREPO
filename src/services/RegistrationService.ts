@@ -1,25 +1,34 @@
-import { AppDataSource } from '../config/database';
-import { SocietyApplication, ApplicationStatus, ApplicationType } from '../entities/SocietyApplication';
-import { Certificate, CertificateType } from '../entities/Certificate';
-import { ApplicationWorkflowLog } from '../entities/ApplicationWorkflowLog';
-import { AuditLog, AuditAction } from '../entities/AuditLog';
-import { User } from '../entities/User';
+import { query, execute, withTransaction } from '../db/query';
+import { v4 as uuidv4 } from 'uuid';
+import { RowDataPacket } from 'mysql2/promise';
 
 export class RegistrationService {
-    private static applicationRepo = AppDataSource.getRepository(SocietyApplication);
-    private static certificateRepo = AppDataSource.getRepository(Certificate);
-    private static workflowLogRepo = AppDataSource.getRepository(ApplicationWorkflowLog);
-    private static auditLogRepo = AppDataSource.getRepository(AuditLog);
-
     /**
      * Get applications pending final decision
      */
-    static async getPendingDecisions(): Promise<SocietyApplication[]> {
-        return await this.applicationRepo.find({
-            where: { status: ApplicationStatus.PENDING_DECISION },
-            relations: ['applicant', 'registryClerk', 'legalOfficer', 'intelligenceLiaison'],
-            order: { updatedAt: 'DESC' }
-        });
+    static async getPendingDecisions(): Promise<any[]> {
+        const results = await query(`
+            SELECT a.*, 
+                   u_app.firstName as applicantFirstName, u_app.lastName as applicantLastName,
+                   u_clerk.firstName as clerkFirstName, u_clerk.lastName as clerkLastName,
+                   u_legal.firstName as legalFirstName, u_legal.lastName as legalLastName,
+                   u_intel.firstName as intelFirstName, u_intel.lastName as intelLastName
+            FROM society_applications a
+            LEFT JOIN users u_app ON u_app.id = a.applicantId
+            LEFT JOIN users u_clerk ON u_clerk.id = a.registryClerkId
+            LEFT JOIN users u_legal ON u_legal.id = a.legalOfficerId
+            LEFT JOIN users u_intel ON u_intel.id = a.intelligenceLiaisonId
+            WHERE a.status = ?
+            ORDER BY a.updatedAt DESC
+        `, ['pending_decision']) as any[];
+
+        return results.map(r => ({
+            ...r,
+            applicant: r.applicantId ? { id: r.applicantId, firstName: r.applicantFirstName, lastName: r.applicantLastName } : undefined,
+            registryClerk: r.registryClerkId ? { id: r.registryClerkId, firstName: r.clerkFirstName, lastName: r.clerkLastName } : undefined,
+            legalOfficer: r.legalOfficerId ? { id: r.legalOfficerId, firstName: r.legalFirstName, lastName: r.legalLastName } : undefined,
+            intelligenceLiaison: r.intelligenceLiaisonId ? { id: r.intelligenceLiaisonId, firstName: r.intelFirstName, lastName: r.intelLastName } : undefined,
+        })) as any[];
     }
 
     /**
@@ -29,58 +38,59 @@ export class RegistrationService {
         applicationId: string,
         registrarId: string,
         notes?: string
-    ): Promise<SocietyApplication> {
-        return await AppDataSource.transaction(async (transactionalEntityManager) => {
-            const application = await transactionalEntityManager.findOne(SocietyApplication, {
-                where: { id: applicationId },
-                relations: ['applicant']
-            });
+    ): Promise<any> {
+        return await withTransaction(async (conn) => {
+            const [[application]] = await conn.query('SELECT * FROM society_applications WHERE id = ? LIMIT 1', [applicationId]) as any;
 
             if (!application) throw new Error('Application not found');
-            if (application.status !== ApplicationStatus.PENDING_DECISION) {
+            if (application.status !== 'pending_decision') {
                 throw new Error(`Application in status ${application.status} cannot be approved`);
             }
 
-            const registrar = await transactionalEntityManager.findOne(User, { where: { id: registrarId } });
+            const [[registrar]] = await conn.query('SELECT * FROM users WHERE id = ? LIMIT 1', [registrarId]) as any;
             if (!registrar) throw new Error('Registrar not found');
 
             const fromStatus = application.status;
-            application.status = ApplicationStatus.APPROVED;
-            application.finalDecisionMakerId = registrarId;
-            application.finalDecisionAt = new Date();
+            let certificateNumber = application.certificateNumber;
+            const finalDecisionAt = new Date();
 
             // Generate registration number (Certificate Number)
-            if (!application.certificateNumber) {
-                application.certificateNumber = await this.generateRegistrationNumber(application.applicationType);
+            if (!certificateNumber) {
+                certificateNumber = await this.generateRegistrationNumber(application.applicationType, conn);
             }
 
-            const savedApp = await transactionalEntityManager.save(application);
+            // Update application
+            await conn.execute(
+                `UPDATE society_applications 
+                 SET status = ?, finalDecisionMakerId = ?, finalDecisionAt = ?, certificateNumber = ?, updatedAt = NOW()
+                 WHERE id = ?`,
+                ['approved', registrarId, finalDecisionAt, certificateNumber, applicationId]
+            );
+
+            // Fetch the freshly updated application
+            let [[savedApp]] = await conn.query('SELECT * FROM society_applications WHERE id = ? LIMIT 1', [applicationId]) as any;
 
             // Log workflow
-            const workflowLog = transactionalEntityManager.create(ApplicationWorkflowLog, {
-                applicationId: application.id,
-                fromStatus,
-                toStatus: ApplicationStatus.APPROVED,
-                performedBy: registrarId,
-                notes: notes || 'Final approval granted.',
-                metadata: {
-                    registrationNumber: application.certificateNumber,
-                    approvedAt: application.finalDecisionAt
-                }
-            });
-            await transactionalEntityManager.save(workflowLog);
+            const workflowLogId = uuidv4();
+            const workflowMetadata = {
+                registrationNumber: certificateNumber,
+                approvedAt: finalDecisionAt
+            };
+
+            await conn.execute(
+                `INSERT INTO application_workflow_logs (id, applicationId, fromStatus, toStatus, performedBy, notes, metadata, createdAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [workflowLogId, application.id, fromStatus, 'approved', registrarId, notes || 'Final approval granted.', JSON.stringify(workflowMetadata)]
+            );
 
             // Log audit
-            const auditLog = transactionalEntityManager.create(AuditLog, {
-                userId: registrarId,
-                userEmail: registrar.email,
-                action: AuditAction.APPROVE,
-                entityType: 'SocietyApplication',
-                entityId: application.id,
-                description: `Registrar approved society application: ${application.proposedName}`,
-                newValues: { status: ApplicationStatus.APPROVED, registrationNumber: application.certificateNumber }
-            });
-            await transactionalEntityManager.save(auditLog);
+            const auditLogId = uuidv4();
+            const auditNewValues = { status: 'approved', registrationNumber: certificateNumber };
+            await conn.execute(
+                `INSERT INTO audit_logs (id, userId, userEmail, action, entityType, entityId, description, newValues, createdAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [auditLogId, registrarId, registrar.email, 'APPROVE', 'SocietyApplication', application.id, `Registrar approved society application: ${application.proposedName}`, JSON.stringify(auditNewValues)]
+            );
 
             return savedApp;
         });
@@ -92,14 +102,12 @@ export class RegistrationService {
     static async issueCertificate(
         applicationId: string,
         issuerId: string
-    ): Promise<Certificate> {
-        return await AppDataSource.transaction(async (transactionalEntityManager) => {
-            const application = await transactionalEntityManager.findOne(SocietyApplication, {
-                where: { id: applicationId }
-            });
+    ): Promise<any> {
+        return await withTransaction(async (conn) => {
+            const [[application]] = await conn.query('SELECT * FROM society_applications WHERE id = ? LIMIT 1', [applicationId]) as any;
 
             if (!application) throw new Error('Application not found');
-            if (application.status !== ApplicationStatus.APPROVED && application.status !== ApplicationStatus.APPEAL_APPROVED) {
+            if (application.status !== 'approved' && application.status !== 'appeal_approved') {
                 throw new Error('Application must be approved before issuing certificate');
             }
 
@@ -107,48 +115,45 @@ export class RegistrationService {
                 throw new Error('Application does not have a registration number assigned');
             }
 
-            const issuer = await transactionalEntityManager.findOne(User, { where: { id: issuerId } });
+            const [[issuer]] = await conn.query('SELECT * FROM users WHERE id = ? LIMIT 1', [issuerId]) as any;
             if (!issuer) throw new Error('Issuer not found');
 
             // Check if certificate already exists
-            const existingCert = await transactionalEntityManager.findOne(Certificate, {
-                where: { certificateNumber: application.certificateNumber }
-            });
-
+            const [[existingCert]] = await conn.query('SELECT * FROM certificates WHERE certificateNumber = ? LIMIT 1', [application.certificateNumber]) as any;
             if (existingCert) return existingCert;
 
             // Create certificate
-            const certificate = transactionalEntityManager.create(Certificate, {
-                tenantId: application.id, // Using application ID as temporary tenant ID until tenant is fully provisioned
-                certificateNumber: application.certificateNumber,
-                certificateType: CertificateType.REGISTRATION,
-                issuedDate: new Date(),
-                issuedBy: issuerId,
-                metadata: {
-                    societyName: application.proposedName,
-                    registrationNumber: application.certificateNumber,
-                    registrationDate: new Date().toISOString(),
-                    applicationType: application.applicationType,
-                    address: application.physicalAddress
-                }
-            });
+            const certificateId = uuidv4();
+            const now = new Date();
+            const metadata = {
+                societyName: application.proposedName,
+                registrationNumber: application.certificateNumber,
+                registrationDate: now.toISOString(),
+                applicationType: application.applicationType,
+                address: application.physicalAddress
+            };
 
-            const savedCert = await transactionalEntityManager.save(certificate);
+            await conn.execute(
+                `INSERT INTO certificates (id, tenantId, certificateNumber, certificateType, issuedDate, issuedBy, metadata, createdAt, updatedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+                [certificateId, application.id, application.certificateNumber, 'registration', now, issuerId, JSON.stringify(metadata)]
+            );
+
+            const [[savedCert]] = await conn.query('SELECT * FROM certificates WHERE id = ? LIMIT 1', [certificateId]) as any;
 
             // Update application
-            application.certificateIssuedAt = new Date();
-            await transactionalEntityManager.save(application);
+            await conn.execute(
+                'UPDATE society_applications SET certificateIssuedAt = NOW(), updatedAt = NOW() WHERE id = ?',
+                [application.id]
+            );
 
             // Log audit
-            const auditLog = transactionalEntityManager.create(AuditLog, {
-                userId: issuerId,
-                userEmail: issuer.email,
-                action: AuditAction.CREATE,
-                entityType: 'Certificate',
-                entityId: savedCert.id,
-                description: `Certificate issued for ${application.proposedName} (Reg: ${application.certificateNumber})`
-            });
-            await transactionalEntityManager.save(auditLog);
+            const auditLogId = uuidv4();
+            await conn.execute(
+                `INSERT INTO audit_logs (id, userId, userEmail, action, entityType, entityId, description, createdAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [auditLogId, issuerId, issuer.email, 'CREATE', 'Certificate', savedCert.id, `Certificate issued for ${application.proposedName} (Reg: ${application.certificateNumber})`]
+            );
 
             return savedCert;
         });
@@ -157,18 +162,22 @@ export class RegistrationService {
     /**
      * Generate a unique registration number based on type and year
      */
-    private static async generateRegistrationNumber(type: ApplicationType): Promise<string> {
-        const prefix = type === ApplicationType.SACCOS ? 'SACCOS' :
-            type === ApplicationType.BURIAL_SOCIETY ? 'BUR' :
-                type === ApplicationType.RELIGIOUS_SOCIETY ? 'REL' : 'GS';
+    private static async generateRegistrationNumber(type: string, conn?: any): Promise<string> {
+        const prefix = type === 'saccos' ? 'SACCOS' :
+            type === 'burial_society' ? 'BUR' :
+                type === 'religious_society' ? 'REL' : 'GS';
 
         const year = new Date().getFullYear();
+        const pattern = `${prefix}-${year}-%`;
 
-        // Count existing applications of this type in this year to get next number
-        const count = await this.applicationRepo.createQueryBuilder('app')
-            .where('app.applicationType = :type', { type })
-            .andWhere('app.certificateNumber LIKE :pattern', { pattern: `${prefix}-${year}-%` })
-            .getCount();
+        const queryFn = conn ? conn.query.bind(conn) : query;
+
+        const [[countResult]] = await queryFn(
+            'SELECT COUNT(*) as count FROM society_applications WHERE applicationType = ? AND certificateNumber LIKE ?',
+            [type, pattern]
+        ) as any;
+
+        const count = Number(countResult?.count || 0);
 
         return `${prefix}-${year}-${(count + 1).toString().padStart(4, '0')}`;
     }
@@ -176,12 +185,23 @@ export class RegistrationService {
     /**
      * Get applications currently under appeal
      */
-    static async getPendingAppeals(): Promise<SocietyApplication[]> {
-        return await this.applicationRepo.find({
-            where: { status: ApplicationStatus.APPEAL_LODGED },
-            relations: ['applicant', 'finalDecisionMaker'],
-            order: { appealLodgedAt: 'DESC' }
-        });
+    static async getPendingAppeals(): Promise<any[]> {
+        const results = await query(`
+            SELECT a.*, 
+                   u_app.firstName as applicantFirstName, u_app.lastName as applicantLastName,
+                   u_dec.firstName as finalDecisionMakerFirstName, u_dec.lastName as finalDecisionMakerLastName
+            FROM society_applications a
+            LEFT JOIN users u_app ON u_app.id = a.applicantId
+            LEFT JOIN users u_dec ON u_dec.id = a.finalDecisionMakerId
+            WHERE a.status = ?
+            ORDER BY a.appealLodgedAt DESC
+        `, ['appeal_lodged']) as any[];
+
+        return results.map(r => ({
+            ...r,
+            applicant: r.applicantId ? { id: r.applicantId, firstName: r.applicantFirstName, lastName: r.applicantLastName } : undefined,
+            finalDecisionMaker: r.finalDecisionMakerId ? { id: r.finalDecisionMakerId, firstName: r.finalDecisionMakerFirstName, lastName: r.finalDecisionMakerLastName } : undefined,
+        })) as any[];
     }
 
     /**
@@ -192,60 +212,59 @@ export class RegistrationService {
         decisionMakerId: string,
         decision: 'APPROVE' | 'REJECT',
         notes: string
-    ): Promise<SocietyApplication> {
-        return await AppDataSource.transaction(async (transactionalEntityManager) => {
-            const application = await transactionalEntityManager.findOne(SocietyApplication, {
-                where: { id: applicationId },
-                relations: ['applicant']
-            });
+    ): Promise<any> {
+        return await withTransaction(async (conn) => {
+            const [[application]] = await conn.query('SELECT * FROM society_applications WHERE id = ? LIMIT 1', [applicationId]) as any;
 
             if (!application) throw new Error('Application not found');
-            if (application.status !== ApplicationStatus.APPEAL_LODGED) {
+            if (application.status !== 'appeal_lodged') {
                 throw new Error('Application is not under appeal');
             }
 
-            const decisionMaker = await transactionalEntityManager.findOne(User, { where: { id: decisionMakerId } });
+            const [[decisionMaker]] = await conn.query('SELECT * FROM users WHERE id = ? LIMIT 1', [decisionMakerId]) as any;
             if (!decisionMaker) throw new Error('Decision maker not found');
 
             const fromStatus = application.status;
-            const toStatus = decision === 'APPROVE' ? ApplicationStatus.APPEAL_APPROVED : ApplicationStatus.APPEAL_REJECTED;
+            const toStatus = decision === 'APPROVE' ? 'appeal_approved' : 'appeal_rejected';
 
-            application.status = toStatus;
-            application.appealDecisionAt = new Date();
-            application.appealDecisionMakerId = decisionMakerId;
-            application.appealOutcome = notes;
+            const appealDecisionAt = new Date();
+            let certificateNumber = application.certificateNumber;
 
-            if (decision === 'APPROVE' && !application.certificateNumber) {
-                application.certificateNumber = await this.generateRegistrationNumber(application.applicationType);
+            if (decision === 'APPROVE' && !certificateNumber) {
+                certificateNumber = await this.generateRegistrationNumber(application.applicationType, conn);
             }
 
-            const savedApp = await transactionalEntityManager.save(application);
+            // Update application
+            await conn.execute(
+                `UPDATE society_applications 
+                 SET status = ?, appealDecisionAt = ?, appealDecisionMakerId = ?, appealOutcome = ?, certificateNumber = ?, updatedAt = NOW()
+                 WHERE id = ?`,
+                [toStatus, appealDecisionAt, decisionMakerId, notes, certificateNumber, applicationId]
+            );
+
+            // Fetch the updated application
+            let [[savedApp]] = await conn.query('SELECT * FROM society_applications WHERE id = ? LIMIT 1', [applicationId]) as any;
 
             // Log workflow
-            const workflowLog = transactionalEntityManager.create(ApplicationWorkflowLog, {
-                applicationId: application.id,
-                fromStatus,
-                toStatus,
-                performedBy: decisionMakerId,
-                notes: notes,
-                metadata: {
-                    decision,
-                    decisionAt: application.appealDecisionAt
-                }
-            });
-            await transactionalEntityManager.save(workflowLog);
+            const workflowLogId = uuidv4();
+            const workflowMetadata = {
+                decision,
+                decisionAt: appealDecisionAt
+            };
+            await conn.execute(
+                `INSERT INTO application_workflow_logs (id, applicationId, fromStatus, toStatus, performedBy, notes, metadata, createdAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [workflowLogId, application.id, fromStatus, toStatus, decisionMakerId, notes, JSON.stringify(workflowMetadata)]
+            );
 
             // Log audit
-            const auditLog = transactionalEntityManager.create(AuditLog, {
-                userId: decisionMakerId,
-                userEmail: decisionMaker.email,
-                action: decision === 'APPROVE' ? AuditAction.APPROVE : AuditAction.REJECT,
-                entityType: 'SocietyApplication',
-                entityId: application.id,
-                description: `Appeal ${decision.toLowerCase()}d for ${application.proposedName}`,
-                newValues: { status: toStatus, outcome: notes }
-            });
-            await transactionalEntityManager.save(auditLog);
+            const auditLogId = uuidv4();
+            const auditNewValues = { status: toStatus, outcome: notes };
+            await conn.execute(
+                `INSERT INTO audit_logs (id, userId, userEmail, action, entityType, entityId, description, newValues, createdAt)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [auditLogId, decisionMakerId, decisionMaker.email, decision === 'APPROVE' ? 'APPROVE' : 'REJECT', 'SocietyApplication', application.id, `Appeal ${decision.toLowerCase()}d for ${application.proposedName}`, JSON.stringify(auditNewValues)]
+            );
 
             return savedApp;
         });
@@ -254,13 +273,11 @@ export class RegistrationService {
     /**
      * Get all registered societies (Official Registry)
      */
-    static async getOfficialRegistry(): Promise<SocietyApplication[]> {
-        return await this.applicationRepo.find({
-            where: [
-                { status: ApplicationStatus.APPROVED },
-                { status: ApplicationStatus.APPEAL_APPROVED }
-            ],
-            order: { certificateIssuedAt: 'DESC' }
-        });
+    static async getOfficialRegistry(): Promise<any[]> {
+        return await query(`
+            SELECT * FROM society_applications
+            WHERE status IN (?, ?)
+            ORDER BY certificateIssuedAt DESC
+        `, ['approved', 'appeal_approved']) as any[];
     }
 }

@@ -3,25 +3,20 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
-// Dynamic imports to avoid circular dependencies
-        const { AppDataSource } = await import('@/src/config/database');
-        const { Tenant } = await import('@/src/entities/Tenant');
+        // Dynamic imports to avoid circular dependencies
+        const { query } = await import('@/src/db/query');
         const { getUserFromRequest } = await import('@/lib/auth-server');
 
-    
+
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ isMaintenanceMode: false }); // Or true depending on desired default for unauth
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const tenant = await AppDataSource.getRepository(Tenant).findOne({
-            where: { id: user.tenantId },
-            select: ['isMaintenanceMode']
-        });
+        const [[tenant]] = await query(
+            'SELECT isMaintenanceMode FROM tenants WHERE id = ? LIMIT 1',
+            [user.tenantId]
+        ) as any;
 
         return NextResponse.json({
             isMaintenanceMode: tenant?.isMaintenanceMode || false

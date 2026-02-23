@@ -1,28 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { InsuranceClaim, ClaimStatus } from '@/src/entities/InsuranceClaim';
-import { InsurancePolicy } from '@/src/entities/InsurancePolicy';
+import { query, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
 import { getUserFromRequest } from '@/lib/auth-server';
-import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, DatabaseError, NotFoundError } from '@/lib/errors';
-
-export const dynamic = 'force-dynamic';
-async function initDB() {
-    if (!AppDataSource.isInitialized) {
-        try {
-            await AppDataSource.initialize();
-        } catch (error) {
-            throw new DatabaseError('Failed to initialize database connection');
-        }
-    }
-}
+import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, NotFoundError } from '@/lib/errors';
 
 // POST: Submit a claim on behalf of a member
 export const POST = asyncHandler(async (request: NextRequest) => {
     const user = await getUserFromRequest(request);
     if (!user) throw new UnauthorizedError('User not authenticated');
     if (!user.isTenantAdmin()) throw new ForbiddenError('Admin access required');
-
-    await initDB();
 
     const body = await request.json();
     const { policyId, claimType, claimAmount, incidentDate, description, supportingDocuments } = body;
@@ -33,23 +19,19 @@ export const POST = asyncHandler(async (request: NextRequest) => {
 
     if (!user.tenantId) throw new BadRequestError('User tenant ID not found');
 
-    const policyRepo = AppDataSource.getRepository(InsurancePolicy);
-    const policy = await policyRepo.findOne({
-        where: { id: policyId },
-        relations: ['member']
-    });
+    const [[policy]] = await query('SELECT p.id, m.tenantId FROM insurance_policies p JOIN members m ON m.id = p.memberId WHERE p.id = ? LIMIT 1', [policyId]) as any;
 
-    if (!policy || policy.member?.tenantId !== user.tenantId) {
+    if (!policy || policy.tenantId !== user.tenantId) {
         throw new NotFoundError('Policy not found');
     }
 
-    const claimRepo = AppDataSource.getRepository(InsuranceClaim);
-
     // Generate claim number (simplified)
-    const count = await claimRepo.count({ where: { tenantId: user.tenantId } });
-    const claimNumber = `CLM-${user.tenantId.substring(0, 4).toUpperCase()}-${(count + 1).toString().padStart(6, '0')}`;
+    const [[{ count }]] = await query('SELECT COUNT(*) as count FROM insurance_claims WHERE tenantId = ?', [user.tenantId]) as any;
+    const claimNumber = `CLM-${user.tenantId.substring(0, 4).toUpperCase()}-${(Number(count) + 1).toString().padStart(6, '0')}`;
 
-    const claim = claimRepo.create({
+    const claimId = uuidv4();
+    const claimData = {
+        id: claimId,
         tenantId: user.tenantId,
         claimNumber,
         policyId,
@@ -57,11 +39,22 @@ export const POST = asyncHandler(async (request: NextRequest) => {
         claimAmount: Number(claimAmount),
         incidentDate: new Date(incidentDate),
         description,
-        supportingDocuments,
-        status: ClaimStatus.SUBMITTED
-    });
+        supportingDocuments: supportingDocuments ? JSON.stringify(supportingDocuments) : '[]',
+        status: 'submitted'
+    };
 
-    await claimRepo.save(claim);
+    await execute(
+        `INSERT INTO insurance_claims (id, tenantId, claimNumber, policyId, claimType, claimAmount, incidentDate, description, supportingDocuments, status, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [claimData.id, claimData.tenantId, claimData.claimNumber, claimData.policyId, claimData.claimType, claimData.claimAmount, claimData.incidentDate, claimData.description, claimData.supportingDocuments, claimData.status]
+    );
+
+    const [[claim]] = await query('SELECT * FROM insurance_claims WHERE id = ? LIMIT 1', [claimId]) as any;
+
+    // Parse json columns back to array
+    if (claim.supportingDocuments && typeof claim.supportingDocuments === 'string') {
+        claim.supportingDocuments = JSON.parse(claim.supportingDocuments);
+    }
 
     return NextResponse.json({
         success: true,
@@ -75,25 +68,34 @@ export const GET = asyncHandler(async (request: NextRequest) => {
     const user = await getUserFromRequest(request);
     if (!user) throw new UnauthorizedError('User not authenticated');
 
-    await initDB();
-
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get('memberId');
 
     if (!memberId) throw new BadRequestError('Member ID is required');
 
-    const claimRepo = AppDataSource.getRepository(InsuranceClaim);
-    const claims = await claimRepo.find({
-        where: {
-            tenantId: user.tenantId,
-            policy: { memberId }
-        },
-        relations: ['policy', 'policy.product'],
-        order: { createdAt: 'DESC' }
+    const claims = await query(
+        `SELECT c.*, p.productName as policyProductName 
+         FROM insurance_claims c 
+         JOIN insurance_policies p ON p.id = c.policyId 
+         WHERE c.tenantId = ? AND p.memberId = ? 
+         ORDER BY c.createdAt DESC`,
+        [user.tenantId, memberId]
+    ) as any[];
+
+    // Parse supportingDocuments
+    const parsedClaims = claims.map((c: any) => {
+        if (c.supportingDocuments && typeof c.supportingDocuments === 'string') {
+            try {
+                c.supportingDocuments = JSON.parse(c.supportingDocuments);
+            } catch (e) {
+                // Ignore parse errors
+            }
+        }
+        return c;
     });
 
     return NextResponse.json({
         success: true,
-        data: claims
+        data: parsedClaims
     });
 });

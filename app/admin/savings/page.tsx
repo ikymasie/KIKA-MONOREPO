@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import { format } from 'date-fns';
+import Pagination from '@/components/ui/Pagination';
 
 interface SavingAccount {
     memberId?: string;
@@ -35,23 +36,41 @@ export default function AdminSavingsPage() {
     const [metrics, setMetrics] = useState<Metrics | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const [search, setSearch] = useState('');
+    const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
 
     useEffect(() => {
-        async function fetchData() {
-            try {
-                const response = await fetch('/api/admin/savings');
-                if (!response.ok) throw new Error('Failed to fetch savings data');
-                const result = await response.json();
-                setSavings(result.savings);
-                setMetrics(result.metrics);
-            } catch (err: any) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        }
         fetchData();
-    }, []);
+    }, [page]);
+
+    async function fetchData() {
+        try {
+            setLoading(true);
+            const params = new URLSearchParams({
+                page: page.toString(),
+                limit: '20'
+            });
+            if (search) params.append('search', search);
+
+            const response = await fetch(`/api/admin/savings?${params.toString()}`);
+            if (!response.ok) throw new Error('Failed to fetch savings data');
+            const result = await response.json();
+            setSavings(result.savings);
+            setMetrics(result.metrics);
+            setPagination(result.pagination);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function handleSearch(e: React.FormEvent) {
+        e.preventDefault();
+        setPage(1);
+        fetchData();
+    }
 
     return (
         <DashboardLayout sidebar={<AdminSidebar />}>
@@ -104,14 +123,17 @@ export default function AdminSavingsPage() {
                         <div className="card overflow-hidden">
                             <div className="p-6 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                                 <h2 className="font-bold text-gray-900">All Savings Accounts</h2>
-                                <div className="relative">
+                                <form onSubmit={handleSearch} className="relative">
                                     <input
                                         type="text"
                                         placeholder="Search members..."
-                                        className="pl-8 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        className="pl-8 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none w-64"
                                     />
                                     <span className="absolute left-2.5 top-2.5 text-gray-400">🔍</span>
-                                </div>
+                                    <button type="submit" className="hidden" />
+                                </form>
                             </div>
                             <table className="w-full text-left border-collapse">
                                 <thead>
@@ -159,6 +181,15 @@ export default function AdminSavingsPage() {
                                 </tbody>
                             </table>
                         </div>
+                        {pagination.totalPages > 1 && (
+                            <Pagination
+                                currentPage={pagination.page}
+                                totalPages={pagination.totalPages}
+                                totalItems={pagination.total}
+                                itemsPerPage={pagination.limit}
+                                onPageChange={setPage}
+                            />
+                        )}
                     </>
                 )}
             </div>

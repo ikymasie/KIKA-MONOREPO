@@ -31,11 +31,13 @@ export async function GET(
         const startDate = startDateParam ? new Date(startDateParam).toISOString() : undefined;
         const endDate = endDateParam ? new Date(endDateParam).toISOString() : undefined;
 
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '50', 10);
+
         const entries = await getGeneralLedger(
             tenantId,
-            startDate,
-            endDate,
-            accountId
+            { startDate, endDate, accountId },
+            { page, limit }
         );
 
         return NextResponse.json(entries);

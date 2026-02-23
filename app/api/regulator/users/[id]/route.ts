@@ -16,23 +16,18 @@ export async function GET(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
+        const { query } = await import('@/src/db/query');
         const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { AppDataSource } = await import('@/src/config/database');
-        const { User } = await import('@/src/entities/User');
         const currentUser = await getUserFromRequest(request);
         if (!currentUser || !currentUser.isRegulator()) {
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const userRepo = AppDataSource.getRepository(User);
-        const user = await userRepo.findOne({
-            where: { id: params.id },
-            select: ['id', 'email', 'firstName', 'lastName', 'role', 'status', 'phone']
-        });
+        const users = await query(
+            'SELECT id, email, firstName, lastName, role, status, phone FROM users WHERE id = ? LIMIT 1',
+            [params.id]
+        ) as any[];
+        const user = users[0];
 
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
@@ -64,47 +59,56 @@ export async function PUT(
             return NextResponse.json({ error: 'First name and last name are required' }, { status: 400 });
         }
 
-        const { AppDataSource } = await import('@/src/config/database');
-        const { User, UserRole } = await import('@/src/entities/User');
+        const { query, execute } = await import('@/src/db/query');
 
         const REGULATOR_ROLES = [
-            UserRole.DCD_DIRECTOR,
-            UserRole.DCD_FIELD_OFFICER,
-            UserRole.DCD_COMPLIANCE_OFFICER,
-            UserRole.BOB_PRUDENTIAL_SUPERVISOR,
-            UserRole.BOB_FINANCIAL_AUDITOR,
-            UserRole.BOB_COMPLIANCE_OFFICER,
-            UserRole.DEDUCTION_OFFICER,
-            UserRole.REGISTRY_CLERK,
-            UserRole.INTELLIGENCE_LIAISON,
-            UserRole.LEGAL_OFFICER,
-            UserRole.REGISTRAR,
-            UserRole.DIRECTOR_COOPERATIVES,
-            UserRole.MINISTER_DELEGATE,
+            'dcd_director',
+            'dcd_field_officer',
+            'dcd_compliance_officer',
+            'bob_prudential_supervisor',
+            'bob_financial_auditor',
+            'bob_compliance_officer',
+            'deduction_officer',
+            'registry_clerk',
+            'intelligence_liaison',
+            'legal_officer',
+            'registrar',
+            'director_cooperatives',
+            'minister_delegate',
         ];
 
         if (role && !REGULATOR_ROLES.includes(role)) {
             return NextResponse.json({ error: 'Invalid role for regulator user' }, { status: 400 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const userRepo = AppDataSource.getRepository(User);
-        const user = await userRepo.findOne({ where: { id: params.id } });
+        const users = await query('SELECT * FROM users WHERE id = ? LIMIT 1', [params.id]) as any[];
+        const user = users[0];
 
         if (!user) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
         // Update user details
+        const updateParams: any[] = [firstName, lastName];
+        let sql = 'UPDATE users SET firstName = ?, lastName = ?';
+
+        if (phone !== undefined) {
+            sql += ', phone = ?';
+            updateParams.push(phone);
+            user.phone = phone;
+        }
+        if (role) {
+            sql += ', role = ?';
+            updateParams.push(role);
+            user.role = role;
+        }
+
+        sql += ', updatedAt = NOW() WHERE id = ?';
+        updateParams.push(params.id);
+
+        await execute(sql, updateParams);
         user.firstName = firstName;
         user.lastName = lastName;
-        if (phone !== undefined) user.phone = phone;
-        if (role) user.role = role;
-
-        await userRepo.save(user);
 
         return NextResponse.json({
             success: true,

@@ -1,44 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { SupportTicket, TicketStatus, TicketPriority } from '@/src/entities/SupportTicket';
-import { Member } from '@/src/entities/Member';
+import { query, execute, buildSetClause } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
 import { getUserFromRequest } from '@/lib/auth-server';
-import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, DatabaseError, NotFoundError } from '@/lib/errors';
-
-export const dynamic = 'force-dynamic';
-async function initDB() {
-    if (!AppDataSource.isInitialized) {
-        try {
-            await AppDataSource.initialize();
-        } catch (error) {
-            throw new DatabaseError('Failed to initialize database connection');
-        }
-    }
-}
+import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, NotFoundError } from '@/lib/errors';
 
 // GET: List tickets
 export const GET = asyncHandler(async (request: NextRequest) => {
     const user = await getUserFromRequest(request);
     if (!user) throw new UnauthorizedError('User not authenticated');
 
-    await initDB();
-
     const { searchParams } = new URL(request.url);
     const memberId = searchParams.get('memberId');
-    const status = searchParams.get('status') as TicketStatus;
+    const status = searchParams.get('status');
     const category = searchParams.get('category');
 
-    const ticketRepo = AppDataSource.getRepository(SupportTicket);
-    const query = ticketRepo.createQueryBuilder('ticket')
-        .leftJoinAndSelect('ticket.member', 'member')
-        .leftJoinAndSelect('ticket.assignedTo', 'assignedTo')
-        .where('ticket.tenantId = :tenantId', { tenantId: user.tenantId });
+    let sql = `
+        SELECT t.*, m.firstName as memberFirstName, m.lastName as memberLastName, u.firstName as agentFirstName, u.lastName as agentLastName
+        FROM support_tickets t
+        LEFT JOIN members m ON m.id = t.memberId
+        LEFT JOIN users u ON u.id = t.assignedToId
+        WHERE t.tenantId = ?
+    `;
+    const params: any[] = [user.tenantId];
 
-    if (memberId) query.andWhere('ticket.memberId = :memberId', { memberId });
-    if (status) query.andWhere('ticket.status = :status', { status });
-    if (category) query.andWhere('ticket.category = :category', { category });
+    if (memberId) {
+        sql += ' AND t.memberId = ?';
+        params.push(memberId);
+    }
+    if (status) {
+        sql += ' AND t.status = ?';
+        params.push(status);
+    }
+    if (category) {
+        sql += ' AND t.category = ?';
+        params.push(category);
+    }
 
-    const tickets = await query.orderBy('ticket.createdAt', 'DESC').getMany();
+    sql += ' ORDER BY t.createdAt DESC';
+
+    const tickets = await query(sql, params) as any[];
 
     return NextResponse.json({
         success: true,
@@ -51,8 +51,6 @@ export const POST = asyncHandler(async (request: NextRequest) => {
     const user = await getUserFromRequest(request);
     if (!user) throw new UnauthorizedError('User not authenticated');
 
-    await initDB();
-
     const body = await request.json();
     const { memberId, subject, description, category, priority } = body;
 
@@ -60,23 +58,20 @@ export const POST = asyncHandler(async (request: NextRequest) => {
         throw new BadRequestError('Missing required fields');
     }
 
-    const memberRepo = AppDataSource.getRepository(Member);
-    const member = await memberRepo.findOne({ where: { id: memberId, tenantId: user.tenantId } });
+    const [[member]] = await query('SELECT id FROM members WHERE id = ? AND tenantId = ? LIMIT 1', [memberId, user.tenantId]) as any;
     if (!member) throw new NotFoundError('Member not found');
 
-    const ticketRepo = AppDataSource.getRepository(SupportTicket);
-    const ticket = ticketRepo.create({
-        tenantId: user.tenantId,
-        memberId,
-        subject,
-        description,
-        category,
-        priority: priority || TicketPriority.MEDIUM,
-        status: TicketStatus.OPEN,
-        assignedToId: user.id // Default to creator
-    });
+    const ticketId = uuidv4();
+    const assignedToId = user.id; // Default to creator
+    const finalPriority = priority || 'medium';
 
-    await ticketRepo.save(ticket);
+    await execute(
+        `INSERT INTO support_tickets (id, tenantId, memberId, subject, description, category, priority, status, assignedToId, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'open', ?, NOW(), NOW())`,
+        [ticketId, user.tenantId, memberId, subject, description, category, finalPriority, assignedToId]
+    );
+
+    const [[ticket]] = await query('SELECT * FROM support_tickets WHERE id = ? LIMIT 1', [ticketId]) as any;
 
     return NextResponse.json({
         success: true,
@@ -90,28 +85,33 @@ export const PATCH = asyncHandler(async (request: NextRequest) => {
     const user = await getUserFromRequest(request);
     if (!user) throw new UnauthorizedError('User not authenticated');
 
-    await initDB();
-
     const body = await request.json();
     const { id, status, priority, assignedToId, metadata } = body;
 
     if (!id) throw new BadRequestError('Ticket ID is required');
 
-    const ticketRepo = AppDataSource.getRepository(SupportTicket);
-    const ticket = await ticketRepo.findOne({ where: { id, tenantId: user.tenantId } });
-
+    const [[ticket]] = await query('SELECT * FROM support_tickets WHERE id = ? AND tenantId = ? LIMIT 1', [id, user.tenantId]) as any;
     if (!ticket) throw new NotFoundError('Ticket not found');
 
-    if (status) ticket.status = status;
-    if (priority) ticket.priority = priority;
-    if (assignedToId) ticket.assignedToId = assignedToId;
-    if (metadata) ticket.metadata = { ...ticket.metadata, ...metadata };
+    const updates: any = {};
+    if (status) updates.status = status;
+    if (priority) updates.priority = priority;
+    if (assignedToId) updates.assignedToId = assignedToId;
+    if (metadata) {
+        const existingMetadata = typeof ticket.metadata === 'string' ? JSON.parse(ticket.metadata) : (ticket.metadata || {});
+        updates.metadata = JSON.stringify({ ...existingMetadata, ...metadata });
+    }
 
-    await ticketRepo.save(ticket);
+    if (Object.keys(updates).length > 0) {
+        const { clause, values } = buildSetClause(updates);
+        await execute(`UPDATE support_tickets SET ${clause}, updatedAt = NOW() WHERE id = ?`, [...values, id]);
+    }
+
+    const [[updatedTicket]] = await query('SELECT * FROM support_tickets WHERE id = ? LIMIT 1', [id]) as any;
 
     return NextResponse.json({
         success: true,
         message: 'Ticket updated successfully',
-        data: ticket
+        data: updatedTicket
     });
 });

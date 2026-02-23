@@ -1,7 +1,7 @@
 /**
  * src/db/services/KYCService.ts
  *
- * All database operations for the `kycs` table, using raw parameterized SQL.
+ * All database operations for the `kyc` table, using raw parameterized SQL.
  * Mirrors every method in KYCVerificationService and the admin/member API routes.
  */
 
@@ -31,13 +31,13 @@ function parseKYC(row: RowDataPacket): IKYC {
 
 /** Fetch KYC by its own UUID. */
 export async function getKYCById(id: string): Promise<IKYC | null> {
-    const row = await queryOne<RowDataPacket>('SELECT * FROM kycs WHERE id = ? LIMIT 1', [id]);
+    const row = await queryOne<RowDataPacket>('SELECT * FROM kyc WHERE id = ? LIMIT 1', [id]);
     return row ? parseKYC(row) : null;
 }
 
 /** Fetch KYC by the member's UUID. */
 export async function getKYCByMemberId(memberId: string): Promise<IKYC | null> {
-    const row = await queryOne<RowDataPacket>('SELECT * FROM kycs WHERE memberId = ? LIMIT 1', [memberId]);
+    const row = await queryOne<RowDataPacket>('SELECT * FROM kyc WHERE memberId = ? LIMIT 1', [memberId]);
     return row ? parseKYC(row) : null;
 }
 
@@ -76,7 +76,7 @@ export async function getPendingVerifications(
 
     const rows = await query<RowDataPacket>(
         `SELECT k.*
-         FROM kycs k
+         FROM kyc k
          INNER JOIN members m ON m.id = k.memberId
          WHERE ${conditions.join(' AND ')}
          ORDER BY k.createdAt ASC
@@ -101,7 +101,7 @@ export async function getKYCStats(tenantId?: string): Promise<IKYCStats> {
              SUM(k.identityVerified = 0)                                      AS pendingIdentity,
              SUM(k.residenceVerified = 0)                                     AS pendingResidence,
              SUM(k.incomeVerified = 0)                                        AS pendingIncome
-         FROM kycs k ${join} ${where}`,
+         FROM kyc k ${join} ${where}`,
         params
     );
     const r = rows[0] || {};
@@ -130,7 +130,7 @@ export async function getComplianceRate(tenantId: string): Promise<number> {
 
     const verifiedRow = await queryOne<RowDataPacket & { cnt: string }>(
         `SELECT COUNT(*) AS cnt
-         FROM kycs k
+         FROM kyc k
          INNER JOIN members m ON m.id = k.memberId
          WHERE m.tenantId = ?
            AND k.identityVerified = 1
@@ -165,7 +165,7 @@ export async function upsertKYC(
         const vals = [id, memberId, ...Object.values(fields).map(serializeField)];
         const placeholders = cols.map(() => '?').join(', ');
         await execute(
-            `INSERT INTO kycs (\`${cols.join('`, `')}\`, createdAt, updatedAt) VALUES (${placeholders}, NOW(), NOW())`,
+            `INSERT INTO kyc (\`${cols.join('`, `')}\`, createdAt, updatedAt) VALUES (${placeholders}, NOW(), NOW())`,
             vals
         );
         const created = await getKYCByMemberId(memberId);
@@ -177,7 +177,7 @@ export async function upsertKYC(
     const { clause, values } = buildSetClause(
         Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, serializeField(v)]))
     );
-    await execute(`UPDATE kycs SET ${clause}, updatedAt = NOW() WHERE id = ?`, [...values, existing.id]);
+    await execute(`UPDATE kyc SET ${clause}, updatedAt = NOW() WHERE id = ?`, [...values, existing.id]);
 
     const updated = await getKYCById(existing.id);
     if (!updated) throw new Error('KYC update failed');
@@ -227,7 +227,7 @@ export async function verifySection(
     }
 
     await execute(
-        `UPDATE kycs SET ${setSql}, updatedAt = NOW() WHERE id = ?`,
+        `UPDATE kyc SET ${setSql}, updatedAt = NOW() WHERE id = ?`,
         [...args, kycId]
     );
 
@@ -259,7 +259,7 @@ export async function batchVerifyAll(
     }
 
     await execute(
-        `UPDATE kycs SET
+        `UPDATE kyc SET
             identityVerified = ?,  identityVerifiedBy = ?,  identityVerifiedAt = ?,
             residenceVerified = ?, residenceVerifiedBy = ?, residenceVerifiedAt = ?,
             incomeVerified = ?,    incomeVerifiedBy = ?,    incomeVerifiedAt = ?

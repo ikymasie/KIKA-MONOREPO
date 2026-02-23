@@ -5,17 +5,15 @@ export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { getDataSource } = await import('@/src/config/database');
+        const { query } = await import('@/src/db/query');
 
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const AppDataSource = await getDataSource();
-
         // 1. Members with NO transactions in the last 90 days (High Risk)
-        const inactiveMembers = await AppDataSource.query(`
+        const inactiveMembers = await query(`
             SELECT m.id, m.fullName, m.email, m.phone, MAX(t.createdAt) as lastActive
             FROM members m
             LEFT JOIN transactions t ON m.id = t.memberId
@@ -26,7 +24,7 @@ export async function GET(request: NextRequest) {
         `, [user.tenantId]);
 
         // 2. Members with declining savings (Savings this month < 50% of 6-month average)
-        const decliningSavings = await AppDataSource.query(`
+        const decliningSavings = await query(`
             WITH MonthlySavings AS (
                 SELECT 
                     memberId, 
@@ -60,7 +58,7 @@ export async function GET(request: NextRequest) {
         `, [user.tenantId, user.tenantId]);
 
         // 3. Overall churn risk summary
-        const churnSummary = await AppDataSource.query(`
+        const churnSummary = await query(`
             SELECT 
                 (SELECT COUNT(*) FROM members WHERE tenantId = ? AND status = 'active') as totalActive,
                 (SELECT COUNT(DISTINCT m.id)
@@ -76,9 +74,9 @@ export async function GET(request: NextRequest) {
             inactiveMembers,
             decliningSavings,
             summary: {
-                totalActive: churnSummary[0]?.totalActive || 0,
+                totalActive: parseInt(churnSummary[0]?.totalActive || '0', 10),
                 highRiskCount: churnSummary.length, // High risk members based on query
-                riskPercentage: churnSummary[0]?.totalActive > 0 ? (churnSummary.length / churnSummary[0].totalActive) * 100 : 0
+                riskPercentage: parseInt(churnSummary[0]?.totalActive || '0', 10) > 0 ? (churnSummary.length / parseInt(churnSummary[0].totalActive, 10)) * 100 : 0
             }
         });
     } catch (error: any) {

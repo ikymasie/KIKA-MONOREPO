@@ -10,7 +10,11 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const data = await getMembersDeductionSummary(user.tenantId);
+        const { searchParams } = new URL(request.url);
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '20', 10);
+
+        const data = await getMembersDeductionSummary(user.tenantId, { page, limit });
         return NextResponse.json(data);
     } catch (error: any) {
         console.error('Error fetching deductions:', error);

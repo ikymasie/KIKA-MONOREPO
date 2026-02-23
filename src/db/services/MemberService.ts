@@ -131,16 +131,20 @@ export async function getMemberProfile(
              u.email          AS userEmail,
              u.firebaseUid    AS userFirebaseUid,
              k.id             AS kycId,
-             k.status         AS kycStatus,
+             CASE
+                 WHEN k.id IS NULL THEN 'pending'
+                 WHEN k.identityVerified = 1 AND k.residenceVerified = 1 AND k.incomeVerified = 1 THEN 'verified'
+                 ELSE 'in_progress'
+             END              AS kycStatus,
              COALESCE(SUM(DISTINCT ms.balance), 0) AS totalSavings,
              COALESCE(SUM(DISTINCT CASE WHEN l.status NOT IN ('settled','written_off') THEN l.outstandingBalance END), 0) AS totalLoanBalance
          FROM members m
          LEFT JOIN users u ON u.id = m.userId
-         LEFT JOIN kycs k ON k.memberId = m.id
+         LEFT JOIN kyc k ON k.memberId = m.id
          LEFT JOIN member_savings ms ON ms.memberId = m.id
          LEFT JOIN loans l ON l.memberId = m.id
          WHERE m.id = ? AND m.tenantId = ?
-         GROUP BY m.id, u.email, u.firebaseUid, k.id, k.status`,
+         GROUP BY m.id, u.email, u.firebaseUid, k.id, k.identityVerified, k.residenceVerified, k.incomeVerified`,
         [id, tenantId]
     );
 

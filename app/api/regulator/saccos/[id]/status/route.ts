@@ -1,38 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/lib/db';
-import { Tenant } from '@/entities/Tenant';
+import { query, execute } from '@/src/db/query';
 
 export const dynamic = 'force-dynamic';
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const user = await getUserFromRequest(request);
+        const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const { status, reason } = await request.json();
-
-        if (!['active', 'suspended', 'inactive'].includes(status)) {
-            return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
-        }
-
-        const tenantRepo = AppDataSource.getRepository(Tenant);
-        const tenant = await tenantRepo.findOne({ where: { id: params.id } });
+        const tenants = await query('SELECT * FROM tenants WHERE id = ?', [params.id]) as any[];
+        const tenant = tenants[0];
 
         if (!tenant) {
             return NextResponse.json({ error: 'SACCO not found' }, { status: 404 });
         }
 
         const previousStatus = tenant.status;
-        tenant.status = status;
 
-        await tenantRepo.save(tenant);
+        await execute('UPDATE tenants SET status = ?, updatedAt = NOW() WHERE id = ?', [status, params.id]);
 
         // TODO: Log this action in an audit trail
         // TODO: Send notification to SACCO administrators
@@ -43,7 +31,7 @@ const user = await getUserFromRequest(request);
             tenant: {
                 id: tenant.id,
                 name: tenant.name,
-                status: tenant.status,
+                status: status,
                 previousStatus
             }
         });

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { Loan, LoanStatus, WorkflowStage } from '@/src/entities/Loan';
+import { query } from '@/src/db/query';
+import { LoanStatus, WorkflowStage } from '@/src/interfaces/ILoan';
 import { getUserFromRequest } from '@/lib/auth-server';
-import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError, DatabaseError } from '@/lib/errors';
+import { asyncHandler, UnauthorizedError, ForbiddenError, BadRequestError } from '@/lib/errors';
 
 export const dynamic = 'force-dynamic';
 export const GET = asyncHandler(async (request: NextRequest) => {
@@ -20,36 +20,27 @@ export const GET = asyncHandler(async (request: NextRequest) => {
         throw new BadRequestError('No tenant associated with user');
     }
 
-    if (!AppDataSource.isInitialized) {
-        try {
-            await AppDataSource.initialize();
-        } catch (error) {
-            throw new DatabaseError('Failed to initialize database connection');
-        }
-    }
+    const statusExcludeList = ['approved', 'rejected', 'disbursed', 'active', 'paid_off'];
+    const placeholders = statusExcludeList.map(() => '?').join(',');
 
-    const loanRepo = AppDataSource.getRepository(Loan);
-
-    // Task Queue Logic:
-    // 1. Loans explicitly assigned to this officer
-    // 2. Loans in TECHNICAL_APPRAISAL stage that are unassigned
-    const tasks = await loanRepo
-        .createQueryBuilder('loan')
-        .leftJoinAndSelect('loan.member', 'member')
-        .leftJoinAndSelect('loan.product', 'product')
-        .where('loan.tenantId = :tenantId', { tenantId: user.tenantId })
-        .andWhere(
-            '((loan.loanOfficerId = :userId) OR (loan.workflowStage = :stage AND loan.loanOfficerId IS NULL))',
-            {
-                userId: user.id,
-                stage: WorkflowStage.TECHNICAL_APPRAISAL
-            }
-        )
-        .andWhere('loan.status NOT IN (:...terminalStates)', {
-            terminalStates: [LoanStatus.APPROVED, LoanStatus.REJECTED, LoanStatus.DISBURSED, LoanStatus.ACTIVE, LoanStatus.PAID_OFF]
-        })
-        .orderBy('loan.applicationDate', 'ASC') // Oldest first for SLA
-        .getMany();
+    const tasks = await query(
+        `SELECT l.*, 
+                m.firstName as memberFirstName, m.lastName as memberLastName,
+                p.name as productName
+         FROM loans l
+         LEFT JOIN members m ON m.id = l.memberId
+         LEFT JOIN savings_products p ON p.id = l.productId
+         WHERE l.tenantId = ?
+           AND ((l.loanOfficerId = ?) OR (l.workflowStage = ? AND l.loanOfficerId IS NULL))
+           AND l.status NOT IN (${placeholders})
+         ORDER BY COALESCE(l.applicationDate, l.createdAt) ASC`,
+        [
+            user.tenantId,
+            user.id,
+            'technical_appraisal',
+            ...statusExcludeList
+        ]
+    ) as any[];
 
     const formattedTasks = tasks.map(loan => {
         // Calculate urgency based on application date
@@ -58,8 +49,8 @@ export const GET = asyncHandler(async (request: NextRequest) => {
         return {
             id: loan.id,
             loanNumber: loan.loanNumber,
-            memberName: loan.member ? `${loan.member.firstName} ${loan.member.lastName}` : 'Unknown',
-            productName: loan.product?.name || 'Unknown',
+            memberName: (loan.memberFirstName && loan.memberLastName) ? `${loan.memberFirstName} ${loan.memberLastName}` : 'Unknown',
+            productName: loan.productName || 'Unknown',
             amount: Number(loan.principalAmount),
             status: loan.status,
             stage: loan.workflowStage,

@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/lib/db';
-import { Tenant } from '@/entities/Tenant';
-import { Member } from '@/entities/Member';
-import { Account } from '@/entities/Account';
+import { query } from '@/src/db/query';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
@@ -14,54 +11,45 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
         const { searchParams } = new URL(request.url);
         const search = searchParams.get('search') || '';
         const status = searchParams.get('status') || '';
 
-        // Build query
-        let query = AppDataSource.getRepository(Tenant)
-            .createQueryBuilder('tenant')
-            .leftJoinAndSelect('tenant.users', 'user')
-            .select([
-                'tenant.id',
-                'tenant.name',
-                'tenant.registrationNumber',
-                'tenant.status',
-                'tenant.address',
-                'tenant.createdAt',
-                'user.email',
-                'user.phone'
-            ]);
+        let sql = `
+            SELECT t.id, t.name, t.registrationNumber, t.status, t.address, t.createdAt,
+                   u.email as contactEmail, u.phone as contactPhone
+            FROM tenants t
+            LEFT JOIN users u ON u.tenantId = t.id AND u.role = 'admin' /* assuming first user or admin as contact */
+        `;
+        const params: any[] = [];
+        const conditions: string[] = [];
 
         if (search) {
-            query = query.where(
-                'tenant.name ILIKE :search OR tenant.registrationNumber ILIKE :search',
-                { search: `%${search}%` }
-            );
+            conditions.push('(t.name ILIKE ? OR t.registrationNumber ILIKE ?)');
+            params.push(`%${search}%`, `%${search}%`);
         }
 
         if (status) {
-            query = query.andWhere('tenant.status = :status', { status });
+            conditions.push('t.status = ?');
+            params.push(status);
         }
 
-        const tenants = await query.getMany();
+        if (conditions.length > 0) {
+            sql += ' WHERE ' + conditions.join(' AND ');
+        }
+
+        // Group by to ensure single row per tenant if multiple admins
+        sql += ' GROUP BY t.id';
+
+        const tenants = await query(sql, params) as any[];
 
         // Get member counts and total assets for each tenant
         const enrichedData = await Promise.all(
             tenants.map(async (tenant) => {
-                const memberCount = await AppDataSource.getRepository(Member).count({
-                    where: { tenantId: tenant.id }
-                });
+                const [[memberCountResult]] = await query('SELECT COUNT(*) as count FROM members WHERE tenantId = ?', [tenant.id]) as any[];
+                const memberCount = parseInt(memberCountResult?.count || '0', 10);
 
-                const assetsResult = await AppDataSource.getRepository(Account)
-                    .createQueryBuilder('account')
-                    .select('SUM(account.balance)', 'total')
-                    .where('account.tenantId = :tenantId', { tenantId: tenant.id })
-                    .getRawOne();
+                const [[assetsResult]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [tenant.id]) as any[];
 
                 const totalAssets = parseFloat(assetsResult?.total || '0');
 
@@ -70,8 +58,8 @@ export async function GET(request: NextRequest) {
                     registrationNumber: tenant.registrationNumber,
                     status: tenant.status,
                     address: tenant.address || 'N/A',
-                    contactEmail: tenant.users?.[0]?.email || 'N/A',
-                    contactPhone: tenant.users?.[0]?.phone || 'N/A',
+                    contactEmail: tenant.contactEmail || 'N/A',
+                    contactPhone: tenant.contactPhone || 'N/A',
                     memberCount,
                     totalAssets: totalAssets.toFixed(2),
                     registeredDate: tenant.createdAt ? new Date(tenant.createdAt).toLocaleDateString() : 'N/A'

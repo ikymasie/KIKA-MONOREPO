@@ -5,6 +5,7 @@ import DashboardLayout from '@/components/layout/DashboardLayout';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import Link from 'next/link';
 import { getProductThumbnail } from '@/lib/image-utils';
+import Pagination from '@/components/ui/Pagination';
 
 interface Product {
     id: string;
@@ -22,19 +23,39 @@ export default function ProductsPage() {
     const [loading, setLoading] = useState(true);
     const [categoryFilter, setCategoryFilter] = useState('all');
     const [search, setSearch] = useState('');
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, totalPages: 0 });
     const [uploading, setUploading] = useState(false);
     const [uploadResult, setUploadResult] = useState<{ success: number; errors: string[] } | null>(null);
 
+    // Debounce search
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setPage(1);
+            fetchProducts();
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [search]);
+
     useEffect(() => {
         fetchProducts();
-    }, []);
+    }, [page]);
 
     const fetchProducts = async () => {
         try {
             setLoading(true);
-            const response = await fetch('/api/admin/products/merchandise');
+            const queryParams = new URLSearchParams({
+                page: page.toString(),
+                limit: '20'
+            });
+            if (search.trim()) {
+                queryParams.append('search', search.trim());
+            }
+
+            const response = await fetch(`/api/admin/products/merchandise?${queryParams.toString()}`);
             const data = await response.json();
-            setProducts(data);
+            setProducts(data.products || []);
+            setPagination(data.pagination);
         } catch (error) {
             console.error('Failed to fetch products:', error);
         } finally {
@@ -69,10 +90,8 @@ export default function ProductsPage() {
         }
     };
 
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.sku.toLowerCase().includes(search.toLowerCase())
-    );
+    // filteredProducts is now just `products` since the backend handles filtering inline
+    const filteredProducts = products;
 
     return (
         <DashboardLayout sidebar={<AdminSidebar />}>
@@ -186,6 +205,18 @@ export default function ProductsPage() {
                                 <p className="text-gray-500">Try adjusting your search or create a new product.</p>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {pagination && pagination.totalPages > 1 && (
+                    <div className="mt-8">
+                        <Pagination
+                            currentPage={pagination.page}
+                            totalPages={pagination.totalPages}
+                            totalItems={pagination.total}
+                            itemsPerPage={pagination.limit}
+                            onPageChange={setPage}
+                        />
                     </div>
                 )}
             </div>

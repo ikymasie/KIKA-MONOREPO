@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/src/config/database';
-import { MerchandiseInvoice, InvoiceStatus } from '@/src/entities/MerchandiseInvoice';
-import { MerchandiseOrder, OrderStatus } from '@/src/entities/MerchandiseOrder';
+import { query, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
 import { getUserFromRequest } from '@/lib/auth-server';
 import { asyncHandler, ForbiddenError, ValidationError } from '@/lib/errors';
 
@@ -12,16 +11,50 @@ export const GET = asyncHandler(async (request: NextRequest) => {
         throw new ForbiddenError('Unauthorized access');
     }
 
-    if (!AppDataSource.isInitialized) {
-        await AppDataSource.initialize();
-    }
+    const invoicesData = await query(`
+        SELECT mi.*, 
+               mo.id as orderId, mo.status as orderStatus, mo.totalAmount, mo.quantity, mo.orderDate,
+               p.id as productId, p.name as productName, p.sku as productSku,
+               m.id as memberId, m.firstName as memberFirstName, m.lastName as memberLastName, m.memberNumber
+        FROM merchandise_invoices mi
+        LEFT JOIN merchandise_orders mo ON mo.id = mi.orderId
+        LEFT JOIN merchandise_products p ON p.id = mo.productId
+        LEFT JOIN members m ON m.id = mo.memberId
+        WHERE mi.tenantId = ?
+        ORDER BY mi.createdAt DESC
+    `, [user.tenantId]) as any[];
 
-    const invoiceRepo = AppDataSource.getRepository(MerchandiseInvoice);
-    const invoices = await invoiceRepo.find({
-        where: { tenantId: user.tenantId },
-        relations: ['order', 'order.product', 'order.member'],
-        order: { createdAt: 'DESC' }
-    });
+    const invoices = invoicesData.map((inv: any) => ({
+        id: inv.id,
+        tenantId: inv.tenantId,
+        vendorId: inv.vendorId,
+        orderId: inv.orderId,
+        invoiceNumber: inv.invoiceNumber,
+        amount: inv.amount,
+        dueDate: inv.dueDate,
+        status: inv.status,
+        notes: inv.notes,
+        createdAt: inv.createdAt,
+        updatedAt: inv.updatedAt,
+        order: inv.orderId ? {
+            id: inv.orderId,
+            status: inv.orderStatus,
+            totalAmount: inv.totalAmount,
+            quantity: inv.quantity,
+            orderDate: inv.orderDate,
+            product: inv.productId ? {
+                id: inv.productId,
+                name: inv.productName,
+                sku: inv.productSku,
+            } : null,
+            member: inv.memberId ? {
+                id: inv.memberId,
+                firstName: inv.memberFirstName,
+                lastName: inv.memberLastName,
+                memberNumber: inv.memberNumber,
+            } : null
+        } : null
+    }));
 
     return NextResponse.json(invoices);
 });
@@ -39,30 +72,31 @@ export const POST = asyncHandler(async (request: NextRequest) => {
         throw new ValidationError('Missing required fields');
     }
 
-    if (!AppDataSource.isInitialized) {
-        await AppDataSource.initialize();
-    }
-
-    const orderRepo = AppDataSource.getRepository(MerchandiseOrder);
-    const order = await orderRepo.findOne({ where: { id: orderId, tenantId: user.tenantId } });
+    const orders = await query('SELECT * FROM merchandise_orders WHERE id = ? AND tenantId = ? LIMIT 1', [orderId, user.tenantId]) as any[];
+    const order = orders[0];
 
     if (!order) {
         throw new Error('Order not found');
     }
 
-    const invoiceRepo = AppDataSource.getRepository(MerchandiseInvoice);
-    const invoice = invoiceRepo.create({
+    const newInvoiceId = uuidv4();
+    const invoice = {
+        id: newInvoiceId,
         tenantId: user.tenantId,
         vendorId: user.id, // Assuming user.id is the vendor ID for now, or fetch from vendor entity
         orderId: order.id,
         invoiceNumber,
-        amount: order.totalPrice,
-        dueDate: new Date(dueDate),
-        status: InvoiceStatus.SENT,
+        amount: order.totalAmount || order.totalPrice, // Note: updated to try totalAmount first
+        dueDate: new Date(dueDate).toISOString().slice(0, 19).replace('T', ' '),
+        status: 'sent',
         notes
-    });
+    };
 
-    await invoiceRepo.save(invoice);
+    await execute(
+        `INSERT INTO merchandise_invoices (id, tenantId, vendorId, orderId, invoiceNumber, amount, dueDate, status, notes, createdAt, updatedAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+        [invoice.id, invoice.tenantId, invoice.vendorId, invoice.orderId, invoice.invoiceNumber, invoice.amount, invoice.dueDate, invoice.status, invoice.notes]
+    );
 
     return NextResponse.json(invoice, { status: 201 });
 });

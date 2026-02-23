@@ -10,8 +10,13 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const products = await listMerchandiseProducts(user.tenantId);
-        return NextResponse.json(products);
+        const { searchParams } = new URL(request.url);
+        const search = searchParams.get('search') || undefined;
+        const page = parseInt(searchParams.get('page') || '1', 10);
+        const limit = parseInt(searchParams.get('limit') || '50', 10);
+
+        const data = await listMerchandiseProducts(user.tenantId, false, search, { page, limit });
+        return NextResponse.json(data);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

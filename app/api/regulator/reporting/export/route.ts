@@ -1,41 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { AppDataSource } from '@/lib/db';
-import { Tenant } from '@/entities/Tenant';
-import { Account } from '@/entities/Account';
-import { Loan } from '@/entities/Loan';
+import { query } from '@/src/db/query';
 
 export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const user = await getUserFromRequest(request);
+        const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        if (!AppDataSource.isInitialized) {
-            await AppDataSource.initialize();
-        }
-
-        const tenants = await AppDataSource.getRepository(Tenant).find({
-            select: ['id', 'name', 'status']
-        });
+        const tenants = await query('SELECT id, name, status FROM tenants') as any[];
 
         // Calculate compliance data for each SACCO
         const complianceData = await Promise.all(
             tenants.map(async (t) => {
-                const saccoAssets = await AppDataSource.getRepository(Account)
-                    .createQueryBuilder('account')
-                    .select('SUM(account.balance)', 'total')
-                    .where('account.tenantId = :tenantId', { tenantId: t.id })
-                    .getRawOne();
-
-                const saccoLoans = await AppDataSource.getRepository(Loan)
-                    .createQueryBuilder('loan')
-                    .select('SUM(loan.outstandingBalance)', 'outstanding')
-                    .where('loan.tenantId = :tenantId', { tenantId: t.id })
-                    .getRawOne();
+                const [[saccoAssets]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [t.id]) as any[];
+                const [[saccoLoans]] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [t.id]) as any[];
 
                 const assets = parseFloat(saccoAssets?.total || '0');
                 const outstanding = parseFloat(saccoLoans?.outstanding || '0');

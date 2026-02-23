@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import AdminSidebar from '@/components/layout/AdminSidebar';
+import Pagination from '@/components/ui/Pagination';
 
 interface DeductionRow {
     id: string;
@@ -43,16 +44,19 @@ export default function AdminDeductionsPage() {
     const [error, setError] = useState<string | null>(null);
     const periodOptions = useMemo(() => generatePeriodOptions(), []);
     const [selectedPeriod, setSelectedPeriod] = useState(periodOptions[0].value);
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
 
     useEffect(() => {
         async function fetchDeductions() {
             try {
                 setLoading(true);
-                const response = await fetch('/api/admin/deductions');
+                const response = await fetch(`/api/admin/deductions?page=${page}&limit=50`);
                 if (!response.ok) throw new Error('Failed to fetch deduction data');
                 const data = await response.json();
                 setDeductions(data.deductions);
                 setMetrics(data.metrics);
+                setPagination(data.pagination);
             } catch (err: any) {
                 setError(err.message);
             } finally {
@@ -60,16 +64,22 @@ export default function AdminDeductionsPage() {
             }
         }
         fetchDeductions();
-    }, [selectedPeriod]);
+    }, [selectedPeriod, page]);
 
-    const handleGenerateCSV = () => {
+    const handleGenerateCSV = async () => {
         setIsGenerating(true);
         try {
+            // Fetch all records for CSV
+            const response = await fetch('/api/admin/deductions?limit=999999');
+            if (!response.ok) throw new Error('Failed to fetch all deductions');
+            const data = await response.json();
+            const allDeductions: DeductionRow[] = data.deductions;
+
             // CSV Header
             const headers = ['Member ID', 'Name', 'Savings', 'Loans', 'Insurance', 'Total'];
 
             // CSV Content
-            const rows = deductions.map(d => [
+            const rows = allDeductions.map(d => [
                 d.memberNumber,
                 d.name,
                 d.savings.toFixed(2),
@@ -199,6 +209,16 @@ export default function AdminDeductionsPage() {
                                 </tfoot>
                             </table>
                         </div>
+
+                        {pagination && pagination.totalPages > 1 && (
+                            <Pagination
+                                currentPage={pagination.page}
+                                totalPages={pagination.totalPages}
+                                totalItems={pagination.total}
+                                itemsPerPage={pagination.limit}
+                                onPageChange={setPage}
+                            />
+                        )}
                     </>
                 )}
             </div>

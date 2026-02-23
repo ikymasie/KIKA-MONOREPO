@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import AdminSidebar from '@/components/layout/AdminSidebar';
+import Pagination from '@/components/ui/Pagination';
 
 interface JournalEntry {
     id: string;
@@ -23,18 +24,28 @@ export default function GLPage() {
     const [entries, setEntries] = useState<JournalEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [filters, setFilters] = useState({ startDate: '', endDate: '', accountId: '' });
+    const [page, setPage] = useState(1);
+    const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
 
     useEffect(() => {
         fetchGL();
-    }, []);
+    }, [page]);
 
     async function fetchGL() {
         setLoading(true);
         try {
-            const query = new URLSearchParams(filters as any).toString();
+            const queryData = { ...filters, page: page.toString(), limit: '50' };
+            // Remove empty filters
+            Object.keys(queryData).forEach(key => {
+                if (!queryData[key as keyof typeof queryData]) {
+                    delete queryData[key as keyof typeof queryData];
+                }
+            });
+            const query = new URLSearchParams(queryData as Record<string, string>).toString();
             const res = await fetch(`/api/admin/accounting/general-ledger?${query}`);
             const data = await res.json();
-            setEntries(data);
+            setEntries(data.entries || []);
+            setPagination(data.pagination);
         } catch (error) {
             console.error('Error fetching GL:', error);
         } finally {
@@ -70,13 +81,13 @@ export default function GLPage() {
                         />
                     </div>
                     <button
-                        onClick={fetchGL}
+                        onClick={() => { setPage(1); fetchGL(); }}
                         className="btn btn-primary px-6 py-2 rounded-lg font-bold"
                     >
                         Filter GL
                     </button>
                     <button
-                        onClick={() => { setFilters({ startDate: '', endDate: '', accountId: '' }); fetchGL(); }}
+                        onClick={() => { setFilters({ startDate: '', endDate: '', accountId: '' }); setPage(1); fetchGL(); }}
                         className="px-6 py-2 rounded-lg font-bold text-gray-500 hover:bg-gray-100"
                     >
                         Reset
@@ -130,6 +141,16 @@ export default function GLPage() {
                         </tbody>
                     </table>
                 </div>
+
+                {pagination && pagination.totalPages > 1 && (
+                    <Pagination
+                        currentPage={pagination.page}
+                        totalPages={pagination.totalPages}
+                        totalItems={pagination.total}
+                        itemsPerPage={pagination.limit}
+                        onPageChange={setPage}
+                    />
+                )}
             </div>
         </DashboardLayout>
     );

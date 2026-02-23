@@ -46,32 +46,62 @@ export async function updateAccount(id: string, tenantId: string, data: Partial<
     return account;
 }
 
-export async function getGeneralLedger(tenantId: string, startDate?: string, endDate?: string, accountId?: string): Promise<IJournalEntry[]> {
-    let sql = `
+export async function getGeneralLedger(
+    tenantId: string,
+    filter: { startDate?: string; endDate?: string; accountId?: string } = {},
+    pagination: { page?: number; limit?: number } = {}
+) {
+    const page = Math.max(1, pagination.page ?? 1);
+    const limit = pagination.limit ? Math.min(10000, Math.max(1, pagination.limit)) : 10000;
+    const offset = (page - 1) * limit;
+
+    let baseWhere = `WHERE a.tenantId = ? AND t.status = 'posted'`;
+    const params: any[] = [tenantId];
+
+    if (filter.accountId) {
+        baseWhere += ` AND je.accountId = ?`;
+        params.push(filter.accountId);
+    }
+    if (filter.startDate) {
+        baseWhere += ` AND t.transactionDate >= ?`;
+        params.push(filter.startDate);
+    }
+    if (filter.endDate) {
+        baseWhere += ` AND t.transactionDate <= ?`;
+        params.push(filter.endDate);
+    }
+
+    const countRow = await queryOne<RowDataPacket & { total: string }>(
+        `SELECT COUNT(*) as total 
+         FROM journal_entries je
+         INNER JOIN accounts a ON a.id = je.accountId
+         INNER JOIN transactions t ON t.id = je.transactionId
+         ${baseWhere}`,
+        params
+    );
+    const total = parseInt(countRow?.total ?? '0', 10);
+
+    const sql = `
         SELECT je.*, a.code AS accountCode, a.name AS accountName, t.transactionDate, t.referenceNumber
         FROM journal_entries je
         INNER JOIN accounts a ON a.id = je.accountId
         INNER JOIN transactions t ON t.id = je.transactionId
-        WHERE a.tenantId = ? AND t.status = 'posted'
+        ${baseWhere}
+        ORDER BY t.transactionDate DESC, je.createdAt DESC
+        LIMIT ? OFFSET ?
     `;
-    const params: any[] = [tenantId];
 
-    if (accountId) {
-        sql += ` AND je.accountId = ?`;
-        params.push(accountId);
-    }
-    if (startDate) {
-        sql += ` AND t.transactionDate >= ?`;
-        params.push(startDate);
-    }
-    if (endDate) {
-        sql += ` AND t.transactionDate <= ?`;
-        params.push(endDate);
-    }
+    const entries = await query<RowDataPacket & IJournalEntry>(sql, [...params, limit, offset]);
 
-    sql += ` ORDER BY t.transactionDate DESC, je.createdAt DESC`;
-
-    return await query<RowDataPacket & IJournalEntry>(sql, params);
+    return {
+        entries,
+        pagination: {
+            page,
+            limit,
+            total,
+            totalPages: Math.ceil(total / limit)
+        }
+    };
 }
 
 export async function getTrialBalance(tenantId: string, asOfDate?: string): Promise<{ accounts: any[]; totalDebit: number; totalCredit: number }> {
