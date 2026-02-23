@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         const total = parseInt(countRow?.total ?? '0', 10);
 
         // Fetch full savings rows with member + product info
-        const savings = await query<RowDataPacket>(
+        const savingsRows = await query<RowDataPacket>(
             `SELECT ms.*,
                     m.id AS memberId, m.firstName, m.lastName, m.memberNumber,
                     sp.name AS productName, sp.code AS productCode, sp.isShareCapital
@@ -51,8 +51,26 @@ export async function GET(request: NextRequest) {
             [...params, limit, offset]
         );
 
+        const formattedSavings = savingsRows.map(row => ({
+            id: row.id,
+            balance: row.balance,
+            monthlyContribution: row.monthlyContribution,
+            isActive: Boolean(row.isActive),
+            memberId: row.memberId,
+            member: {
+                firstName: row.firstName || '',
+                lastName: row.lastName || '',
+                memberNumber: row.memberNumber || 'Unknown',
+            },
+            product: {
+                name: row.productName || 'Unknown',
+                code: row.productCode || '',
+            },
+            createdAt: row.createdAt,
+        }));
+
         return NextResponse.json({
-            savings,
+            savings: formattedSavings,
             metrics: {
                 totalSavings: summary.totalBalance,
                 totalShareCapital: summary.totalShareCapital,
