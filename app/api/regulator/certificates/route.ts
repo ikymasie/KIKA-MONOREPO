@@ -112,9 +112,22 @@ export async function POST(request: NextRequest) {
 
         await certRepo.save(certificate);
 
-        // TODO: Generate PDF certificate and upload to Firebase Storage
-        // certificate.documentUrl = await generateCertificatePDF(certificate);
-        // await certRepo.save(certificate);
+        // Mock PDF generation by creating a simple text certificate for now
+        // TODO: Replace with actual PDF generation (e.g. using pdfkit or pdf-lib)
+        const { uploadFile } = await import('@/lib/firebase-storage');
+
+        const certificateContent = `CERTIFICATE OF ${certificateType}\n\nTenant ID: ${tenantId}\nCertificate Number: ${certificateNumber}\nIssued: ${new Date().toISOString()}`;
+        const blob = new Blob([certificateContent], { type: 'text/plain' });
+        const file = new File([blob], `${certificateNumber}.txt`, { type: 'text/plain' });
+
+        const path = `certificates/${tenantId}/${certificateNumber}.txt`;
+        try {
+            certificate.documentUrl = await uploadFile(file, path);
+            await certRepo.save(certificate);
+        } catch (uploadError) {
+            console.error('Failed to upload certificate:', uploadError);
+            // Optionally continue without document URL, or handle the error
+        }
 
         return NextResponse.json(certificate, { status: 201 });
     } catch (error: any) {

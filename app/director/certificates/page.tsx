@@ -5,25 +5,51 @@ import { useEffect, useState } from 'react';
 export default function CertificateSigning() {
     const [pending, setPending] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [signing, setSigning] = useState<string | null>(null);
+
+    const fetchPending = async () => {
+        try {
+            const res = await fetch('/api/registration/applications?status=approved');
+            if (res.ok) {
+                const apps = await res.json();
+                setPending(apps.filter((a: any) => !a.certificateIssuedAt));
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        // Fetch certificates that need co-signing
-        // For demonstration, we'll use a mocked list or fetch from applications in a specific state
-        async function fetchPending() {
-            try {
-                const res = await fetch('/api/registration/applications?status=approved');
-                if (res.ok) {
-                    const apps = await res.json();
-                    setPending(apps.filter((a: any) => !a.certificateIssuedAt));
-                }
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
-        }
         fetchPending();
     }, []);
+
+    const handleSignAndIssue = async (applicationId: string) => {
+        if (!confirm('Are you sure you want to digitally sign and issue this certificate?')) return;
+
+        setSigning(applicationId);
+        try {
+            const res = await fetch('/api/registration/certificates/issue', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ applicationId })
+            });
+
+            if (res.ok) {
+                alert('Official certificate signed and issued successfully.');
+                fetchPending(); // Refresh list
+            } else {
+                const errorData = await res.json();
+                alert(errorData.error || 'Failed to issue certificate');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error issuing certificate');
+        } finally {
+            setSigning(null);
+        }
+    };
 
     return (
         <div className="space-y-8 animate-fade-in-up">
@@ -78,7 +104,13 @@ export default function CertificateSigning() {
                                     <td className="p-5">
                                         <div className="flex gap-2">
                                             <button className="px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-bold hover:scale-105 transition-transform">Preview</button>
-                                            <button className="px-4 py-2 bg-primary-600 text-white rounded-xl text-xs font-bold hover:scale-105 transition-transform shadow-lg shadow-primary-500/20">Sign & Issue</button>
+                                            <button
+                                                onClick={() => handleSignAndIssue(app.id)}
+                                                disabled={signing === app.id}
+                                                className="px-4 py-2 bg-primary-600 text-white rounded-xl text-xs font-bold hover:scale-105 transition-transform shadow-lg shadow-primary-500/20 disabled:opacity-50 disabled:scale-100"
+                                            >
+                                                {signing === app.id ? 'Signing...' : 'Sign & Issue'}
+                                            </button>
                                         </div>
                                     </td>
                                 </tr>

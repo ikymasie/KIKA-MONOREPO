@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import {
-ComplianceIssue,
+    ComplianceIssue,
     ComplianceIssueType,
     ComplianceIssueSeverity,
     ComplianceIssueStatus,
@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const { UserRole } = await import('@/src/entities/User');
+        const { UserRole } = await import('@/src/entities/User');
 
-    
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const user = await getUserFromRequest(request);
+        const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -119,10 +119,21 @@ const user = await getUserFromRequest(request);
 
         await issueRepo.save(issue);
 
-        // TODO: Send alert to tenant admins via notification system
-        // Notification details: Compliance Issue Identified
-        // Priority: based on severity (critical/high = high, otherwise medium)
-        // Channels: email, in_app
+        const { notificationService } = await import('@/lib/notification-service');
+        const { NotificationEvent } = await import('@/lib/notification-types');
+        const { UserRole } = await import('@/src/entities/User');
+
+        // Send alert to tenant admins via notification system
+        await notificationService.sendNotification({
+            event: NotificationEvent.SACCOS_SYSTEM_ALERT,
+            recipientRole: UserRole.SACCOS_ADMIN,
+            tenantId,
+            data: {
+                issueType,
+                severity,
+                description
+            }
+        });
 
         return NextResponse.json(issue, { status: 201 });
     } catch (error: any) {

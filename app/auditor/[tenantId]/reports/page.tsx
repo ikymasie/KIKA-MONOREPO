@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { uploadFile } from '@/lib/firebase-storage';
 
 interface AuditReport {
     id: string;
@@ -48,30 +49,46 @@ export default function SubmitReportPage() {
         e.preventDefault();
         setSubmitting(true);
 
-        const mockUrl = `https://storage.kika.com/audits/${requestId}/final-report-${Date.now()}.pdf`;
-        const fileName = (e.currentTarget.elements.namedItem('reportName') as HTMLInputElement).value;
+        const form = e.currentTarget;
+        const fileName = (form.elements.namedItem('reportName') as HTMLInputElement).value;
+        const fileInput = form.elements.namedItem('reportFile') as HTMLInputElement;
+
+        if (!fileInput.files?.[0]) {
+            alert('Please select a file to upload');
+            setSubmitting(false);
+            return;
+        }
 
         try {
+            const file = fileInput.files[0];
+            const timestamp = Date.now();
+            const extension = file.name.split('.').pop() || 'pdf';
+            const uploadPath = `audits/${requestId}/reports/final-report-${timestamp}.${extension}`;
+
+            // Upload to Firebase Storage
+            const fileUrl = await uploadFile(file, uploadPath);
+
             const res = await fetch('/api/external-auditor/reports/submit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     requestId,
                     fileName,
-                    fileUrl: mockUrl
+                    fileUrl
                 }),
             });
 
             if (res.ok) {
                 alert('Audit report submitted successfully!');
                 setReport(await res.json());
-                (e.target as HTMLFormElement).reset();
+                form.reset();
             } else {
                 const err = await res.json();
                 alert(err.error || 'Failed to submit report');
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error('Error submitting report:', e);
+            alert(e.message || 'Error uploading file');
         } finally {
             setSubmitting(false);
         }
@@ -127,10 +144,17 @@ export default function SubmitReportPage() {
                                 required
                             />
                         </div>
-                        <div className="p-12 border-2 border-dashed border-gray-200 rounded-2xl text-center hover:border-emerald-500 transition-colors cursor-pointer group">
-                            <div className="text-4xl mb-3 group-hover:scale-110 transition-transform">📄</div>
-                            <div className="text-sm font-bold text-gray-700">Select Final Report File</div>
-                            <div className="text-xs text-gray-500 mt-2">Only signed PDF files are accepted.</div>
+
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Select Final Report File</label>
+                            <input
+                                type="file"
+                                name="reportFile"
+                                className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 transition-colors border-2 border-dashed border-gray-200 rounded-xl p-4 cursor-pointer"
+                                accept=".pdf"
+                                required
+                            />
+                            <div className="text-xs text-gray-500 mt-2 ml-1">Only signed PDF files are accepted.</div>
                         </div>
 
                         <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 flex gap-3 text-sm text-amber-800 italic">

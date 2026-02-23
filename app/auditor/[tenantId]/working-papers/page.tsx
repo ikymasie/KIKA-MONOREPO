@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { uploadFile } from '@/lib/firebase-storage';
 
 interface WorkingPaper {
     id: string;
@@ -47,18 +48,32 @@ export default function WorkingPapersPage() {
         e.preventDefault();
         setUploading(true);
 
-        // Mocking file upload for now - in a real app, this would use Firebase Storage
-        const mockUrl = `https://storage.kika.com/audits/${requestId}/working-paper-${Date.now()}.pdf`;
-        const fileName = (e.currentTarget.elements.namedItem('fileName') as HTMLInputElement).value;
+        const form = e.currentTarget;
+        const fileName = (form.elements.namedItem('fileName') as HTMLInputElement).value;
+        const fileInput = form.elements.namedItem('paperFile') as HTMLInputElement;
+
+        if (!fileInput.files?.[0]) {
+            alert('Please select a file to upload');
+            setUploading(false);
+            return;
+        }
 
         try {
+            const file = fileInput.files[0];
+            const timestamp = Date.now();
+            const extension = file.name.split('.').pop() || 'pdf';
+            const uploadPath = `audits/${requestId}/working-papers/working-paper-${timestamp}.${extension}`;
+
+            // Upload to Firebase Storage
+            const fileUrl = await uploadFile(file, uploadPath);
+
             const res = await fetch('/api/external-auditor/working-papers', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     requestId,
                     fileName,
-                    fileUrl: mockUrl
+                    fileUrl
                 }),
             });
 
@@ -66,13 +81,14 @@ export default function WorkingPapersPage() {
                 alert('Working paper uploaded successfully!');
                 const newPaper = await res.json();
                 setPapers([newPaper, ...papers]);
-                (e.target as HTMLFormElement).reset();
+                form.reset();
             } else {
                 const err = await res.json();
                 alert(err.error || 'Failed to upload paper');
             }
-        } catch (e) {
+        } catch (e: any) {
             console.error('Error uploading paper:', e);
+            alert(e.message || 'Error uploading file');
         } finally {
             setUploading(false);
         }
@@ -109,11 +125,19 @@ export default function WorkingPapersPage() {
                                     required
                                 />
                             </div>
-                            <div className="p-8 border-2 border-dashed border-gray-200 rounded-xl text-center hover:border-emerald-500 transition-colors cursor-pointer group">
-                                <div className="text-3xl mb-2 group-hover:scale-110 transition-transform">📁</div>
-                                <div className="text-sm font-medium text-gray-500">Click to select or drag and drop</div>
-                                <div className="text-xs text-gray-400 mt-1">PDF, XLSX up to 10MB</div>
+
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">Select Working Paper</label>
+                                <input
+                                    type="file"
+                                    name="paperFile"
+                                    className="block w-full text-sm text-gray-500 file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100 transition-colors border-2 border-dashed border-gray-200 rounded-xl p-4 cursor-pointer"
+                                    accept=".pdf,.xlsx,.csv,.docx"
+                                    required
+                                />
+                                <div className="text-xs text-gray-400 mt-2 ml-1">PDF, XLSX, DOCX up to 10MB</div>
                             </div>
+
                             <button
                                 type="submit"
                                 className="btn btn-primary w-full shadow-emerald-200"

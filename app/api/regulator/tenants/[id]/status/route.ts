@@ -63,10 +63,21 @@ export async function PUT(
         tenant.status = status as TenantStatusType;
         await tenantRepo.save(tenant);
 
-        // TODO: Send notification to tenant admins via notification system
-        // Notification details: Tenant Status Changed
-        // Priority: urgent
-        // Channels: email, sms, in_app
+        const { notificationService } = await import('@/lib/notification-service');
+        const { NotificationEvent } = await import('@/lib/notification-types');
+
+        // Send notification to tenant admins via notification system
+        await notificationService.sendNotification({
+            event: NotificationEvent.SACCOS_SYSTEM_ALERT,
+            recipientRole: UserRole.SACCOS_ADMIN,
+            tenantId: tenant.id,
+            data: {
+                tenantName: tenant.name,
+                newStatus: status,
+                reason,
+                effectiveDate: effectiveDate ? new Date(effectiveDate).toISOString() : new Date().toISOString()
+            }
+        });
 
         return NextResponse.json({ tenant, statusLog });
     } catch (error: any) {

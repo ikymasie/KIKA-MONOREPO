@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/lib/auth-hooks';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import RegulatorSidebar from '@/components/layout/RegulatorSidebar';
 
@@ -25,6 +26,7 @@ interface KYCVerification {
 }
 
 export default function KYCVerificationPage() {
+    const { user } = useAuth();
     const [verifications, setVerifications] = useState<KYCVerification[]>([]);
     const [selectedKYC, setSelectedKYC] = useState<KYCVerification | null>(null);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -85,7 +87,7 @@ export default function KYCVerificationPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     kycIds: selectedIds,
-                    verifiedBy: 'CURRENT_USER_ID', // TODO: Get from auth context
+                    verifiedBy: user?.id || '',
                     verified: true,
                     notes: 'Bulk verified via Compliance Portal'
                 }),

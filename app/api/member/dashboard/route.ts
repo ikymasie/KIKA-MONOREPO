@@ -31,10 +31,11 @@ export async function GET(request: NextRequest) {
         }
 
         // Fetch member data
-        const [savings, activeLoans, recentTransactions] = await Promise.all([
+        const [savings, activeLoans, recentTransactions, activePolicies] = await Promise.all([
             query('SELECT s.*, p.isShareCapital FROM member_savings s LEFT JOIN savings_products p ON p.id = s.productId WHERE s.memberId = ?', [member.id]),
             query('SELECT * FROM loans WHERE memberId = ? AND status = "active" ORDER BY createdAt DESC LIMIT 1', [member.id]),
             query('SELECT * FROM transactions WHERE memberId = ? ORDER BY createdAt DESC LIMIT 10', [member.id]),
+            query('SELECT monthlyPremium FROM insurance_policies WHERE memberId = ? AND status = "active"', [member.id])
         ]) as any[][];
 
         const activeLoan = activeLoans.length > 0 ? activeLoans[0] : null;
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
 
         // Calculate next payment breakdown
         const monthlySavings = savings.reduce((sum, s) => sum + Number(s.monthlyContribution), 0);
-        const insurancePremium = 250; // TODO: Fetch from insurance module when ready
+        const insurancePremium = activePolicies.reduce((sum: number, p: any) => sum + Number(p.monthlyPremium || 0), 0);
 
         const nextPayment = activeLoanData
             ? {

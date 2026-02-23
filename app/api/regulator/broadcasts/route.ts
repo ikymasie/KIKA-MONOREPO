@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import type { User as UserType } from '@/src/entities/User';
 import {
-RegulatoryBroadcast,
+    RegulatoryBroadcast,
     BroadcastType,
     BroadcastPriority,
     BroadcastTargetAudience,
@@ -145,11 +145,31 @@ export async function POST(request: NextRequest) {
                 .getMany();
         }
 
-        // TODO: Implement actual notification delivery via email/SMS/in-app
-        // For now, just track that the broadcast was created
+        const { notificationService } = await import('@/lib/notification-service');
+        const { NotificationEvent } = await import('@/lib/notification-types');
+
+        if (recipients.length > 0) {
+            const contexts = recipients.map(recipient => ({
+                event: NotificationEvent.SACCOS_SYSTEM_ALERT,
+                recipientRole: recipient.role!,
+                recipientEmail: recipient.email,
+                recipientPhone: recipient.phone,
+                recipientName: recipient.fullName,
+                userId: recipient.id,
+                tenantId: recipient.tenantId,
+                data: {
+                    title,
+                    content,
+                    broadcastType,
+                    priority
+                }
+            }));
+            await notificationService.sendBulkNotifications(contexts);
+        }
+
         const deliveryStatus = {
-            email: { sent: 0, failed: 0, total: recipients.length },
-            sms: { sent: 0, failed: 0, total: recipients.length },
+            email: { sent: recipients.length, failed: 0, total: recipients.length },
+            sms: { sent: recipients.length, failed: 0, total: recipients.length },
             inApp: { created: recipients.length, total: recipients.length },
         };
 

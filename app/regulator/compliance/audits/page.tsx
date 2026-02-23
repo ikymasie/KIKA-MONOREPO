@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/lib/auth-hooks';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import RegulatorSidebar from '@/components/layout/RegulatorSidebar';
 import { Calendar as CalendarIcon, Clock, MapPin, Search, ChevronRight, User } from 'lucide-react';
@@ -14,13 +15,14 @@ interface Audit {
 }
 
 export default function ComplianceAuditsPage() {
+    const { user } = useAuth();
     const [audits, setAudits] = useState<Audit[]>([]);
     const [tenants, setTenants] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [formData, setFormData] = useState({
         tenantId: '',
-        auditorId: 'CURRENT_USER_ID', // TODO: From context
+        auditorId: user?.id || '',
         scheduledDate: ''
     });
 
@@ -118,8 +120,8 @@ export default function ComplianceAuditsPage() {
                                     </div>
                                     <div className="flex items-center gap-4">
                                         <span className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase ${audit.status === 'completed' ? 'bg-success-100 text-success-700' :
-                                                audit.status === 'pending' ? 'bg-warning-100 text-warning-700' :
-                                                    'bg-gray-100 text-gray-700'
+                                            audit.status === 'pending' ? 'bg-warning-100 text-warning-700' :
+                                                'bg-gray-100 text-gray-700'
                                             }`}>
                                             {audit.status}
                                         </span>

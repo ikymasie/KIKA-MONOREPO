@@ -6,10 +6,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     try {
         // Dynamic imports to avoid circular dependencies
         const { getUserFromRequest } = await import('@/lib/auth-server');
-const { Bylaw, BylawStatus } = await import('@/src/entities/Bylaw');
+        const { Bylaw, BylawStatus } = await import('@/src/entities/Bylaw');
         const { UserRole } = await import('@/src/entities/User');
 
-    
+
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -49,10 +49,22 @@ const { Bylaw, BylawStatus } = await import('@/src/entities/Bylaw');
 
         await bylawRepo.save(bylaw);
 
-        // TODO: Send notification to tenant admins via notification system
-        // Notification details: Bye-laws Approved
-        // Priority: high
-        // Channels: email, in_app
+        const { notificationService } = await import('@/lib/notification-service');
+        const { NotificationEvent } = await import('@/lib/notification-types');
+
+        // Send notification to tenant admins via notification system
+        await notificationService.sendNotification({
+            event: NotificationEvent.SACCOS_SYSTEM_ALERT,
+            recipientRole: UserRole.SACCOS_ADMIN,
+            tenantId: bylaw.tenantId,
+            data: {
+                bylawId: bylaw.id,
+                bylawVersion: bylaw.version,
+                status: 'APPROVED',
+                effectiveDate: bylaw.effectiveDate,
+                notes: notes
+            }
+        });
 
         return NextResponse.json(bylaw);
     } catch (error: any) {
