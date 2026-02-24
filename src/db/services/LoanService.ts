@@ -124,12 +124,20 @@ export async function listLoans(
     return { loans: rows.map(parseLoan), total };
 }
 
-export async function getLoansByMember(memberId: string, tenantId: string): Promise<ILoan[]> {
+export async function getLoansByMember(memberId: string, tenantId: string): Promise<(ILoan & { product: { name: string } })[]> {
     const rows = await query<RowDataPacket>(
-        'SELECT * FROM loans WHERE memberId = ? AND tenantId = ? ORDER BY createdAt DESC',
+        `SELECT l.*,
+                lp.name AS productName
+         FROM loans l
+         LEFT JOIN loan_products lp ON lp.id = l.productId
+         WHERE l.memberId = ? AND l.tenantId = ?
+         ORDER BY l.createdAt DESC`,
         [memberId, tenantId]
     );
-    return rows.map(parseLoan);
+    return rows.map(row => ({
+        ...parseLoan(row),
+        product: { name: row.productName ?? 'Unknown Product' },
+    }));
 }
 
 /** Loans that are ACTIVE and overdue (maturityDate in the past). */
