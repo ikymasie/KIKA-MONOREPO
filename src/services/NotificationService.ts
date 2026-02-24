@@ -10,7 +10,7 @@ export class NotificationService {
         newStatus: string
     ): Promise<void> {
         try {
-            const [[settings]] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
+            const [settings] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
 
             if (!settings?.workflowConfig) {
                 console.log('No workflow configuration found, skipping notification');

@@ -28,8 +28,8 @@ export class AlertGenerationService {
      * Check for liquidity ratio breaches
      */
     private static async checkLiquidityBreach(tenant: any): Promise<void> {
-        const [[assets]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [tenant.id]) as any;
-        const [[loans]] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [tenant.id]) as any;
+        const [assets] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [tenant.id]) as any;
+        const [loans] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [tenant.id]) as any;
 
         const totalAssets = parseFloat(assets?.total || '0');
         const outstanding = parseFloat(loans?.outstanding || '0');
@@ -68,8 +68,8 @@ export class AlertGenerationService {
      * Check for high-risk ratings
      */
     private static async checkHighRisk(tenant: any): Promise<void> {
-        const [[assets]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [tenant.id]) as any;
-        const [[loans]] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [tenant.id]) as any;
+        const [assets] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [tenant.id]) as any;
+        const [loans] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [tenant.id]) as any;
 
         const totalAssets = parseFloat(assets?.total || '0');
         const outstanding = parseFloat(loans?.outstanding || '0');
@@ -90,8 +90,8 @@ export class AlertGenerationService {
      * Check capital adequacy
      */
     private static async checkCapitalAdequacy(tenant: any): Promise<void> {
-        const [[assets]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [tenant.id]) as any;
-        const [[loans]] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [tenant.id]) as any;
+        const [assets] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [tenant.id]) as any;
+        const [loans] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [tenant.id]) as any;
 
         const totalAssets = parseFloat(assets?.total || '0');
         const totalLoans = parseFloat(loans?.outstanding || '0');
@@ -149,7 +149,7 @@ export class AlertGenerationService {
      * Check for pending KYC verifications
      */
     private static async checkPendingKYC(tenant: any): Promise<void> {
-        const [[result]] = await query(`
+        const [result] = await query(`
             SELECT COUNT(*) as count 
             FROM kyc
             INNER JOIN members m ON m.id = kyc.memberId
@@ -173,7 +173,7 @@ export class AlertGenerationService {
      * Check for overdue bye-laws reviews
      */
     private static async checkByelawReview(tenant: any): Promise<void> {
-        const [[overdueReview]] = await query(
+        const [overdueReview] = await query(
             'SELECT * FROM byelaw_reviews WHERE tenantId = ? AND status = ? ORDER BY submittedAt ASC LIMIT 1',
             [tenant.id, 'pending']
         ) as any;
@@ -198,7 +198,7 @@ export class AlertGenerationService {
      * Check for critical compliance issues
      */
     private static async checkCriticalIssues(tenant: any): Promise<void> {
-        const [[result]] = await query(
+        const [result] = await query(
             'SELECT COUNT(*) as count FROM compliance_issues WHERE tenantId = ? AND status = ? AND severity = ?',
             [tenant.id, 'open', 'critical']
         ) as any;
@@ -232,7 +232,7 @@ export class AlertGenerationService {
         if (!tenantId) return;
 
         // Check if similar unresolved alert exists
-        const [[existing]] = await query(
+        const [existing] = await query(
             'SELECT * FROM regulatory_alerts WHERE tenantId = ? AND type = ? AND isResolved = false LIMIT 1',
             [tenantId, alertData.type]
         ) as any;

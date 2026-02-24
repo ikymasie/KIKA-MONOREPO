@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Find member record by user ID
-        const [[member]] = await query(
+        const [member] = await query(
             'SELECT m.*, t.code as tenantCode FROM members m LEFT JOIN tenants t ON t.id = m.tenantId WHERE m.userId = ? LIMIT 1',
             [user.id]
         ) as any[];

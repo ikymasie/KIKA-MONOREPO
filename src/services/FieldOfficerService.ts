@@ -21,7 +21,7 @@ export class FieldOfficerService {
             [id, data.tenantId, data.officerId, data.scheduledDate, data.purpose, data.notes || null, 'scheduled']
         );
 
-        const [[visit]] = await query('SELECT * FROM field_visits WHERE id = ? LIMIT 1', [id]) as any;
+        const [visit] = await query('SELECT * FROM field_visits WHERE id = ? LIMIT 1', [id]) as any;
         return visit;
     }
 
@@ -85,7 +85,7 @@ export class FieldOfficerService {
             );
         }
 
-        const [[visit]] = await query('SELECT * FROM field_visits WHERE id = ? LIMIT 1', [visitId]) as any;
+        const [visit] = await query('SELECT * FROM field_visits WHERE id = ? LIMIT 1', [visitId]) as any;
         return visit;
     }
 
@@ -116,7 +116,7 @@ export class FieldOfficerService {
             ]
         );
 
-        const [[savedReport]] = await query('SELECT * FROM field_reports WHERE id = ? LIMIT 1', [id]) as any;
+        const [savedReport] = await query('SELECT * FROM field_reports WHERE id = ? LIMIT 1', [id]) as any;
 
         await this.updateVisitStatus(data.visitId, 'completed', new Date());
 
@@ -140,7 +140,7 @@ export class FieldOfficerService {
             [id, data.tenantId, data.officerId, data.subject, data.description, data.severity, 'open']
         );
 
-        const [[investigation]] = await query('SELECT * FROM investigations WHERE id = ? LIMIT 1', [id]) as any;
+        const [investigation] = await query('SELECT * FROM investigations WHERE id = ? LIMIT 1', [id]) as any;
         return investigation;
     }
 
@@ -180,7 +180,7 @@ export class FieldOfficerService {
             );
         }
 
-        const [[investigation]] = await query('SELECT * FROM investigations WHERE id = ? LIMIT 1', [investigationId]) as any;
+        const [investigation] = await query('SELECT * FROM investigations WHERE id = ? LIMIT 1', [investigationId]) as any;
         return investigation;
     }
 
@@ -234,7 +234,7 @@ export class FieldOfficerService {
             [latitude, longitude, visitId]
         );
 
-        const [[visit]] = await query('SELECT * FROM field_visits WHERE id = ? LIMIT 1', [visitId]) as any;
+        const [visit] = await query('SELECT * FROM field_visits WHERE id = ? LIMIT 1', [visitId]) as any;
         return visit;
     }
 

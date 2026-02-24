@@ -16,8 +16,8 @@ export async function GET(request: NextRequest) {
         // Calculate compliance data for each SACCO
         const complianceData = await Promise.all(
             tenants.map(async (t) => {
-                const [[saccoAssets]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [t.id]) as any[];
-                const [[saccoLoans]] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [t.id]) as any[];
+                const [saccoAssets] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [t.id]) as any[];
+                const [saccoLoans] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [t.id]) as any[];
 
                 const assets = parseFloat(saccoAssets?.total || '0');
                 const outstanding = parseFloat(saccoLoans?.outstanding || '0');

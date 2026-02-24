@@ -21,17 +21,17 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Product ID and initial contribution are required' }, { status: 400 });
         }
 
-        const [[member]] = await query('SELECT id FROM members WHERE userId = ? LIMIT 1', [user.id]) as any;
+        const [member] = await query('SELECT id FROM members WHERE userId = ? LIMIT 1', [user.id]) as any;
         if (!member) {
             return NextResponse.json({ error: 'Member profile not found' }, { status: 404 });
         }
 
-        const [[product]] = await query('SELECT id FROM savings_products WHERE id = ? LIMIT 1', [productId]) as any;
+        const [product] = await query('SELECT id FROM savings_products WHERE id = ? LIMIT 1', [productId]) as any;
         if (!product) {
             return NextResponse.json({ error: 'Savings product not found' }, { status: 404 });
         }
 
-        const [[existing]] = await query('SELECT id FROM member_savings WHERE memberId = ? AND productId = ? LIMIT 1', [member.id, product.id]) as any;
+        const [existing] = await query('SELECT id FROM member_savings WHERE memberId = ? AND productId = ? LIMIT 1', [member.id, product.id]) as any;
         if (existing) {
             return NextResponse.json({ error: 'You already have an active account for this product' }, { status: 400 });
         }
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
             [accountId, member.id, product.id, Number(initialMonthlyContribution)]
         );
 
-        const [[newAccount]] = await query('SELECT * FROM member_savings WHERE id = ? LIMIT 1', [accountId]) as any;
+        const [newAccount] = await query('SELECT * FROM member_savings WHERE id = ? LIMIT 1', [accountId]) as any;
 
         return NextResponse.json({
             message: 'Application successful',

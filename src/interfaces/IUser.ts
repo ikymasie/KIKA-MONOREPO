@@ -42,6 +42,7 @@ export interface IUser {
     id: string;
     email: string;
     firebaseUid?: string;
+    passwordHash?: string;
     firstName: string;
     lastName: string;
     role: UserRole;
@@ -64,6 +65,7 @@ export interface IUserCreateInput {
     email: string;
     firstName: string;
     lastName: string;
+    passwordHash?: string;
     role: UserRole;
     tenantId?: string;
     phone?: string;
@@ -81,6 +83,7 @@ export type IUserUpdateInput = Partial<
         | 'firstName'
         | 'lastName'
         | 'phone'
+        | 'passwordHash'
         | 'role'
         | 'status'
         | 'permissions'

@@ -25,7 +25,7 @@ export class ComplianceService {
         const alertScore = await this.calculateAlertScore(tenantId);
 
         // Fetch thresholds from settings or use defaults
-        const [[settings]] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
+        const [settings] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
 
         const thresholds = {
             excellent: Number(settings?.excellentThreshold || 90),
@@ -56,7 +56,7 @@ export class ComplianceService {
             [scoreId, tenantId, overallScore, kycScore, reportingScore, bylawScore, issueScore, alertScore, rating, calculatedBy]
         );
 
-        const [[complianceScore]] = await query('SELECT * FROM compliance_scores WHERE id = ?', [scoreId]) as any;
+        const [complianceScore] = await query('SELECT * FROM compliance_scores WHERE id = ?', [scoreId]) as any;
 
         // Update tenant with latest score
         await execute(
@@ -72,12 +72,12 @@ export class ComplianceService {
      * Based on percentage of members with fully verified KYC
      */
     private static async calculateKYCScore(tenantId: string): Promise<number> {
-        const [[totalMembersResult]] = await query('SELECT COUNT(*) as count FROM members WHERE tenantId = ?', [tenantId]) as any;
+        const [totalMembersResult] = await query('SELECT COUNT(*) as count FROM members WHERE tenantId = ?', [tenantId]) as any;
         const totalMembers = Number(totalMembersResult?.count || 0);
 
         if (totalMembers === 0) return 100; // No members = perfect score
 
-        const [[verifiedKYCResult]] = await query(`
+        const [verifiedKYCResult] = await query(`
             SELECT COUNT(*) as count 
             FROM kyc 
             INNER JOIN members m ON m.id = kyc.memberId 
@@ -104,7 +104,7 @@ export class ComplianceService {
      * Based on approved bye-laws and compliance
      */
     private static async calculateBylawScore(tenantId: string): Promise<number> {
-        const [[latestReview]] = await query(
+        const [latestReview] = await query(
             'SELECT * FROM byelaw_reviews WHERE tenantId = ? ORDER BY submittedAt DESC LIMIT 1',
             [tenantId]
         ) as any;
@@ -175,12 +175,12 @@ export class ComplianceService {
      * Based on percentage of resolved regulatory alerts
      */
     private static async calculateAlertScore(tenantId: string): Promise<number> {
-        const [[totalAlertsResult]] = await query('SELECT COUNT(*) as count FROM regulatory_alerts WHERE tenantId = ?', [tenantId]) as any;
+        const [totalAlertsResult] = await query('SELECT COUNT(*) as count FROM regulatory_alerts WHERE tenantId = ?', [tenantId]) as any;
         const totalAlerts = Number(totalAlertsResult?.count || 0);
 
         if (totalAlerts === 0) return 100; // No alerts = perfect score
 
-        const [[resolvedAlertsResult]] = await query('SELECT COUNT(*) as count FROM regulatory_alerts WHERE tenantId = ? AND isResolved = true', [tenantId]) as any;
+        const [resolvedAlertsResult] = await query('SELECT COUNT(*) as count FROM regulatory_alerts WHERE tenantId = ? AND isResolved = true', [tenantId]) as any;
         const resolvedAlerts = Number(resolvedAlertsResult?.count || 0);
 
         return (resolvedAlerts / totalAlerts) * 100;
@@ -237,7 +237,7 @@ export class ComplianceService {
      * Get detailed compliance metrics for a SACCO
      */
     static async getComplianceMetrics(tenantId: string) {
-        const [[latestScore]] = await query(`
+        const [latestScore] = await query(`
             SELECT s.*, t.name as tenantName, u.firstName as calculatorFirstName, u.lastName as calculatorLastName 
             FROM compliance_scores s 
             LEFT JOIN tenants t ON t.id = s.tenantId 
@@ -246,10 +246,10 @@ export class ComplianceService {
             ORDER BY s.calculatedAt DESC LIMIT 1
         `, [tenantId]) as any;
 
-        const [[openIssuesResult]] = await query('SELECT COUNT(*) as count FROM compliance_issues WHERE tenantId = ? AND status = ?', [tenantId, 'open']) as any;
+        const [openIssuesResult] = await query('SELECT COUNT(*) as count FROM compliance_issues WHERE tenantId = ? AND status = ?', [tenantId, 'open']) as any;
         const openIssuesCount = Number(openIssuesResult?.count || 0);
 
-        const [[pendingKycResult]] = await query(`
+        const [pendingKycResult] = await query(`
             SELECT COUNT(*) as count 
             FROM kyc 
             INNER JOIN members m ON m.id = kyc.memberId 
@@ -257,7 +257,7 @@ export class ComplianceService {
         `, [tenantId]) as any;
         const pendingKYCCount = Number(pendingKycResult?.count || 0);
 
-        const [[bylawReview]] = await query('SELECT * FROM byelaw_reviews WHERE tenantId = ? ORDER BY submittedAt DESC LIMIT 1', [tenantId]) as any;
+        const [bylawReview] = await query('SELECT * FROM byelaw_reviews WHERE tenantId = ? ORDER BY submittedAt DESC LIMIT 1', [tenantId]) as any;
 
         return {
             latestScore: latestScore ? {
@@ -310,7 +310,7 @@ export class ComplianceService {
             if (triggered) {
                 // Check if a similar unresolved alert already exists
                 const title = `Automated Alert: ${rule.name}`;
-                const [[existingAlert]] = await query(
+                const [existingAlert] = await query(
                     'SELECT * FROM regulatory_alerts WHERE tenantId = ? AND type = ? AND title = ? AND isResolved = false LIMIT 1',
                     [tenantId, 'compliance_issue', title]
                 ) as any;
@@ -337,7 +337,7 @@ export class ComplianceService {
             [id, tenantId, auditorId, scheduledDate, 'pending']
         );
 
-        const [[audit]] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [id]) as any;
+        const [audit] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [id]) as any;
         return audit;
     }
 
@@ -345,7 +345,7 @@ export class ComplianceService {
      * Audit Scheduler: Complete an audit
      */
     static async completeAudit(auditId: string, findings: string): Promise<any> {
-        const [[audit]] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [auditId]) as any;
+        const [audit] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [auditId]) as any;
 
         if (!audit) throw new Error('Audit not found');
 
@@ -359,7 +359,7 @@ export class ComplianceService {
             ['completed', findings, complianceScoreAtTime, auditId]
         );
 
-        const [[updatedAudit]] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [auditId]) as any;
+        const [updatedAudit] = await query('SELECT * FROM compliance_audits WHERE id = ? LIMIT 1', [auditId]) as any;
         return updatedAudit;
     }
 
@@ -381,7 +381,7 @@ export class ComplianceService {
             );
         }
 
-        const [[rule]] = await query('SELECT * FROM compliance_rules WHERE id = ? LIMIT 1', [id]) as any;
+        const [rule] = await query('SELECT * FROM compliance_rules WHERE id = ? LIMIT 1', [id]) as any;
         return rule;
     }
 

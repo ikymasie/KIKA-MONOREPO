@@ -75,6 +75,9 @@ export class User {
     @Column({ nullable: true, unique: true })
     firebaseUid?: string;
 
+    @Column({ nullable: true })
+    passwordHash?: string;
+
     @Column()
     firstName?: string;
 

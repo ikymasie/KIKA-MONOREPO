@@ -33,7 +33,7 @@ export class ByelawReviewService {
      * Get bye-law review by ID
      */
     static async getReviewById(reviewId: string): Promise<any | null> {
-        const [[review]] = await query(`
+        const [review] = await query(`
             SELECT r.*, t.name as tenantName, u.firstName as reviewerFirstName, u.lastName as reviewerLastName 
             FROM byelaw_reviews r 
             LEFT JOIN tenants t ON t.id = r.tenantId 
@@ -54,7 +54,7 @@ export class ByelawReviewService {
      * Submit a bye-laws review
      */
     static async submitReview(submission: ByelawReviewSubmission): Promise<any> {
-        const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [submission.reviewId]) as any;
+        const [review] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [submission.reviewId]) as any;
 
         if (!review) {
             throw new Error('Bye-law review not found');
@@ -76,7 +76,7 @@ export class ByelawReviewService {
         userId: string,
         notes?: string
     ): Promise<any> {
-        const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
+        const [review] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
 
         if (!review) {
             throw new Error('Bye-law review not found');
@@ -98,7 +98,7 @@ export class ByelawReviewService {
         userId: string,
         reason: string
     ): Promise<any> {
-        const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
+        const [review] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
 
         if (!review) {
             throw new Error('Bye-law review not found');
@@ -120,7 +120,7 @@ export class ByelawReviewService {
         userId: string,
         notes: string
     ): Promise<any> {
-        const [[review]] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
+        const [review] = await query('SELECT * FROM byelaw_reviews WHERE id = ? LIMIT 1', [reviewId]) as any;
 
         if (!review) {
             throw new Error('Bye-law review not found');
@@ -156,22 +156,22 @@ export class ByelawReviewService {
      * Get bye-laws review statistics
      */
     static async getReviewStatistics() {
-        const [[totalResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews') as any;
+        const [totalResult] = await query('SELECT COUNT(*) as count FROM byelaw_reviews') as any;
         const totalReviews = Number(totalResult?.count || 0);
 
-        const [[pendingResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['pending']) as any;
+        const [pendingResult] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['pending']) as any;
         const pending = Number(pendingResult?.count || 0);
 
-        const [[underReviewResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['under_review']) as any;
+        const [underReviewResult] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['under_review']) as any;
         const underReview = Number(underReviewResult?.count || 0);
 
-        const [[approvedResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['approved']) as any;
+        const [approvedResult] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['approved']) as any;
         const approved = Number(approvedResult?.count || 0);
 
-        const [[rejectedResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['rejected']) as any;
+        const [rejectedResult] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['rejected']) as any;
         const rejected = Number(rejectedResult?.count || 0);
 
-        const [[revisionResult]] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['revision_required']) as any;
+        const [revisionResult] = await query('SELECT COUNT(*) as count FROM byelaw_reviews WHERE status = ?', ['revision_required']) as any;
         const revisionRequired = Number(revisionResult?.count || 0);
 
         return {

@@ -48,7 +48,7 @@ export class KYCVerificationService {
      * Verify a specific KYC document
      */
     static async verifyKYCDocument(request: KYCVerificationRequest): Promise<any> {
-        const [[kyc]] = await query('SELECT * FROM kyc WHERE id = ? LIMIT 1', [request.kycId]) as any;
+        const [kyc] = await query('SELECT * FROM kyc WHERE id = ? LIMIT 1', [request.kycId]) as any;
 
         if (!kyc) {
             throw new Error('KYC record not found');
@@ -86,7 +86,7 @@ export class KYCVerificationService {
 
         await execute(updateSql, params);
 
-        const [[updatedKyc]] = await query('SELECT * FROM kyc WHERE id = ? LIMIT 1', [request.kycId]) as any;
+        const [updatedKyc] = await query('SELECT * FROM kyc WHERE id = ? LIMIT 1', [request.kycId]) as any;
 
         return updatedKyc;
     }
@@ -95,12 +95,12 @@ export class KYCVerificationService {
      * Get KYC compliance rate for a SACCO
      */
     static async getKYCComplianceRate(tenantId: string): Promise<number> {
-        const [[totalMembersRow]] = await query('SELECT COUNT(*) as count FROM members WHERE tenantId = ?', [tenantId]) as any;
+        const [totalMembersRow] = await query('SELECT COUNT(*) as count FROM members WHERE tenantId = ?', [tenantId]) as any;
         const totalMembers = Number(totalMembersRow?.count || 0);
 
         if (totalMembers === 0) return 100;
 
-        const [[verifiedKYCsRow]] = await query(`
+        const [verifiedKYCsRow] = await query(`
             SELECT COUNT(*) as count 
             FROM kyc k
             INNER JOIN members m ON m.id = k.memberId
@@ -119,7 +119,7 @@ export class KYCVerificationService {
      * Get KYC details by ID
      */
     static async getKYCById(kycId: string): Promise<any | null> {
-        const [[kyc]] = await query(`
+        const [kyc] = await query(`
             SELECT k.*, m.firstName, m.lastName, t.name as tenantName 
             FROM kyc k
             LEFT JOIN members m ON m.id = k.memberId
@@ -145,22 +145,22 @@ export class KYCVerificationService {
      * Get KYC statistics for dashboard
      */
     static async getKYCStatistics() {
-        const [[totalResult]] = await query('SELECT COUNT(*) as count FROM kyc') as any;
+        const [totalResult] = await query('SELECT COUNT(*) as count FROM kyc') as any;
         const totalKYCs = Number(totalResult?.count || 0);
 
-        const [[fullyVerifiedResult]] = await query(`
+        const [fullyVerifiedResult] = await query(`
             SELECT COUNT(*) as count FROM kyc 
             WHERE identityVerified = true AND residenceVerified = true AND incomeVerified = true
         `) as any;
         const fullyVerified = Number(fullyVerifiedResult?.count || 0);
 
-        const [[pendingIdentityResult]] = await query('SELECT COUNT(*) as count FROM kyc WHERE identityVerified = false') as any;
+        const [pendingIdentityResult] = await query('SELECT COUNT(*) as count FROM kyc WHERE identityVerified = false') as any;
         const pendingIdentity = Number(pendingIdentityResult?.count || 0);
 
-        const [[pendingResidenceResult]] = await query('SELECT COUNT(*) as count FROM kyc WHERE residenceVerified = false') as any;
+        const [pendingResidenceResult] = await query('SELECT COUNT(*) as count FROM kyc WHERE residenceVerified = false') as any;
         const pendingResidence = Number(pendingResidenceResult?.count || 0);
 
-        const [[pendingIncomeResult]] = await query('SELECT COUNT(*) as count FROM kyc WHERE incomeVerified = false') as any;
+        const [pendingIncomeResult] = await query('SELECT COUNT(*) as count FROM kyc WHERE incomeVerified = false') as any;
         const pendingIncome = Number(pendingIncomeResult?.count || 0);
 
         return {

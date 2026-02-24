@@ -58,7 +58,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
         throw new BadRequestError('Missing required fields');
     }
 
-    const [[member]] = await query('SELECT id FROM members WHERE id = ? AND tenantId = ? LIMIT 1', [memberId, user.tenantId]) as any;
+    const [member] = await query('SELECT id FROM members WHERE id = ? AND tenantId = ? LIMIT 1', [memberId, user.tenantId]) as any;
     if (!member) throw new NotFoundError('Member not found');
 
     const ticketId = uuidv4();
@@ -71,7 +71,7 @@ export const POST = asyncHandler(async (request: NextRequest) => {
         [ticketId, user.tenantId, memberId, subject, description, category, finalPriority, assignedToId]
     );
 
-    const [[ticket]] = await query('SELECT * FROM support_tickets WHERE id = ? LIMIT 1', [ticketId]) as any;
+    const [ticket] = await query('SELECT * FROM support_tickets WHERE id = ? LIMIT 1', [ticketId]) as any;
 
     return NextResponse.json({
         success: true,
@@ -90,7 +90,7 @@ export const PATCH = asyncHandler(async (request: NextRequest) => {
 
     if (!id) throw new BadRequestError('Ticket ID is required');
 
-    const [[ticket]] = await query('SELECT * FROM support_tickets WHERE id = ? AND tenantId = ? LIMIT 1', [id, user.tenantId]) as any;
+    const [ticket] = await query('SELECT * FROM support_tickets WHERE id = ? AND tenantId = ? LIMIT 1', [id, user.tenantId]) as any;
     if (!ticket) throw new NotFoundError('Ticket not found');
 
     const updates: any = {};
@@ -107,7 +107,7 @@ export const PATCH = asyncHandler(async (request: NextRequest) => {
         await execute(`UPDATE support_tickets SET ${clause}, updatedAt = NOW() WHERE id = ?`, [...values, id]);
     }
 
-    const [[updatedTicket]] = await query('SELECT * FROM support_tickets WHERE id = ? LIMIT 1', [id]) as any;
+    const [updatedTicket] = await query('SELECT * FROM support_tickets WHERE id = ? LIMIT 1', [id]) as any;
 
     return NextResponse.json({
         success: true,

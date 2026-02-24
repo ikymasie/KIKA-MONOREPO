@@ -36,28 +36,21 @@ function AdminSignInForm() {
         setLoading(true);
 
         try {
-            const userCredential = await signIn(email, password);
-            const idToken = await userCredential.user.getIdToken();
+            const res = await signIn(email, password);
 
-            const response = await fetch('/api/auth/signin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ idToken }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to create session');
+            if (res?.error) {
+                toast.error(res.error || 'Failed to sign in');
+                return;
             }
 
-            const { user: userData } = await response.json();
             toast.success('Signed in successfully');
 
+            // Redirect to dashboard or callbackUrl
             if (callbackUrl && callbackUrl !== '/') {
                 router.push(callbackUrl);
             } else {
-                const route = getRoleBasedRoute(userData.role);
-                router.push(route);
+                // Default admin route
+                router.push('/admin/dashboard');
             }
         } catch (err: any) {
             console.error('Admin sign in error:', err);

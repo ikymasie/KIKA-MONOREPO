@@ -9,7 +9,7 @@ export class SocietyApplicationService {
         user: any
     ): Promise<any> {
         // Ensure settings exist and get current fees
-        let [[settings]] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
+        let [settings] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
 
         if (!settings) {
             // Fallback fees if no settings
@@ -55,7 +55,7 @@ export class SocietyApplicationService {
             ]
         );
 
-        const [[savedApplication]] = await query('SELECT * FROM society_applications WHERE id = ?', [id]) as any;
+        const [savedApplication] = await query('SELECT * FROM society_applications WHERE id = ?', [id]) as any;
         return savedApplication;
     }
 
@@ -64,13 +64,13 @@ export class SocietyApplicationService {
      * Useful if fees changed while application was in draft.
      */
     static async refreshApplicationFee(applicationId: string): Promise<any | null> {
-        const [[application]] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
+        const [application] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
 
         if (!application || application.status !== 'draft') {
             return application;
         }
 
-        const [[settings]] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
+        const [settings] = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any;
 
         if (!settings) return application;
 
@@ -96,7 +96,7 @@ export class SocietyApplicationService {
         }
 
         await execute('UPDATE society_applications SET feeAmount = ?, updatedAt = NOW() WHERE id = ?', [feeAmount, applicationId]);
-        const [[updatedApplication]] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
+        const [updatedApplication] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
         return updatedApplication;
     }
 
@@ -157,7 +157,7 @@ export class SocietyApplicationService {
         isVerified: boolean,
         clerkId: string
     ): Promise<any> {
-        const [[document]] = await query('SELECT * FROM application_documents WHERE id = ?', [documentId]) as any;
+        const [document] = await query('SELECT * FROM application_documents WHERE id = ?', [documentId]) as any;
 
         if (!document) throw new Error('Document not found');
 
@@ -167,7 +167,7 @@ export class SocietyApplicationService {
             [isVerified, verifiedAt, clerkId, documentId]
         );
 
-        const [[updatedDocument]] = await query('SELECT * FROM application_documents WHERE id = ?', [documentId]) as any;
+        const [updatedDocument] = await query('SELECT * FROM application_documents WHERE id = ?', [documentId]) as any;
         return updatedDocument;
     }
 
@@ -180,7 +180,7 @@ export class SocietyApplicationService {
         isIncomplete: boolean,
         notes?: string
     ): Promise<any> {
-        const [[application]] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
+        const [application] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
         if (!application) throw new Error('Application not found');
 
         let status = application.status;
@@ -201,7 +201,7 @@ export class SocietyApplicationService {
             if (!fileNumber) {
                 const prefix = application.applicationType === 'saccos' ? 'SACCOS' : 'SOC';
                 const year = new Date().getFullYear();
-                const [[countResult]] = await query('SELECT COUNT(*) as count FROM society_applications') as any;
+                const [countResult] = await query('SELECT COUNT(*) as count FROM society_applications') as any;
                 const count = Number(countResult?.count || 0);
                 fileNumber = `${prefix}-${year}-${(count + 1).toString().padStart(4, '0')}`;
             }
@@ -214,7 +214,7 @@ export class SocietyApplicationService {
             [status, rejectionReasons, registryClerkId, assignedFileNumberAt, fileNumber, applicationId]
         );
 
-        const [[updatedApplication]] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
+        const [updatedApplication] = await query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
         return updatedApplication;
     }
 
@@ -229,7 +229,7 @@ export class SocietyApplicationService {
         notes?: string
     ): Promise<any> {
         return await withTransaction(async (conn) => {
-            const [[application]] = await conn.query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
+            const [application] = await conn.query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
             if (!application) throw new Error('Application not found');
 
             const fromStatus = application.status;
@@ -254,7 +254,7 @@ export class SocietyApplicationService {
             );
 
             // Fetch updated application
-            const [[savedApplication]] = await conn.query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
+            const [savedApplication] = await conn.query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
 
             // Log the workflow change
             if (performerId) {
@@ -267,7 +267,7 @@ export class SocietyApplicationService {
             }
 
             // Merge applicant details for return (to match previous behavior if needed)
-            const [[applicant]] = await conn.query('SELECT * FROM users WHERE id = ?', [savedApplication.applicantUserId]) as any;
+            const [applicant] = await conn.query('SELECT * FROM users WHERE id = ?', [savedApplication.applicantUserId]) as any;
             if (applicant) {
                 savedApplication.applicant = { id: applicant.id, firstName: applicant.firstName, lastName: applicant.lastName, email: applicant.email };
             }
@@ -313,7 +313,7 @@ export class SocietyApplicationService {
              VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
             [id, applicationId, data.type, data.direction, data.subject, data.content, data.recordedById]
         );
-        const [[comm]] = await query('SELECT * FROM application_communications WHERE id = ?', [id]) as any;
+        const [comm] = await query('SELECT * FROM application_communications WHERE id = ?', [id]) as any;
         return comm;
     }
 
@@ -364,11 +364,11 @@ export class SocietyApplicationService {
         riskLevel: string = 'low'
     ): Promise<any> {
         return await withTransaction(async (conn) => {
-            const [[application]] = await conn.query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
+            const [application] = await conn.query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
             if (!application) throw new Error('Application not found');
 
             // Update or create screening record
-            const [[screening]] = await conn.query('SELECT * FROM security_screenings WHERE applicationId = ? LIMIT 1', [applicationId]) as any;
+            const [screening] = await conn.query('SELECT * FROM security_screenings WHERE applicationId = ? LIMIT 1', [applicationId]) as any;
 
             const screeningStatus = isCleared ? 'cleared' : 'failed';
 
@@ -406,7 +406,7 @@ export class SocietyApplicationService {
                 [notes, securityClearedAt, officerId, appStatus, applicationId]
             );
 
-            const [[updatedApp]] = await conn.query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
+            const [updatedApp] = await conn.query('SELECT * FROM society_applications WHERE id = ?', [applicationId]) as any;
             return updatedApp;
         });
     }
@@ -415,14 +415,14 @@ export class SocietyApplicationService {
      * Get security screening for an application
      */
     static async getSecurityScreening(applicationId: string): Promise<any | null> {
-        const [[screening]] = await query('SELECT * FROM security_screenings WHERE applicationId = ? LIMIT 1', [applicationId]) as any;
+        const [screening] = await query('SELECT * FROM security_screenings WHERE applicationId = ? LIMIT 1', [applicationId]) as any;
         if (!screening) return null;
 
         const flags = await query('SELECT * FROM risk_flags WHERE screeningId = ?', [screening.id]) as any[];
         screening.riskFlags = flags;
 
         if (screening.officerId) {
-            const [[officer]] = await query('SELECT * FROM users WHERE id = ?', [screening.officerId]) as any;
+            const [officer] = await query('SELECT * FROM users WHERE id = ?', [screening.officerId]) as any;
             screening.officer = officer;
         }
 
@@ -442,7 +442,7 @@ export class SocietyApplicationService {
              VALUES (?, ?, ?, ?, false, NOW())`,
             [id, screeningId, data.type, data.description]
         );
-        const [[flag]] = await query('SELECT * FROM risk_flags WHERE id = ?', [id]) as any;
+        const [flag] = await query('SELECT * FROM risk_flags WHERE id = ?', [id]) as any;
         return flag;
     }
 
@@ -450,7 +450,7 @@ export class SocietyApplicationService {
      * Resolve a risk flag
      */
     static async resolveRiskFlag(flagId: string, userId: string): Promise<any> {
-        const [[flag]] = await query('SELECT * FROM risk_flags WHERE id = ?', [flagId]) as any;
+        const [flag] = await query('SELECT * FROM risk_flags WHERE id = ?', [flagId]) as any;
         if (!flag) throw new Error('Risk flag not found');
 
         const resolvedAt = new Date();
@@ -459,7 +459,7 @@ export class SocietyApplicationService {
             [resolvedAt, userId, flagId]
         );
 
-        const [[updatedFlag]] = await query('SELECT * FROM risk_flags WHERE id = ?', [flagId]) as any;
+        const [updatedFlag] = await query('SELECT * FROM risk_flags WHERE id = ?', [flagId]) as any;
         return updatedFlag;
     }
 
@@ -485,7 +485,7 @@ export class SocietyApplicationService {
      * Get a specific application by ID
      */
     static async getApplicationById(id: string): Promise<any | null> {
-        const [[application]] = await query(`
+        const [application] = await query(`
             SELECT a.*, 
                    u.firstName as applicantFirstName, u.lastName as applicantLastName, u.email as applicantEmail,
                    rc.firstName as rcFirstName, rc.lastName as rcLastName,
@@ -526,7 +526,7 @@ export class SocietyApplicationService {
      * Get application by ID ensuring it belongs to the applicant
      */
     static async getApplicantApplication(id: string, userId: string): Promise<any | null> {
-        const [[application]] = await query(`
+        const [application] = await query(`
             SELECT a.*, u.firstName as applicantFirstName, u.lastName as applicantLastName, u.email as applicantEmail
             FROM society_applications a
             LEFT JOIN users u ON u.id = a.applicantUserId
@@ -594,7 +594,7 @@ export class SocietyApplicationService {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
             [id, applicationId, data.documentType, data.fileName, data.fileUrl, data.fileSizeBytes, data.mimeType, userId]
         );
-        const [[doc]] = await query('SELECT * FROM application_documents WHERE id = ?', [id]) as any;
+        const [doc] = await query('SELECT * FROM application_documents WHERE id = ?', [id]) as any;
         return doc;
     }
 
@@ -609,7 +609,7 @@ export class SocietyApplicationService {
      * Remove a document
      */
     static async removeDocument(documentId: string, userId: string): Promise<void> {
-        const [[document]] = await query('SELECT * FROM application_documents WHERE id = ? AND uploadedBy = ?', [documentId, userId]) as any;
+        const [document] = await query('SELECT * FROM application_documents WHERE id = ? AND uploadedBy = ?', [documentId, userId]) as any;
         if (!document) throw new Error('Document not found or unauthorized');
         await execute('DELETE FROM application_documents WHERE id = ?', [documentId]);
     }
@@ -629,7 +629,7 @@ export class SocietyApplicationService {
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
             [id, applicationId, data.fullName, data.idNumber, data.citizenship, data.isOfficeBearer || false, data.officeBearerPosition, data.residentialAddress]
         );
-        const [[member]] = await query('SELECT * FROM application_members WHERE id = ?', [id]) as any;
+        const [member] = await query('SELECT * FROM application_members WHERE id = ?', [id]) as any;
         return member;
     }
 
@@ -647,7 +647,7 @@ export class SocietyApplicationService {
         memberId: string,
         data: any
     ): Promise<any> {
-        const [[member]] = await query('SELECT * FROM application_members WHERE id = ?', [memberId]) as any;
+        const [member] = await query('SELECT * FROM application_members WHERE id = ?', [memberId]) as any;
         if (!member) throw new Error('Member not found');
 
         const updates: string[] = [];
@@ -665,7 +665,7 @@ export class SocietyApplicationService {
             await execute(`UPDATE application_members SET ${updates.join(', ')} WHERE id = ?`, params);
         }
 
-        const [[updatedMember]] = await query('SELECT * FROM application_members WHERE id = ?', [memberId]) as any;
+        const [updatedMember] = await query('SELECT * FROM application_members WHERE id = ?', [memberId]) as any;
         return updatedMember;
     }
 
@@ -673,7 +673,7 @@ export class SocietyApplicationService {
      * Remove a member from an application
      */
     static async removeMember(memberId: string): Promise<void> {
-        const [[member]] = await query('SELECT * FROM application_members WHERE id = ?', [memberId]) as any;
+        const [member] = await query('SELECT * FROM application_members WHERE id = ?', [memberId]) as any;
         if (!member) throw new Error('Member not found');
         await execute('DELETE FROM application_members WHERE id = ?', [memberId]);
     }

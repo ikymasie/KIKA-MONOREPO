@@ -19,8 +19,8 @@ export async function GET(request: NextRequest) {
         // Calculate risk rating for each SACCO based on financial metrics
         const complianceDataPromises = tenants.map(async (t) => {
             // Get SACCO-specific financial data
-            const [[saccoAssets]] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [t.id]) as any[];
-            const [[saccoLoans]] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [t.id]) as any[];
+            const [saccoAssets] = await query('SELECT SUM(balance) as total FROM accounts WHERE tenantId = ?', [t.id]) as any[];
+            const [saccoLoans] = await query('SELECT SUM(outstandingBalance) as outstanding FROM loans WHERE tenantId = ?', [t.id]) as any[];
 
             const assets = parseFloat(saccoAssets?.total || '0');
             const outstanding = parseFloat(saccoLoans?.outstanding || '0');
@@ -54,9 +54,9 @@ export async function GET(request: NextRequest) {
         const complianceData = await Promise.all(complianceDataPromises);
 
         // 2. Financial Health (Sector Wide)
-        const [[totalAssets]] = await query('SELECT SUM(balance) as total FROM accounts') as any[];
-        const [[totalLoans]] = await query('SELECT SUM(principalAmount) as total FROM loans') as any[];
-        const [[outstandingLoans]] = await query('SELECT SUM(outstandingBalance) as totalOutstanding FROM loans') as any[];
+        const [totalAssets] = await query('SELECT SUM(balance) as total FROM accounts') as any[];
+        const [totalLoans] = await query('SELECT SUM(principalAmount) as total FROM loans') as any[];
+        const [outstandingLoans] = await query('SELECT SUM(outstandingBalance) as totalOutstanding FROM loans') as any[];
 
         // Calculate Liquidity Ratio: (Total Assets / Total Outstanding Loans) × 100
         const totalAssetsValue = parseFloat(totalAssets?.total || '0');

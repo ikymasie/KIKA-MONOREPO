@@ -135,9 +135,9 @@ export async function createUser(data: IUserCreateInput): Promise<IUser> {
     await execute(
         `INSERT INTO users (
             id, email, firstName, lastName, role, status, phone,
-            tenantId, mfaEnabled, mustChangePassword, permissions,
+            tenantId, mfaEnabled, mustChangePassword, passwordHash, permissions,
             notificationPreferences, createdAt, updatedAt
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
         [
             id,
             data.email,
@@ -149,6 +149,7 @@ export async function createUser(data: IUserCreateInput): Promise<IUser> {
             data.tenantId ?? null,
             mfaEnabled ? 1 : 0,
             mustChangePassword ? 1 : 0,
+            data.passwordHash ?? null,
             JSON.stringify(permissions),
             data.notificationPreferences ? JSON.stringify(data.notificationPreferences) : null,
         ]

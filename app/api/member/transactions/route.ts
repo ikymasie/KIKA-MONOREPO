@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const [[member]] = await query('SELECT id FROM members WHERE userId = ? LIMIT 1', [user.id]) as any;
+        const [member] = await query('SELECT id FROM members WHERE userId = ? LIMIT 1', [user.id]) as any;
         if (!member) {
             return NextResponse.json({ error: 'Member profile not found' }, { status: 404 });
         }

@@ -91,7 +91,14 @@ export const PATCH = asyncHandler(async (
 
     if (!status) throw new BadRequestError('status is required');
 
-    const validStatuses: MemberStatus[] = ['active', 'inactive', 'suspended', 'deceased', 'resigned', 'retired'];
+    const validStatuses: MemberStatus[] = [
+        MemberStatus.ACTIVE,
+        MemberStatus.INACTIVE,
+        MemberStatus.SUSPENDED,
+        MemberStatus.DECEASED,
+        MemberStatus.RESIGNED,
+        MemberStatus.RETIRED,
+    ];
     if (!validStatuses.includes(status as MemberStatus)) {
         throw new BadRequestError(`Invalid status: ${status}`);
     }
@@ -99,7 +106,7 @@ export const PATCH = asyncHandler(async (
     // Guard: deceased members cannot be reactivated
     const current = await getMemberProfile(id, user.tenantId);
     if (!current) throw new NotFoundError('Member not found');
-    if (current.status === 'deceased' && status === 'active') {
+    if (current.status === MemberStatus.DECEASED && status === MemberStatus.ACTIVE) {
         throw new BadRequestError('Cannot reactivate a member marked as deceased');
     }
 
