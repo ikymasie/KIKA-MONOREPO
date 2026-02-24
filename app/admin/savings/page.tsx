@@ -170,7 +170,7 @@ export default function AdminSavingsPage() {
                                             </td>
                                             <td className="px-6 py-4 text-right">
                                                 <button
-                                                    onClick={() => router.push(acc.memberId ? `/admin/members/${acc.memberId}` : '/admin/members')}
+                                                    onClick={() => router.push(`/admin/savings/${acc.id}`)}
                                                     className="text-primary-600 font-bold hover:text-primary-700 text-xs"
                                                 >
                                                     Manage
