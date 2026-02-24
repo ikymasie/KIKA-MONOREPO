@@ -1,13 +1,4 @@
-import { storage } from './firebase-client';
-import {
-    ref,
-    uploadBytesResumable,
-    getDownloadURL,
-    deleteObject,
-    getMetadata,
-    UploadMetadata,
-} from 'firebase/storage';
-
+// On-Premise Polyfill for Firebase Storage
 export interface UploadProgress {
     bytesTransferred: number;
     totalBytes: number;
@@ -63,106 +54,69 @@ export function generateUniqueFileName(originalName: string): string {
 }
 
 /**
- * Upload a file to Firebase Storage
- * @param file - File to upload
- * @param path - Storage path (use helper functions above)
- * @param onProgress - Optional callback for upload progress
- * @returns Promise resolving to the download URL
+ * Upload a file using the Local On-Premise API instead of Firebase 
  */
 export async function uploadFile(
     file: File,
     path: string,
     onProgress?: (progress: UploadProgress) => void
 ): Promise<string> {
-    return new Promise((resolve, reject) => {
-        const storageRef = ref(storage, path);
+    const formData = new FormData();
+    formData.append('file', file);
 
-        const metadata: UploadMetadata = {
-            contentType: file.type,
-            customMetadata: {
-                originalName: file.name,
-                uploadedAt: new Date().toISOString(),
-            },
-        };
+    // Convert firebase path to local folder structure string,
+    // avoiding deep slashes to make generic uploading simpler
+    formData.append('path', path.replace(/\//g, '-'));
 
-        const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+    // Optional: simulate progress
+    if (onProgress) {
+        onProgress({ bytesTransferred: 0, totalBytes: file.size, percentage: 0 });
+    }
 
-        uploadTask.on(
-            'state_changed',
-            (snapshot) => {
-                if (onProgress) {
-                    const progress: UploadProgress = {
-                        bytesTransferred: snapshot.bytesTransferred,
-                        totalBytes: snapshot.totalBytes,
-                        percentage: (snapshot.bytesTransferred / snapshot.totalBytes) * 100,
-                    };
-                    onProgress(progress);
-                }
-            },
-            (error) => {
-                console.error('Upload error:', error);
-                reject(new Error(`Upload failed: ${error.message}`));
-            },
-            async () => {
-                try {
-                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-                    resolve(downloadURL);
-                } catch (error: any) {
-                    reject(new Error(`Failed to get download URL: ${error.message}`));
-                }
-            }
-        );
-    });
-}
-
-/**
- * Delete a file from Firebase Storage
- * @param url - The download URL of the file to delete
- */
-export async function deleteFile(url: string): Promise<void> {
     try {
-        // Extract the path from the URL
-        const urlObj = new URL(url);
-        const pathMatch = urlObj.pathname.match(/\/o\/(.+)\?/);
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+        });
 
-        if (!pathMatch) {
-            throw new Error('Invalid Firebase Storage URL');
+        if (!response.ok) {
+            throw new Error(`Upload failed: ${response.statusText}`);
         }
 
-        const path = decodeURIComponent(pathMatch[1]);
-        const storageRef = ref(storage, path);
+        if (onProgress) {
+            onProgress({ bytesTransferred: file.size, totalBytes: file.size, percentage: 100 });
+        }
 
-        await deleteObject(storageRef);
+        const data = await response.json();
+        return data.url; // Returns the local URL
     } catch (error: any) {
-        console.error('Delete error:', error);
-        throw new Error(`Failed to delete file: ${error.message}`);
+        console.error('Upload error:', error);
+        throw new Error(`Upload failed: ${error.message}`);
     }
 }
 
 /**
- * Get metadata for a file in Firebase Storage
- * @param url - The download URL of the file
+ * Delete a file (Not fully implemented locally yet)
+ */
+export async function deleteFile(url: string): Promise<void> {
+    // For on-premise, file deletion can be implemented via another API route,
+    // or ignored depending on compliance rules. We'll simply console.log for now.
+    console.log("Local file deletion requested for:", url);
+}
+
+/**
+ * Get metadata for a file
+ * For local files, this would require querying the file system.
+ * Returning a mock for now.
  */
 export async function getFileMetadata(url: string): Promise<FileMetadata> {
     try {
-        const urlObj = new URL(url);
-        const pathMatch = urlObj.pathname.match(/\/o\/(.+)\?/);
-
-        if (!pathMatch) {
-            throw new Error('Invalid Firebase Storage URL');
-        }
-
-        const path = decodeURIComponent(pathMatch[1]);
-        const storageRef = ref(storage, path);
-
-        const metadata = await getMetadata(storageRef);
-
         return {
-            name: metadata.name,
-            size: metadata.size,
-            contentType: metadata.contentType || 'application/octet-stream',
-            timeCreated: metadata.timeCreated,
-            updated: metadata.updated,
+            name: url.split('/').pop() || 'file',
+            size: 0,
+            contentType: 'application/octet-stream',
+            timeCreated: new Date().toISOString(),
+            updated: new Date().toISOString(),
         };
     } catch (error: any) {
         console.error('Metadata error:', error);

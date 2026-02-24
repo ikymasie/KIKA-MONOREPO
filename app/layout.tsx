@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import './globals.css';
 import { AuthProvider } from '@/lib/auth-context';
 import { BrandingProvider } from '@/components/providers/BrandingProvider';
+import { NextAuthProvider } from '@/components/providers/NextAuthProvider';
 import RouteProgressBar from '@/components/common/RouteProgressBar';
 import GlobalLoadingOverlay from '@/components/common/GlobalLoadingOverlay';
 
@@ -28,12 +29,14 @@ export default function RootLayout({
                     <GlobalLoadingOverlay />
                     <RouteProgressBar />
                 </Suspense>
-                <AuthProvider>
-                    <BrandingProvider>
-                        {children}
-                        <Toaster position="top-right" richColors />
-                    </BrandingProvider>
-                </AuthProvider>
+                <NextAuthProvider>
+                    <AuthProvider>
+                        <BrandingProvider>
+                            {children}
+                            <Toaster position="top-right" richColors />
+                        </BrandingProvider>
+                    </AuthProvider>
+                </NextAuthProvider>
             </body>
         </html>
     );

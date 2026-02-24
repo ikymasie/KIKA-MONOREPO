@@ -1,13 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import {
-    signInWithEmailAndPassword,
-    signOut as firebaseSignOut,
-    onAuthStateChanged,
-    User as FirebaseUser,
-} from 'firebase/auth';
-import { auth } from './firebase-client';
+import { useSession, signIn as nextAuthSignIn, signOut as nextAuthSignOut } from 'next-auth/react';
 
 interface AuthUser {
     id: string;
@@ -15,12 +9,12 @@ interface AuthUser {
     name: string;
     role: string;
     tenantId?: string;
-    firebaseUid: string;
+    firebaseUid?: string;
 }
 
 interface AuthContextType {
     user: AuthUser | null;
-    firebaseUser: FirebaseUser | null;
+    firebaseUser: any | null; // Deprecated placeholder for compatibility
     loading: boolean;
     signIn: (email: string, password: string) => Promise<any>;
     signOut: () => Promise<void>;
@@ -30,100 +24,57 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<AuthUser | null>(null);
-    const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-    const [loading, setLoading] = useState(true);
+    const { data: session, status } = useSession();
 
-    // Listen to Firebase auth state changes
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            setFirebaseUser(firebaseUser);
+    // We map the NextAuth session user to the AuthUser interface 
+    // expected by the rest of the application
+    const user: AuthUser | null = session?.user ? {
+        id: session.user.id,
+        email: session.user.email || '',
+        name: session.user.name || session.user.email || 'User',
+        role: session.user.role || 'member',
+        tenantId: session.user.tenantId || undefined,
+        firebaseUid: session.user.firebaseUid,
+    } : null;
 
-            if (firebaseUser) {
-                try {
-                    // Fetch real user profile (role, name, tenantId) from backend session
-                    const res = await fetch('/api/auth/session');
-                    if (res.ok) {
-                        const { user: sessionUser } = await res.json();
-                        if (sessionUser) {
-                            setUser({
-                                id: sessionUser.id || firebaseUser.uid,
-                                email: sessionUser.email || firebaseUser.email || '',
-                                name: sessionUser.name || firebaseUser.displayName || firebaseUser.email || 'User',
-                                role: sessionUser.role || 'member',
-                                tenantId: sessionUser.tenantId,
-                                firebaseUid: firebaseUser.uid,
-                            });
-                        } else {
-                            // Session cookie not yet set (race condition during sign-in); use Firebase info only
-                            setUser({
-                                id: firebaseUser.uid,
-                                email: firebaseUser.email || '',
-                                name: firebaseUser.displayName || firebaseUser.email || 'User',
-                                role: 'member',
-                                tenantId: undefined,
-                                firebaseUid: firebaseUser.uid,
-                            });
-                        }
-                    }
-                } catch {
-                    // Fallback to basic Firebase user info on network error
-                    setUser({
-                        id: firebaseUser.uid,
-                        email: firebaseUser.email || '',
-                        name: firebaseUser.displayName || firebaseUser.email || 'User',
-                        role: 'member',
-                        tenantId: undefined,
-                        firebaseUid: firebaseUser.uid,
-                    });
-                }
-            } else {
-                setUser(null);
-            }
-
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, []);
+    const loading = status === 'loading';
 
     const signIn = async (email: string, password: string) => {
         try {
-            setLoading(true);
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            // User state will be updated by onAuthStateChanged
-            return userCredential;
+            const res = await nextAuthSignIn('credentials', {
+                redirect: false,
+                email,
+                password,
+            });
+            if (res?.error) {
+                throw new Error(res.error);
+            }
+            return res;
         } catch (error: any) {
             console.error('Sign in error:', error);
             throw error;
-        } finally {
-            setLoading(false);
         }
     };
 
     const signOut = async () => {
         try {
-            setLoading(true);
-            await firebaseSignOut(auth);
-            // User state will be updated by onAuthStateChanged
+            await nextAuthSignOut({ redirect: false });
         } catch (error) {
             console.error('Sign out error:', error);
             throw error;
-        } finally {
-            setLoading(false);
         }
     };
 
     const refreshSession = async () => {
-        if (firebaseUser) {
-            // Force token refresh
-            await firebaseUser.getIdToken(true);
-        }
+        // NextAuth automatically handles session refreshing if configured,
+        // but can be manually triggered by reloading the window or 
+        // calling getSession() if needed.
+        console.log("Session refresh requested locally");
     };
 
     const value: AuthContextType = {
         user,
-        firebaseUser,
+        firebaseUser: null, // Removed external dependency
         loading,
         signIn,
         signOut,

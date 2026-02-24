@@ -1,27 +1,31 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
 
-// Define public routes that don't require authentication
 const publicRoutes = ['/', '/auth/signin', '/auth/admin/signin', '/auth/error', '/regulator/auth/signin', '/directory', '/directory/search'];
 
-export async function middleware(request: NextRequest) {
-    const { pathname } = request.nextUrl;
-
-    // Allow public routes
-    // Allow public routes
-    if (publicRoutes.includes(pathname) || pathname.startsWith('/directory')) {
+export default withAuth(
+    function middleware(req) {
         return NextResponse.next();
-    }
+    },
+    {
+        callbacks: {
+            authorized: ({ req, token }) => {
+                const { pathname } = req.nextUrl;
 
-    // Allow API routes and static files
-    if (pathname.startsWith('/api/') || pathname.startsWith('/_next/')) {
-        return NextResponse.next();
-    }
+                // Always allow public routes
+                if (publicRoutes.includes(pathname) || pathname.startsWith('/directory') || pathname.startsWith('/api/') || pathname.startsWith('/_next/')) {
+                    return true;
+                }
 
-    // For client-side Firebase auth, we'll handle protection in the ProtectedRoute component
-    // Middleware just allows requests through
-    return NextResponse.next();
-}
+                // All other routes require a valid session token (NextAuth)
+                return !!token;
+            },
+        },
+        pages: {
+            signIn: '/auth/signin',
+        }
+    }
+);
 
 export const config = {
     matcher: [
