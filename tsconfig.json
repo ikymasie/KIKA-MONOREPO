@@ -25,10 +25,8 @@
                 "name": "next"
             }
         ],
+        "baseUrl": ".",
         "paths": {
-            "@/*": [
-                "./*"
-            ],
             "@/entities/*": [
                 "./src/entities/*"
             ],
@@ -37,6 +35,9 @@
             ],
             "@/components/*": [
                 "./components/*"
+            ],
+            "@/*": [
+                "./*"
             ]
         }
     },
