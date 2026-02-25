@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import DashboardLayout from '../../../../components/layout/DashboardLayout';
-import AdminSidebar from '../../../../components/layout/AdminSidebar';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import AdminSidebar from '@/components/layout/AdminSidebar';
 
 interface Account {
     id: string;

@@ -4,9 +4,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
     try {
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
-        const { RegistrationService } = await import("../../../../src/services/RegistrationService");
-        const { UserRole } = await import("../../../../src/entities/User");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { RegistrationService } = await import("@/src/services/RegistrationService");
+        const { UserRole } = await import("@/src/entities/User");
 
         const user = await getUserFromRequest(request);
         if (!user) {
