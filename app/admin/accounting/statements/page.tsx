@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import AdminSidebar from '@/components/layout/AdminSidebar';
+import DashboardLayout from '../../../../components/layout/DashboardLayout';
+import AdminSidebar from '../../../../components/layout/AdminSidebar';
 
 export default function StatementsPage() {
     const [type, setType] = useState<'balance-sheet' | 'income-statement'>('balance-sheet');

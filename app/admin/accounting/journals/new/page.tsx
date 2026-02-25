@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import AdminSidebar from '@/components/layout/AdminSidebar';
+import DashboardLayout from '../../../../../components/layout/DashboardLayout';
+import AdminSidebar from '../../../../../components/layout/AdminSidebar';
 import { useRouter } from 'next/navigation';
 
 interface Account {
