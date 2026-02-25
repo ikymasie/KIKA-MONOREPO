@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import DashboardLayout from '../../../../components/layout/DashboardLayout';
-import AdminSidebar from '../../../../components/layout/AdminSidebar';
-import Pagination from '../../../../components/ui/Pagination';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import AdminSidebar from '@/components/layout/AdminSidebar';
+import Pagination from '@/components/ui/Pagination';
 import Link from 'next/link';
 
 

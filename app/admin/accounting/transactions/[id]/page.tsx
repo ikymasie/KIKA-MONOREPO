@@ -15,8 +15,8 @@ import {
     Download
 } from 'lucide-react';
 import { format } from 'date-fns';
-import DashboardLayout from '../../../../../components/layout/DashboardLayout';
-import AdminSidebar from '../../../../../components/layout/AdminSidebar';
+import DashboardLayout from '@/components/layout/DashboardLayout';
+import AdminSidebar from '@/components/layout/AdminSidebar';
 
 interface JournalEntry {
     id: string;
