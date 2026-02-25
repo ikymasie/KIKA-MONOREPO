@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import AdminSidebar from '@/components/layout/AdminSidebar';
+import DashboardLayout from '../../../../components/layout/DashboardLayout';
+import AdminSidebar from '../../../../components/layout/AdminSidebar';
 
 export default function BankRecPage() {
     const [step, setStep] = useState(1);
