@@ -75,7 +75,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         const updatedClaim = await updateClaim(id, user.tenantId, updates);
 
         // Fetch user phone to notify
-        const { queryOne } = await import("@/../src/db/query");
+        const { queryOne } = await import("@/src/db/query");
         const policyData = await queryOne('SELECT m.phone FROM insurance_policies ip INNER JOIN members m ON m.id = ip.memberId WHERE ip.id = ?', [claim.policyId]) as any;
 
         if (policyData && policyData.phone) {

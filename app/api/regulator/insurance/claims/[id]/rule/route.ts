@@ -8,8 +8,8 @@ export async function POST(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { InsuranceClaim, ClaimStatus } = await import("@/../src/entities/InsuranceClaim");
-        const { getUserFromRequest } = await import("@/../lib/auth-server");
+        const { InsuranceClaim, ClaimStatus } = await import("@/src/entities/InsuranceClaim");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
 
 
         const user = await getUserFromRequest(request);
