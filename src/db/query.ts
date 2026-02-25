@@ -21,10 +21,10 @@ import { getPool } from './pool';
  */
 export async function query<T extends RowDataPacket>(
     sql: string,
-    params?: unknown[]
+    params?: any[]
 ): Promise<T[]> {
     const pool = getPool();
-    const [rows] = await pool.query<T[]>(sql, params);
+    const [rows] = await pool.query<T[]>(sql, params || []);
     return rows;
 }
 
@@ -33,7 +33,7 @@ export async function query<T extends RowDataPacket>(
  */
 export async function queryOne<T extends RowDataPacket>(
     sql: string,
-    params?: unknown[]
+    params?: any[]
 ): Promise<T | null> {
     const rows = await query<T>(sql, params);
     return rows.length > 0 ? rows[0] : null;
@@ -49,10 +49,10 @@ export async function queryOne<T extends RowDataPacket>(
  */
 export async function execute(
     sql: string,
-    params?: unknown[]
+    params?: any[]
 ): Promise<ResultSetHeader> {
     const pool = getPool();
-    const [result] = await pool.execute<ResultSetHeader>(sql, params);
+    const [result] = await pool.execute<ResultSetHeader>(sql, params || []);
     return result;
 }
 

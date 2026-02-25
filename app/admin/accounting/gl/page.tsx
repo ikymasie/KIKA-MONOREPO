@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 import Pagination from '@/components/ui/Pagination';
+import Link from 'next/link';
+
 
 interface JournalEntry {
     id: string;
@@ -16,9 +18,11 @@ interface JournalEntry {
         name: string;
     };
     transaction: {
+        id: string;
         transactionNumber: string;
     };
 }
+
 
 export default function GLPage() {
     const [entries, setEntries] = useState<JournalEntry[]>([]);
@@ -122,10 +126,17 @@ export default function GLPage() {
                                     <td className="px-6 py-4 text-xs font-mono text-gray-500">
                                         {new Date(entry.createdAt).toLocaleDateString()}
                                     </td>
-                                    <td className="px-6 py-4 text-xs font-black text-indigo-600">
-                                        {entry.transaction?.transactionNumber || 'N/A'}
-                                    </td>
                                     <td className="px-6 py-4">
+                                        <Link
+                                            href={`/admin/accounting/transactions/${entry.transaction.id}`}
+                                            className="text-xs font-black text-indigo-600 hover:text-indigo-800 hover:underline decoration-2 underline-offset-4 transition-all"
+                                        >
+                                            {entry.transaction?.transactionNumber || 'N/A'}
+                                        </Link>
+                                    </td>
+
+                                    <td className="px-6 py-4">
+
                                         <div className="text-[10px] font-black text-primary-500 uppercase tracking-tighter">{entry.account.code}</div>
                                         <div className="font-bold text-gray-900">{entry.account.name}</div>
                                     </td>

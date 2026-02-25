@@ -171,12 +171,12 @@ export class RegistrationService {
         const pattern = `${prefix}-${year}-%`;
 
         const queryFn = conn ? conn.query.bind(conn) : query;
-
-        const [[countResult]] = await queryFn(
+        const result = await queryFn(
             'SELECT COUNT(*) as count FROM society_applications WHERE applicationType = ? AND certificateNumber LIKE ?',
             [type, pattern]
         ) as any;
 
+        const countResult = conn ? result[0][0] : result[0];
         const count = Number(countResult?.count || 0);
 
         return `${prefix}-${year}-${(count + 1).toString().padStart(4, '0')}`;

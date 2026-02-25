@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 import AdminSidebar from '@/components/layout/AdminSidebar';
 
@@ -92,9 +93,17 @@ export default function COAPage() {
                                     </tr>
                                 ))
                             ) : accounts.map(acc => (
-                                <tr key={acc.id} className="hover:bg-gray-50/50 transition-colors">
-                                    <td className="px-6 py-4 font-mono font-bold text-primary-600">{acc.code}</td>
-                                    <td className="px-6 py-4 font-bold text-gray-900">{acc.name}</td>
+                                <tr key={acc.id} className="hover:bg-gray-50/50 transition-colors group/row">
+                                    <td className="px-6 py-4">
+                                        <Link href={`/admin/accounting/coa/${acc.id}`} className="font-mono font-bold text-primary-600 hover:text-primary-700 underline decoration-primary-200 underline-offset-4 decoration-2">
+                                            {acc.code}
+                                        </Link>
+                                    </td>
+                                    <td className="px-6 py-4 font-bold text-gray-900 group-hover/row:text-primary-600 transition-colors">
+                                        <Link href={`/admin/accounting/coa/${acc.id}`}>
+                                            {acc.name}
+                                        </Link>
+                                    </td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 rounded text-xs font-bold uppercase tracking-tighter
                                             ${acc.accountType === 'asset' ? 'bg-blue-100 text-blue-700' :

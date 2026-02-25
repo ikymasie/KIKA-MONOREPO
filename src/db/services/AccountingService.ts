@@ -15,6 +15,15 @@ export async function listAccounts(tenantId: string): Promise<IAccount[]> {
     return rows;
 }
 
+export async function getAccountById(id: string, tenantId: string): Promise<IAccount> {
+    const account = await queryOne<RowDataPacket & IAccount>(
+        'SELECT * FROM accounts WHERE id = ? AND tenantId = ?',
+        [id, tenantId]
+    );
+    if (!account) throw new Error('Account not found');
+    return account;
+}
+
 export async function createAccount(tenantId: string, data: Partial<IAccount>): Promise<IAccount> {
     const id = uuidv4();
     await execute(
@@ -82,7 +91,7 @@ export async function getGeneralLedger(
     const total = parseInt(countRow?.total ?? '0', 10);
 
     const sql = `
-        SELECT je.*, a.code AS accountCode, a.name AS accountName, t.transactionDate, t.referenceNumber
+        SELECT je.*, a.code AS accountCode, a.name AS accountName, t.transactionDate, t.transactionNumber AS referenceNumber
         FROM journal_entries je
         INNER JOIN accounts a ON a.id = je.accountId
         INNER JOIN transactions t ON t.id = je.transactionId
@@ -103,6 +112,33 @@ export async function getGeneralLedger(
         }
     };
 }
+
+export async function getTransactionById(tenantId: string, id: string): Promise<any> {
+    const transaction = await queryOne<RowDataPacket>(
+        `SELECT t.*, t.transactionNumber AS referenceNumber, m.firstName, m.lastName, m.memberNumber 
+         FROM transactions t
+         LEFT JOIN members m ON m.id = t.memberId
+         WHERE t.id = ? AND t.tenantId = ?`,
+        [id, tenantId]
+    );
+
+    if (!transaction) return null;
+
+    const entries = await query<RowDataPacket & IJournalEntry>(
+        `SELECT je.*, a.code AS accountCode, a.name AS accountName
+         FROM journal_entries je
+         INNER JOIN accounts a ON a.id = je.accountId
+         WHERE je.transactionId = ?
+         ORDER BY je.entryType ASC`,
+        [id]
+    );
+
+    return {
+        ...transaction,
+        entries
+    };
+}
+
 
 export async function getTrialBalance(tenantId: string, asOfDate?: string): Promise<{ accounts: any[]; totalDebit: number; totalCredit: number }> {
     let sql = `
@@ -215,17 +251,60 @@ export async function getFinancialStatement(tenantId: string, type: 'balance-she
     }
 }
 
+
+export async function recalculateAccountBalances(tenantId: string): Promise<void> {
+    const accounts = await listAccounts(tenantId);
+
+    await withTransaction(async (conn) => {
+        for (const account of accounts) {
+            const [rows] = await conn.query(
+                `SELECT 
+                    SUM(CASE WHEN entryType = 'debit' THEN amount ELSE 0 END) as totalDebit,
+                    SUM(CASE WHEN entryType = 'credit' THEN amount ELSE 0 END) as totalCredit
+                 FROM journal_entries
+                 WHERE accountId = ?`,
+                [account.id]
+            ) as any;
+
+            const totalDebit = Number(rows[0].totalDebit || 0);
+            const totalCredit = Number(rows[0].totalCredit || 0);
+
+            let newBalance = 0;
+            if (['asset', 'expense'].includes(account.accountType)) {
+                newBalance = totalDebit - totalCredit;
+            } else {
+                newBalance = totalCredit - totalDebit;
+            }
+
+            // Round to 2 decimal places to avoid floating point issues
+            newBalance = Math.round(newBalance * 100) / 100;
+
+            await conn.query(
+                'UPDATE accounts SET balance = ?, updatedAt = NOW() WHERE id = ?',
+                [newBalance, account.id]
+            );
+        }
+    });
+}
+
 export async function createManualJournalEntry(
     tenantId: string,
     description: string,
     date: Date,
     items: { accountId: string; type: EntryType; amount: number; description?: string }[]
 ) {
-    const totalDebit = items.filter(i => i.type === EntryType.DEBIT).reduce((sum, i) => sum + Number(i.amount), 0);
-    const totalCredit = items.filter(i => i.type === EntryType.CREDIT).reduce((sum, i) => sum + Number(i.amount), 0);
+    // Ensure 2 decimal places for all amounts
+    const roundedItems = items.map(item => ({
+        ...item,
+        amount: Math.round(Number(item.amount) * 100) / 100
+    }));
 
-    if (Math.abs(totalDebit - totalCredit) > 0.01) {
-        throw new Error('Journal entry must be balanced (Debits must equal Credits)');
+    const totalDebit = roundedItems.filter(i => i.type === EntryType.DEBIT).reduce((sum, i) => sum + i.amount, 0);
+    const totalCredit = roundedItems.filter(i => i.type === EntryType.CREDIT).reduce((sum, i) => sum + i.amount, 0);
+
+    // Use a small epsilon for float comparison
+    if (Math.abs(totalDebit - totalCredit) > 0.001) {
+        throw new Error(`Journal entry must be balanced (Debits: ${totalDebit}, Credits: ${totalCredit})`);
     }
 
     return await withTransaction(async (conn) => {
@@ -236,7 +315,7 @@ export async function createManualJournalEntry(
             [transId, tenantId, `MANUAL-${Date.now()}`, date, totalDebit, description]
         );
 
-        for (const item of items) {
+        for (const item of roundedItems) {
             const entryId = uuidv4();
             await conn.query(
                 `INSERT INTO journal_entries(id, transactionId, accountId, entryType, amount, description, createdAt)
@@ -247,13 +326,16 @@ export async function createManualJournalEntry(
             const [accRows] = await conn.query('SELECT accountType, balance FROM accounts WHERE id = ?', [item.accountId]) as any;
             if (accRows.length > 0) {
                 const acc = accRows[0];
-                const amt = Number(item.amount);
+                const amt = item.amount;
                 const isDebit = item.type === EntryType.DEBIT;
                 const increasesOnDebit = ['asset', 'expense'].includes(acc.accountType);
 
                 let newBalance = Number(acc.balance);
                 if (isDebit === increasesOnDebit) newBalance += amt;
                 else newBalance -= amt;
+
+                // Round balance
+                newBalance = Math.round(newBalance * 100) / 100;
 
                 await conn.query('UPDATE accounts SET balance = ?, updatedAt = NOW() WHERE id = ?', [newBalance, item.accountId]);
             }
@@ -302,4 +384,96 @@ export async function processInsurancePayout(tenantId: string, policyId: string,
             { accountId: cashAcc.id, type: EntryType.CREDIT, amount }
         ]
     );
+}
+
+export async function processStandardTransaction(tenantId: string, transactionId: string): Promise<any[]> {
+    return await withTransaction(async (conn) => {
+        const transaction = await queryOne<RowDataPacket>(
+            'SELECT * FROM transactions WHERE id = ? AND tenantId = ? LIMIT 1',
+            [transactionId, tenantId]
+        );
+
+        if (!transaction) throw new Error('Transaction not found');
+
+        const { transactionType, amount, description } = transaction;
+        const entries: { code: string; name: string; type: AccountType; entryType: EntryType }[] = [];
+
+        switch (transactionType) {
+            case 'deposit':
+                entries.push(
+                    { code: '1000', name: 'Cash at Bank', type: AccountType.ASSET, entryType: EntryType.DEBIT },
+                    { code: '2000', name: 'Member Savings', type: AccountType.LIABILITY, entryType: EntryType.CREDIT }
+                );
+                break;
+            case 'withdrawal':
+                entries.push(
+                    { code: '2000', name: 'Member Savings', type: AccountType.LIABILITY, entryType: EntryType.DEBIT },
+                    { code: '1000', name: 'Cash at Bank', type: AccountType.ASSET, entryType: EntryType.CREDIT }
+                );
+                break;
+            case 'loan_disbursement':
+                entries.push(
+                    { code: '1100', name: 'Loan Portfolio', type: AccountType.ASSET, entryType: EntryType.DEBIT },
+                    { code: '1000', name: 'Cash at Bank', type: AccountType.ASSET, entryType: EntryType.CREDIT }
+                );
+                break;
+            case 'loan_repayment':
+                entries.push(
+                    { code: '1000', name: 'Cash at Bank', type: AccountType.ASSET, entryType: EntryType.DEBIT },
+                    { code: '1100', name: 'Loan Portfolio', type: AccountType.ASSET, entryType: EntryType.CREDIT }
+                );
+                break;
+            case 'insurance_premium':
+                entries.push(
+                    { code: '1000', name: 'Cash at Bank', type: AccountType.ASSET, entryType: EntryType.DEBIT },
+                    { code: '2100', name: 'Insurance Premiums Payable', type: AccountType.LIABILITY, entryType: EntryType.CREDIT }
+                );
+                break;
+        }
+
+        if (entries.length === 0) return [];
+
+        const journalItems = [];
+        for (const entry of entries) {
+            const acc = await getOrCreateAccountSQL(tenantId, entry.code, entry.name, entry.type);
+            journalItems.push({
+                accountId: acc.id,
+                type: entry.entryType,
+                amount: Number(amount),
+                description
+            });
+        }
+
+        const savedEntries = [];
+        for (const item of journalItems) {
+            const entryId = uuidv4();
+            await conn.query(
+                `INSERT INTO journal_entries(id, transactionId, accountId, entryType, amount, description, createdAt)
+                 VALUES(?, ?, ?, ?, ?, ?, NOW())`,
+                [entryId, transactionId, item.accountId, item.type, item.amount, item.description]
+            );
+
+            const [accRows] = await conn.query('SELECT accountType, balance FROM accounts WHERE id = ?', [item.accountId]) as any;
+            if (accRows.length > 0) {
+                const acc = accRows[0];
+                const amt = Number(item.amount);
+                const isDebit = item.type === EntryType.DEBIT;
+                const increasesOnDebit = ['asset', 'expense'].includes(acc.accountType);
+
+                let newBalance = Number(acc.balance);
+                if (isDebit === increasesOnDebit) newBalance += amt;
+                else newBalance -= amt;
+                newBalance = Math.round(newBalance * 100) / 100;
+
+                await conn.query('UPDATE accounts SET balance = ?, updatedAt = NOW() WHERE id = ?', [newBalance, item.accountId]);
+            }
+
+            const [savedEntry] = await conn.query('SELECT * FROM journal_entries WHERE id = ?', [entryId]) as any;
+            savedEntries.push(savedEntry[0][0]); // mysql2 returns [rows, fields]
+        }
+
+        await conn.query('UPDATE transactions SET status = "posted", updatedAt = NOW() WHERE id = ?', [transactionId]);
+
+        return savedEntries;
+    });
 }

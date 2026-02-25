@@ -218,22 +218,27 @@ export default function SavingsDetailPage() {
                                         </thead>
                                         <tbody className="divide-y divide-gray-50">
                                             {data.transactions.map((t) => (
-                                                <tr key={t.id} className="hover:bg-gray-50/80 transition-colors group">
+                                                <tr
+                                                    key={t.id}
+                                                    onClick={() => router.push(`/admin/accounting/transactions/${t.id}`)}
+                                                    className="hover:bg-primary-50/50 transition-all group cursor-pointer active:scale-[0.99] duration-200"
+                                                >
                                                     <td className="px-8 py-5">
-                                                        <div className="text-gray-900 font-semibold">{format(new Date(t.createdAt), 'MMM dd, yyyy')}</div>
-                                                        <div className="text-gray-400 text-xs">{format(new Date(t.createdAt), 'HH:mm')}</div>
+                                                        <div className="text-gray-900 font-semibold group-hover:text-primary-700 transition-colors uppercase tracking-tight">{format(new Date(t.createdAt), 'MMM dd, yyyy')}</div>
+                                                        <div className="text-gray-400 text-xs font-mono">{format(new Date(t.createdAt), 'HH:mm')}</div>
                                                     </td>
                                                     <td className="px-8 py-5">
-                                                        <p className="text-gray-900 font-medium line-clamp-1">{t.description}</p>
-                                                        <p className="text-gray-400 text-xs capitalize">{t.transactionType.replace('_', ' ')}</p>
+                                                        <p className="text-gray-900 font-bold group-hover:text-primary-800 transition-colors uppercase tracking-tighter">{t.description}</p>
+                                                        <p className="text-[10px] font-black text-primary-500 uppercase tracking-widest">{t.transactionType.replace('_', ' ')}</p>
                                                     </td>
-                                                    <td className={`px-8 py-5 text-right font-bold text-lg tabular-nums ${t.amount >= 0 ? 'text-green-600' : 'text-red-600'
+                                                    <td className={`px-8 py-5 text-right font-black text-xl tabular-nums ${t.amount >= 0 ? 'text-green-600' : 'text-danger-600'
                                                         }`}>
                                                         {t.amount >= 0 ? '+' : ''}{t.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
+
                                     </table>
                                 </div>
                             ) : (

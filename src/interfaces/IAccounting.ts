@@ -45,6 +45,8 @@ export interface IJournalEntry {
     // Virtual fields
     accountCode?: string;
     accountName?: string;
+    transactionDate?: Date;
+    referenceNumber?: string;
 }
 
 export interface ILedgerTransaction {

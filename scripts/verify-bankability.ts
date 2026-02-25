@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { AppDataSource } from '../src/config/database';
-import { AccountingService } from '../src/services/AccountingService';
-import { Transaction, TransactionType, TransactionStatus } from '../src/entities/Transaction';
+import { initializeChartOfAccounts, processStandardTransaction } from '../src/db/services/AccountingService';
+import { TransactionType, TransactionStatus } from '../src/entities/Transaction';
 import { Tenant } from '../src/entities/Tenant';
 import { Account } from '../src/entities/Account';
 
@@ -12,49 +12,34 @@ async function verify() {
         await AppDataSource.initialize();
     }
 
-    const accountingService = new AccountingService();
-    const tenantRepo = AppDataSource.getRepository(Tenant);
-    const txnRepo = AppDataSource.getRepository(Transaction);
-    const accountRepo = AppDataSource.getRepository(Account);
-
     // 1. Setup Tenant
-    const tenant = tenantRepo.create({
-        name: 'Test Bankability SACCOS ' + Date.now(),
-        code: 'TBANK' + Date.now().toString().slice(-4),
-    });
-    await tenantRepo.save(tenant);
-    console.log('✅ Tenant Created:', tenant.id);
+    const [tenantResult] = await AppDataSource.query(
+        'INSERT INTO tenants (name, code) VALUES (?, ?)',
+        ['Test Bankability SACCOS ' + Date.now(), 'TBANK' + Date.now().toString().slice(-4)]
+    );
+    const tenantId = (await AppDataSource.query('SELECT LAST_INSERT_ID() as id')).id;
+    console.log('✅ Tenant Created:', tenantId);
 
     // 2. Initialize Accounts
-    await accountingService.initializeChartOfAccounts(tenant.id!);
+    await initializeChartOfAccounts(tenantId);
     console.log('✅ Chart of Accounts Initialized');
 
     // 3. Simulate Loan Disbursement
-    const txn = txnRepo.create({
-        tenantId: tenant.id,
-        transactionNumber: 'DISB-' + Date.now().toString().slice(-6),
-        transactionType: TransactionType.LOAN_DISBURSEMENT,
-        amount: 10000,
-        transactionDate: new Date(),
-        status: TransactionStatus.COMPLETED,
-        description: 'Test Loan Disbursement',
-    });
-    await txnRepo.save(txn);
+    const txnId = `txn_${Date.now()}`;
+    await AppDataSource.query(
+        'INSERT INTO transactions (id, tenantId, transactionNumber, transactionType, amount, transactionDate, status, description) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)',
+        [txnId, tenantId, 'DISB-' + Date.now().toString().slice(-6), 'loan_disbursement', 10000, 'completed', 'Test Loan Disbursement']
+    );
     console.log('✅ Loan Disbursement Transaction Created');
 
     // 4. Process Journaling
-    const entries = await accountingService.processTransaction(txn.id!);
+    const entries = await processStandardTransaction(tenantId, txnId);
     console.log('✅ Journal Entries Generated:', entries.length);
 
     // 5. Verify Balances
-    const loanAcc = await accountRepo.findOne({
-        where: { tenantId: tenant.id, code: '1100' }
-    });
-    const cashAcc = await accountRepo.findOne({
-        where: { tenantId: tenant.id, code: '1000' }
-    });
+    const [loanAcc] = await AppDataSource.query('SELECT balance FROM accounts WHERE tenantId = ? AND code = "1100"', [tenantId]);
+    const [cashAcc] = await AppDataSource.query('SELECT balance FROM accounts WHERE tenantId = ? AND code = "1000"', [tenantId]);
 
-    console.log('📊 Balance Check:');
     console.log('   - Loan Portfolio (1100): P', loanAcc?.balance);
     console.log('   - Cash at Bank (1000): P', cashAcc?.balance);
 
