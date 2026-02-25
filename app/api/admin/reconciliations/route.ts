@@ -1,29 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ReconciliationEngine } from '@/lib/deductions/reconciliation';
-import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
+
 // List all reconciliation batches
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-const { ReconciliationBatch } = await import("@/src/entities/ReconciliationBatch");
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { query } = await import('@/src/db/query');
 
-    
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const db = await getDb();
-        const batchRepo = db.getRepository(ReconciliationBatch);
-
-        const batches = await batchRepo.find({
-            where: { tenantId: user.tenantId },
-            order: { createdAt: 'DESC' },
-            take: 50,
-        });
+        const batches = await query(
+            'SELECT * FROM reconciliation_batches WHERE tenantId = ? ORDER BY createdAt DESC LIMIT 50',
+            [user.tenantId]
+        );
 
         return NextResponse.json({ batches });
     } catch (error: any) {
@@ -35,9 +29,9 @@ const { ReconciliationBatch } = await import("@/src/entities/ReconciliationBatch
 // Create new reconciliation from MoF CSV upload
 export async function POST(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-const user = await getUserFromRequest(request);
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
+        const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
@@ -49,14 +43,10 @@ const user = await getUserFromRequest(request);
         const year = parseInt(formData.get('year') as string);
 
         if (!file || !month || !year) {
-            return NextResponse.json(
-                { error: 'File, month, and year are required' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'File, month, and year are required' }, { status: 400 });
         }
 
         const csvContent = await file.text();
-
         const engine = new ReconciliationEngine(user.tenantId!, month, year);
         const batch = await engine.reconcile(csvContent, deductionRequestId);
 

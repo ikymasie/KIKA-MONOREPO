@@ -1,42 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { queryOne } from '@/src/db/query';
+import { UserRole } from '@/src/entities/User';
 
 export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-const { Certificate } = await import("@/src/entities/Certificate");
-        const { UserRole } = await import("@/src/entities/User");
-
-    
+        const { getUserFromRequest } = await import('@/lib/auth-server');
         const user = await getUserFromRequest(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (user.role !== UserRole.DCD_DIRECTOR) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        if (user.role !== UserRole.DCD_DIRECTOR) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        const dataSource = await getDb();
-        const certRepo = dataSource.getRepository(Certificate);
-
-        const certificate = await certRepo.findOne({
-            where: { id: params.id },
-            relations: ['tenant', 'issuer'],
-        });
-
-        if (!certificate) {
-            return NextResponse.json({ error: 'Certificate not found' }, { status: 404 });
-        }
+        const certificate = await queryOne<any>(
+            'SELECT c.*, t.name as tenantName FROM certificates c LEFT JOIN tenants t ON c.tenantId = t.id WHERE c.id = ?',
+            [params.id]
+        );
+        if (!certificate) return NextResponse.json({ error: 'Certificate not found' }, { status: 404 });
 
         return NextResponse.json(certificate);
     } catch (error: any) {
-        console.error('Error fetching certificate:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch certificate', details: error.message },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch certificate', details: error.message }, { status: 500 });
     }
 }

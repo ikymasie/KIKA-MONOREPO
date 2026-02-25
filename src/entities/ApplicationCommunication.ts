@@ -1,12 +1,3 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    ManyToOne,
-    JoinColumn,
-    Index,
-} from 'typeorm';
 import type { SocietyApplication } from './SocietyApplication';
 import type { User } from './User';
 
@@ -23,41 +14,15 @@ export enum CommunicationDirection {
     INBOUND = 'inbound',
     OUTBOUND = 'outbound',
 }
-
-@Entity('application_communications')
-@Index(['applicationId'])
-@Index(['type'])
-@Index(['createdAt'])
 export class ApplicationCommunication {
-    @PrimaryGeneratedColumn('uuid')
     id?: string;
-
-    @Column({ type: 'uuid' })
     applicationId?: string;
-
-    @ManyToOne('SocietyApplication')
-    @JoinColumn({ name: 'applicationId' })
     application?: SocietyApplication;
-
-    @Column({ type: 'enum', enum: CommunicationType })
     type?: CommunicationType;
-
-    @Column({ type: 'enum', enum: CommunicationDirection })
     direction?: CommunicationDirection;
-
-    @Column({ nullable: true })
     subject?: string;
-
-    @Column({ type: 'text' })
     content?: string;
-
-    @Column({ type: 'uuid' })
     recordedById?: string;
-
-    @ManyToOne('User')
-    @JoinColumn({ name: 'recordedById' })
     recordedBy?: User;
-
-    @CreateDateColumn()
     createdAt?: Date;
 }

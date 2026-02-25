@@ -1,13 +1,3 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    ManyToOne,
-    OneToMany,
-    JoinColumn,
-} from 'typeorm';
 import type { Member } from './Member';
 import type { InsuranceProduct } from './InsuranceProduct';
 import type { InsuranceClaim } from './InsuranceClaim';
@@ -18,57 +8,22 @@ export enum PolicyStatus {
     LAPSED = 'lapsed',
     CANCELLED = 'cancelled',
 }
-
-@Entity('insurance_policies')
 export class InsurancePolicy {
-    @PrimaryGeneratedColumn('uuid')
     id?: string;
-
-    @Column()
     policyNumber?: string;
-
-    @Column({ type: 'uuid' })
     memberId?: string;
-
-    @ManyToOne('Member', 'insurancePolicies')
-    @JoinColumn({ name: 'memberId' })
     member?: Member;
-
-    @Column({ type: 'uuid' })
     productId?: string;
-
-    @ManyToOne('InsuranceProduct')
-    @JoinColumn({ name: 'productId' })
     product?: InsuranceProduct;
-
-    @Column({ type: 'decimal', precision: 15, scale: 2 })
     monthlyPremium?: number;
-
-    @Column({ type: 'decimal', precision: 15, scale: 2 })
     coverageAmount?: number;
-
-    @Column({ type: 'date' })
     startDate?: Date;
-
-    @Column({ type: 'date', nullable: true })
     endDate?: Date;
-
-    @Column({ type: 'date', nullable: true })
     waitingPeriodEndDate?: Date;
-
-    @Column({ type: 'enum', enum: PolicyStatus, default: PolicyStatus.WAITING_PERIOD })
     status?: PolicyStatus;
-
-    @Column({ type: 'int', default: 0 })
     monthsPaid?: number;
-
-    @OneToMany('InsuranceClaim', 'policy')
     claims?: InsuranceClaim[];
-
-    @CreateDateColumn()
     createdAt?: Date;
-
-    @UpdateDateColumn()
     updatedAt?: Date;
 
     get isInWaitingPeriod(): boolean {

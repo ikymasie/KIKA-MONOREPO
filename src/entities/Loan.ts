@@ -1,13 +1,3 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    ManyToOne,
-    OneToMany,
-    JoinColumn,
-} from 'typeorm';
 import type { Member } from './Member';
 import type { LoanProduct } from './LoanProduct';
 import type { LoanGuarantor } from './LoanGuarantor';
@@ -44,137 +34,55 @@ export enum WorkflowStage {
     DISBURSEMENT = 'disbursement',
     COMPLETED = 'completed',
 }
-
-@Entity('loans')
 export class Loan {
-    @PrimaryGeneratedColumn('uuid')
     id?: string;
-
-    @Column({ type: 'uuid' })
     tenantId?: string;
-
-    @ManyToOne('Tenant')
-    @JoinColumn({ name: 'tenantId' })
     tenant?: Tenant;
-
-    @Column()
     loanNumber?: string;
-
-    @Column({ type: 'uuid' })
     memberId?: string;
-
-    @ManyToOne('Member', 'loans')
-    @JoinColumn({ name: 'memberId' })
     member?: Member;
-
-    @Column({ type: 'uuid' })
     productId?: string;
-
-    @ManyToOne('LoanProduct')
-    @JoinColumn({ name: 'productId' })
     product?: LoanProduct;
-
-    @Column({ type: 'decimal', precision: 15, scale: 2 })
     principalAmount?: number;
-
-    @Column({ type: 'decimal', precision: 5, scale: 2 })
     interestRate?: number;
-
-    @Column({ type: 'int' })
     termMonths?: number;
-
-    @Column({ type: 'decimal', precision: 15, scale: 2 })
     monthlyInstallment?: number;
-
-    @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
     processingFee?: number;
-
-    @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
     insuranceFee?: number;
-
-    @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
     totalAmountDue?: number;
-
-    @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
     amountPaid?: number;
-
-    @Column({ type: 'decimal', precision: 15, scale: 2, default: 0 })
     outstandingBalance?: number;
-
-    @Column({ type: 'enum', enum: LoanStatus, default: LoanStatus.PENDING })
     status?: LoanStatus;
-
-    @Column({ type: 'date', nullable: true })
     applicationDate?: Date;
-
-    @Column({ type: 'date', nullable: true })
     approvalDate?: Date;
-
-    @Column({ type: 'date', nullable: true })
     disbursementDate?: Date;
-
-    @Column({ type: 'date', nullable: true })
     maturityDate?: Date;
-
-    @Column({ type: 'uuid', nullable: true })
     approvedBy?: string;
-
-    @Column({ type: 'uuid', nullable: true })
     disbursedBy?: string;
-
-    @Column({ type: 'text', nullable: true })
     purpose?: string;
-
-    @Column({ type: 'text', nullable: true })
     rejectionReason?: string;
-
-    @Column({ type: 'enum', enum: WorkflowStage, nullable: true })
     workflowStage?: WorkflowStage;
-
-    @Column({ type: 'boolean', default: false })
     eligibilityCheckPassed?: boolean;
-
-    @Column({ type: 'json', nullable: true })
     eligibilityCheckNotes?: {
         savingsRatioCheck?: { passed: boolean; details: string };
         activeLoanCheck?: { passed: boolean; details: string };
         membershipDurationCheck?: { passed: boolean; details: string };
         timestamp?: Date;
     };
-
-    @Column({ type: 'uuid', nullable: true })
     loanOfficerId?: string;
-
-    @Column({ type: 'text', nullable: true })
     loanOfficerNotes?: string;
-
-    @Column({ type: 'timestamp', nullable: true })
     loanOfficerReviewDate?: Date;
-
-    @Column({ type: 'timestamp', nullable: true })
     committeeApprovalDate?: Date;
-
-    @Column({ type: 'json', nullable: true })
     committeeVotes?: Array<{
         userId: string;
         vote: 'approve' | 'reject';
         notes?: string;
         timestamp: Date;
     }>;
-
-    @Column({ type: 'boolean', default: false })
     deductionScheduled?: boolean;
-
-    @Column({ type: 'timestamp', nullable: true })
     deductionScheduledAt?: Date;
-
-    @OneToMany('LoanGuarantor', 'loan', { cascade: true })
     guarantors?: LoanGuarantor[];
-
-    @CreateDateColumn()
     createdAt?: Date;
-
-    @UpdateDateColumn()
     updatedAt?: Date;
 
     get isPastDue(): boolean {

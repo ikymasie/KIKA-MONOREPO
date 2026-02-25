@@ -1,8 +1,6 @@
-import { AppDataSource } from '@/src/config/database';
-import { LoanGuarantor, GuarantorStatus } from '@/src/entities/LoanGuarantor';
-import { MemberSavings } from '@/src/entities/MemberSavings';
-import { Member } from '@/src/entities/Member';
-import { Loan } from '@/src/entities/Loan';
+import { query, queryOne, execute } from '@/src/db/query';
+import { GuarantorStatus } from '@/src/entities/LoanGuarantor';
+import { RowDataPacket } from 'mysql2/promise';
 
 export interface GuarantorCapacityCheck {
     canGuarantee: boolean;
@@ -19,33 +17,24 @@ export async function checkGuarantorCapacity(
     guarantorId: string,
     pledgeAmount: number
 ): Promise<GuarantorCapacityCheck> {
-    const savingsRepo = AppDataSource.getRepository(MemberSavings);
-    const guarantorRepo = AppDataSource.getRepository(LoanGuarantor);
-
     // Get guarantor's total savings
-    const memberSavings = await savingsRepo
-        .createQueryBuilder('savings')
-        .select('SUM(savings.currentBalance)', 'total')
-        .where('savings.memberId = :guarantorId', { guarantorId })
-        .getRawOne();
-
-    const totalSavings = Number(memberSavings?.total || 0);
-
-    // Get guarantor's currently locked savings
-    const activeGuarantees = await guarantorRepo
-        .createQueryBuilder('guarantor')
-        .leftJoin('guarantor.loan', 'loan')
-        .where('guarantor.guarantorMemberId = :guarantorId', { guarantorId })
-        .andWhere('guarantor.status = :status', { status: GuarantorStatus.ACCEPTED })
-        .andWhere('loan.status IN (:...activeStatuses)', {
-            activeStatuses: ['active', 'disbursed', 'approved', 'committee_approved'],
-        })
-        .getMany();
-
-    const lockedSavings = activeGuarantees.reduce(
-        (sum, g) => sum + Number(g.guaranteedAmount || 0),
-        0
+    const savingsResult = await queryOne<RowDataPacket & { total: number }>(
+        'SELECT COALESCE(SUM(currentBalance), 0) as total FROM member_savings WHERE memberId = ? AND isActive = true',
+        [guarantorId]
     );
+    const totalSavings = Number(savingsResult?.total || 0);
+
+    // Get guarantor's currently locked savings (active guarantees on active loans)
+    const lockedResult = await queryOne<RowDataPacket & { locked: number }>(
+        `SELECT COALESCE(SUM(g.guaranteedAmount), 0) as locked
+         FROM loan_guarantors g
+         JOIN loans l ON g.loanId = l.id
+         WHERE g.guarantorMemberId = ? 
+           AND g.status = ? 
+           AND l.status IN ('active', 'disbursed', 'approved', 'committee_approved')`,
+        [guarantorId, GuarantorStatus.ACCEPTED]
+    );
+    const lockedSavings = Number(lockedResult?.locked || 0);
 
     const availableSavings = totalSavings - lockedSavings;
     const canGuarantee = availableSavings >= pledgeAmount;
@@ -72,33 +61,22 @@ export async function lockGuarantorSavings(
     const capacityCheck = await checkGuarantorCapacity(guarantorId, amount);
 
     if (!capacityCheck.canGuarantee) {
-        return {
-            success: false,
-            message: capacityCheck.details,
-        };
+        return { success: false, message: capacityCheck.details };
     }
 
-    // Update the guarantor record with pledge details
-    const guarantorRepo = AppDataSource.getRepository(LoanGuarantor);
-    const guarantor = await guarantorRepo.findOne({
-        where: {
-            loanId,
-            guarantorMemberId: guarantorId,
-        },
-    });
+    const guarantor = await queryOne<RowDataPacket & { id: string }>(
+        'SELECT id FROM loan_guarantors WHERE loanId = ? AND guarantorMemberId = ?',
+        [loanId, guarantorId]
+    );
 
     if (!guarantor) {
-        return {
-            success: false,
-            message: 'Guarantor record not found',
-        };
+        return { success: false, message: 'Guarantor record not found' };
     }
 
-    guarantor.pledgeAmount = amount;
-    guarantor.status = GuarantorStatus.ACCEPTED;
-    guarantor.acceptedAt = new Date();
-
-    await guarantorRepo.save(guarantor);
+    await execute(
+        'UPDATE loan_guarantors SET pledgeAmount = ?, status = ?, acceptedAt = NOW() WHERE id = ?',
+        [amount, GuarantorStatus.ACCEPTED, guarantor.id]
+    );
 
     return {
         success: true,
@@ -113,28 +91,21 @@ export async function releaseGuarantorSavings(
     guarantorId: string,
     loanId: string
 ): Promise<{ success: boolean; message: string }> {
-    const guarantorRepo = AppDataSource.getRepository(LoanGuarantor);
-
-    const guarantor = await guarantorRepo.findOne({
-        where: {
-            loanId,
-            guarantorMemberId: guarantorId,
-        },
-    });
+    const guarantor = await queryOne<RowDataPacket & { id: string; pledgeAmount: number }>(
+        'SELECT id, pledgeAmount FROM loan_guarantors WHERE loanId = ? AND guarantorMemberId = ?',
+        [loanId, guarantorId]
+    );
 
     if (!guarantor) {
-        return {
-            success: false,
-            message: 'Guarantor record not found',
-        };
+        return { success: false, message: 'Guarantor record not found' };
     }
 
     const releasedAmount = Number(guarantor.pledgeAmount || 0);
 
-    guarantor.status = GuarantorStatus.RELEASED;
-    guarantor.pledgeAmount = 0;
-
-    await guarantorRepo.save(guarantor);
+    await execute(
+        'UPDATE loan_guarantors SET status = ?, pledgeAmount = 0 WHERE id = ?',
+        [GuarantorStatus.RELEASED, guarantor.id]
+    );
 
     return {
         success: true,
@@ -149,42 +120,38 @@ export async function sendGuarantorNotification(
     guarantorId: string,
     loanId: string
 ): Promise<{ success: boolean; message: string }> {
-    const guarantorRepo = AppDataSource.getRepository(LoanGuarantor);
-    const memberRepo = AppDataSource.getRepository(Member);
-    const loanRepo = AppDataSource.getRepository(Loan);
-
-    const guarantor = await guarantorRepo.findOne({
-        where: { loanId, guarantorMemberId: guarantorId },
-    });
+    const guarantor = await queryOne<RowDataPacket & { id: string; notificationAttempts: number }>(
+        'SELECT id, notificationAttempts FROM loan_guarantors WHERE loanId = ? AND guarantorMemberId = ?',
+        [loanId, guarantorId]
+    );
 
     if (!guarantor) {
         return { success: false, message: 'Guarantor record not found' };
     }
 
-    const member = await memberRepo.findOne({ where: { id: guarantorId } });
-    const loan = await loanRepo.findOne({
-        where: { id: loanId },
-        relations: ['member'],
-    });
+    const member = await queryOne<RowDataPacket & { fullName: string; phone: string }>(
+        'SELECT fullName, phone FROM members WHERE id = ?',
+        [guarantorId]
+    );
 
-    if (!member || !loan) {
-        return { success: false, message: 'Member or loan not found' };
+    if (!member) {
+        return { success: false, message: 'Member not found' };
     }
 
     // Set response deadline (7 days from now)
     const deadline = new Date();
     deadline.setDate(deadline.getDate() + 7);
 
-    guarantor.notificationSentAt = new Date();
-    guarantor.responseDeadline = deadline;
-    guarantor.notificationAttempts = (guarantor.notificationAttempts || 0) + 1;
-    guarantor.notificationMethod = 'sms'; // TODO: Integrate with SMS service
-
-    await guarantorRepo.save(guarantor);
+    await execute(
+        `UPDATE loan_guarantors 
+         SET notificationSentAt = NOW(), responseDeadline = ?, 
+             notificationAttempts = ?, notificationMethod = 'sms' 
+         WHERE id = ?`,
+        [(guarantor.notificationAttempts || 0) + 1, deadline, guarantor.id]
+    );
 
     // TODO: Actually send SMS/email notification
-    // const message = `You have been requested to guarantee a loan of P ${loan.principalAmount} for ${loan.member.fullName}. Please respond by ${deadline.toLocaleDateString()}. Login to KIKA to accept or reject.`;
-    // await sendSMS(member.phone, message);
+    // await notificationService.sendNotification({ ... });
 
     return {
         success: true,
@@ -198,26 +165,18 @@ export async function sendGuarantorNotification(
 export async function requestGuarantorPledges(
     loanId: string
 ): Promise<{ success: boolean; message: string; guarantorsSent: number }> {
-    const guarantorRepo = AppDataSource.getRepository(LoanGuarantor);
-
-    const guarantors = await guarantorRepo.find({
-        where: { loanId, status: GuarantorStatus.PENDING },
-    });
+    const guarantors = await query<RowDataPacket & { guarantorMemberId: string }>(
+        'SELECT guarantorMemberId FROM loan_guarantors WHERE loanId = ? AND status = ?',
+        [loanId, GuarantorStatus.PENDING]
+    );
 
     if (guarantors.length === 0) {
-        return {
-            success: false,
-            message: 'No pending guarantors found',
-            guarantorsSent: 0,
-        };
+        return { success: false, message: 'No pending guarantors found', guarantorsSent: 0 };
     }
 
     let successCount = 0;
     for (const guarantor of guarantors) {
-        const result = await sendGuarantorNotification(
-            guarantor.guarantorMemberId!,
-            loanId
-        );
+        const result = await sendGuarantorNotification(guarantor.guarantorMemberId, loanId);
         if (result.success) successCount++;
     }
 

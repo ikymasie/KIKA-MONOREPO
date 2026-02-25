@@ -1,74 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { query, queryOne } from '@/src/db/query';
+import { ComplianceIssueStatus, ComplianceIssueSeverity } from '@/src/entities/ComplianceIssue';
 
 export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-const { ComplianceIssue, ComplianceIssueStatus, ComplianceIssueSeverity } = await import("@/src/entities/ComplianceIssue");
-        const { UserRole } = await import("@/src/entities/User");
-
-    
+        const { getUserFromRequest } = await import('@/lib/auth-server');
         const user = await getUserFromRequest(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user.isRegulator()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        if (!user.isRegulator()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+        const [totalRow, openRow, criticalRow] = await Promise.all([
+            queryOne<any>('SELECT COUNT(*) as c FROM compliance_issues', []),
+            queryOne<any>('SELECT COUNT(*) as c FROM compliance_issues WHERE status = ?', [ComplianceIssueStatus.OPEN]),
+            queryOne<any>('SELECT COUNT(*) as c FROM compliance_issues WHERE severity = ?', [ComplianceIssueSeverity.CRITICAL]),
+        ]);
 
-        const dataSource = await getDb();
-        const issueRepo = dataSource.getRepository(ComplianceIssue);
-
-        // Get aggregated stats
-        const totalIssues = await issueRepo.count();
-        const openIssues = await issueRepo.count({
-            where: { status: ComplianceIssueStatus.OPEN },
-        });
-        const criticalIssues = await issueRepo.count({
-            where: { severity: ComplianceIssueSeverity.CRITICAL },
-        });
-
-        // Get issues by severity
-        const issuesBySeverity = await issueRepo
-            .createQueryBuilder('issue')
-            .select('issue.severity', 'severity')
-            .addSelect('COUNT(*)', 'count')
-            .groupBy('issue.severity')
-            .getRawMany();
-
-        // Get issues by type
-        const issuesByType = await issueRepo
-            .createQueryBuilder('issue')
-            .select('issue.issueType', 'type')
-            .addSelect('COUNT(*)', 'count')
-            .groupBy('issue.issueType')
-            .getRawMany();
-
-        // Get recent issues
-        const recentIssues = await issueRepo.find({
-            relations: ['tenant', 'identifier'],
-            order: { identifiedDate: 'DESC' },
-            take: 10,
-        });
+        const issuesBySeverity = await query<any>('SELECT severity, COUNT(*) as count FROM compliance_issues GROUP BY severity', []);
+        const issuesByType = await query<any>('SELECT issueType as type, COUNT(*) as count FROM compliance_issues GROUP BY issueType', []);
+        const recentIssues = await query<any>(
+            'SELECT i.*, t.name as tenantName FROM compliance_issues i LEFT JOIN tenants t ON i.tenantId = t.id ORDER BY i.identifiedDate DESC LIMIT 10',
+            []
+        );
 
         return NextResponse.json({
-            stats: {
-                totalIssues,
-                openIssues,
-                criticalIssues,
-            },
+            stats: { totalIssues: Number(totalRow?.c || 0), openIssues: Number(openRow?.c || 0), criticalIssues: Number(criticalRow?.c || 0) },
             issuesBySeverity,
             issuesByType,
             recentIssues,
         });
     } catch (error: any) {
-        console.error('Error fetching compliance dashboard:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch compliance dashboard', details: error.message },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch compliance dashboard', details: error.message }, { status: 500 });
     }
 }

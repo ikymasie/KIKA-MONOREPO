@@ -8,11 +8,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typeorm": "typeorm-ts-node-commonjs",
-    "migration:generate": "npm run typeorm -- migration:generate -d src/config/database.ts",
-    "migration:run": "npm run typeorm -- migration:run -d src/config/database.ts",
-    "migration:revert": "npm run typeorm -- migration:revert -d src/config/database.ts",
-    "schema:sync": "npm run typeorm -- schema:sync -d src/config/database.ts",
     "create-user": "ts-node --project tsconfig.scripts.json scripts/create-super-user.ts",
     "test:sms": "ts-node scripts/test-sms.ts"
   },
@@ -37,11 +32,9 @@
     "react-dom": "^18.3.0",
     "react-hook-form": "^7.51.0",
     "recharts": "^2.12.0",
-    "reflect-metadata": "^0.2.1",
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.2.1",
     "tailwindcss": "^3.4.19",
-    "typeorm": "^0.3.20",
     "uuid": "^9.0.1",
     "zod": "^3.22.4"
   },

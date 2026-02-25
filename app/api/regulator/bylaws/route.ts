@@ -1,123 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
-import type { BylawStatus as BylawStatusType } from '@/src/entities/Bylaw';
+import { query, queryOne, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
+import { BylawStatus } from '@/src/entities/Bylaw';
+import { UserRole } from '@/src/entities/User';
 
 export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-        const { Bylaw, BylawStatus } = await import("@/src/entities/Bylaw");
-        const { UserRole } = await import("@/src/entities/User");
-
-
+        const { getUserFromRequest } = await import('@/lib/auth-server');
         const user = await getUserFromRequest(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // Only DCD_DIRECTOR can access
-        if (user.role !== UserRole.DCD_DIRECTOR) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (user.role !== UserRole.DCD_DIRECTOR) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const { searchParams } = new URL(request.url);
-        const status = searchParams.get('status') as BylawStatusType | null;
+        const status = searchParams.get('status');
         const tenantId = searchParams.get('tenantId');
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '20');
+        const offset = (page - 1) * limit;
 
-        const dataSource = await getDb();
-        const bylawRepo = dataSource.getRepository(Bylaw);
+        let sql = 'SELECT b.*, t.name as tenantName FROM bylaws b LEFT JOIN tenants t ON b.tenantId = t.id WHERE 1=1';
+        const params: any[] = [];
 
-        const queryBuilder = bylawRepo
-            .createQueryBuilder('bylaw')
-            .leftJoinAndSelect('bylaw.tenant', 'tenant')
-            .leftJoinAndSelect('bylaw.approver', 'approver')
-            .orderBy('bylaw.submittedDate', 'DESC');
+        if (status) { sql += ' AND b.status = ?'; params.push(status); }
+        if (tenantId) { sql += ' AND b.tenantId = ?'; params.push(tenantId); }
 
-        if (status) {
-            queryBuilder.andWhere('bylaw.status = :status', { status });
-        }
+        const countResult = await queryOne<any>('SELECT COUNT(*) as total FROM bylaws WHERE 1=1' + (status ? ' AND status = ?' : '') + (tenantId ? ' AND tenantId = ?' : ''), params);
+        const bylaws = await query<any>(sql + ' ORDER BY b.submittedDate DESC LIMIT ? OFFSET ?', [...params, limit, offset]);
 
-        if (tenantId) {
-            queryBuilder.andWhere('bylaw.tenantId = :tenantId', { tenantId });
-        }
-
-        const [bylaws, total] = await queryBuilder
-            .skip((page - 1) * limit)
-            .take(limit)
-            .getManyAndCount();
-
-        return NextResponse.json({
-            bylaws,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-            },
-        });
+        return NextResponse.json({ bylaws, pagination: { page, limit, total: Number(countResult?.total || 0), totalPages: Math.ceil(Number(countResult?.total || 0) / limit) } });
     } catch (error: any) {
-        console.error('Error fetching bylaws:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch bylaws', details: error.message },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch bylaws', details: error.message }, { status: 500 });
     }
 }
 
 export async function POST(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-        const { UserRole } = await import("@/src/entities/User");
-        const { Bylaw, BylawStatus } = await import("@/src/entities/Bylaw");
+        const { getUserFromRequest } = await import('@/lib/auth-server');
         const user = await getUserFromRequest(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        // SACCOS_ADMIN can submit bylaws
-        if (user.role !== UserRole.SACCOS_ADMIN && user.role !== UserRole.DCD_DIRECTOR) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (user.role !== UserRole.SACCOS_ADMIN && user.role !== UserRole.DCD_DIRECTOR) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const body = await request.json();
         const { tenantId, version, documentUrl, content } = body;
 
-        if (!tenantId || !version) {
-            return NextResponse.json(
-                { error: 'Missing required fields: tenantId, version' },
-                { status: 400 }
-            );
-        }
+        if (!tenantId || !version) return NextResponse.json({ error: 'Missing required fields: tenantId, version' }, { status: 400 });
+        if (user.role === UserRole.SACCOS_ADMIN && user.tenantId !== tenantId) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-        // Verify user belongs to tenant (if SACCOS_ADMIN)
-        if (user.role === UserRole.SACCOS_ADMIN && user.tenantId !== tenantId) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
-
-        const dataSource = await getDb();
-        const bylawRepo = dataSource.getRepository(Bylaw);
-
-        const bylaw = bylawRepo.create({
-            tenantId,
-            version,
-            documentUrl,
-            content,
-            submittedDate: new Date(),
-            status: BylawStatus.PENDING,
-        });
-
-        await bylawRepo.save(bylaw);
-
-        return NextResponse.json(bylaw, { status: 201 });
-    } catch (error: any) {
-        console.error('Error creating bylaw:', error);
-        return NextResponse.json(
-            { error: 'Failed to create bylaw', details: error.message },
-            { status: 500 }
+        const id = uuidv4();
+        await execute(
+            'INSERT INTO bylaws (id, tenantId, version, documentUrl, content, submittedDate, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, NOW(), ?, NOW(), NOW())',
+            [id, tenantId, version, documentUrl || null, content || null, BylawStatus.PENDING]
         );
+
+        return NextResponse.json(await queryOne<any>('SELECT * FROM bylaws WHERE id = ?', [id]), { status: 201 });
+    } catch (error: any) {
+        return NextResponse.json({ error: 'Failed to create bylaw', details: error.message }, { status: 500 });
     }
 }

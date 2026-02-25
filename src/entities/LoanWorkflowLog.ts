@@ -1,11 +1,3 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    ManyToOne,
-    JoinColumn,
-} from 'typeorm';
 import type { Loan } from './Loan';
 import type { User } from './User';
 
@@ -20,39 +12,16 @@ export enum WorkflowActionType {
     STATUS_CHANGE = 'status_change',
     REJECTION = 'rejection',
 }
-
-@Entity('loan_workflow_logs')
 export class LoanWorkflowLog {
-    @PrimaryGeneratedColumn('uuid')
     id?: string;
-
-    @Column({ type: 'uuid' })
     loanId?: string;
-
-    @ManyToOne('Loan')
-    @JoinColumn({ name: 'loanId' })
     loan?: Loan;
-
-    @Column({ nullable: true })
     fromStatus?: string;
-
-    @Column({ nullable: true })
     toStatus?: string;
-
-    @Column({ type: 'enum', enum: WorkflowActionType })
     actionType?: WorkflowActionType;
-
-    @Column({ type: 'uuid', nullable: true })
     actionBy?: string;
-
-    @ManyToOne('User', { nullable: true })
-    @JoinColumn({ name: 'actionBy' })
     actionByUser?: User;
-
-    @Column({ type: 'text', nullable: true })
     notes?: string;
-
-    @Column({ type: 'json', nullable: true })
     metadata?: {
         eligibilityResults?: any;
         guarantorId?: string;
@@ -60,7 +29,5 @@ export class LoanWorkflowLog {
         disbursementDetails?: any;
         [key: string]: any;
     };
-
-    @CreateDateColumn()
     timestamp?: Date;
 }

@@ -1,7 +1,8 @@
-import { Account, AccountType } from '@/src/entities/Account';
-import { Transaction, TransactionType, TransactionStatus } from '@/src/entities/Transaction';
-import { JournalEntry, EntryType } from '@/src/entities/JournalEntry';
-import { getDb } from '@/lib/db';
+import { AccountType } from '@/src/entities/Account';
+import { TransactionType, TransactionStatus } from '@/src/entities/Transaction';
+import { EntryType } from '@/src/entities/JournalEntry';
+import { query, queryOne, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface JournalEntryInput {
     accountId: string;
@@ -25,17 +26,11 @@ export class GeneralLedger {
         memberId?: string,
         referenceId?: string,
         referenceType?: string
-    ): Promise<Transaction> {
-        const db = await getDb();
-        const transactionRepo = db.getRepository(Transaction);
-        const journalEntryRepo = db.getRepository(JournalEntry);
-        const accountRepo = db.getRepository(Account);
-
+    ) {
         // Validate double-entry (debits must equal credits)
         const totalDebits = entries
             .filter((e) => e.entryType === EntryType.DEBIT)
             .reduce((sum, e) => sum + e.amount, 0);
-
         const totalCredits = entries
             .filter((e) => e.entryType === EntryType.CREDIT)
             .reduce((sum, e) => sum + e.amount, 0);
@@ -45,70 +40,63 @@ export class GeneralLedger {
         }
 
         // Generate transaction number
-        const count = await transactionRepo.count({ where: { tenantId: this.tenantId } });
-        const transactionNumber = `TXN-${this.tenantId.substring(0, 8)}-${String(count + 1).padStart(6, '0')}`;
+        const countRow = await queryOne<any>(
+            'SELECT COUNT(*) as c FROM transactions WHERE tenantId = ?',
+            [this.tenantId]
+        );
+        const transactionNumber = `TXN-${this.tenantId.substring(0, 8)}-${String(Number(countRow?.c || 0) + 1).padStart(6, '0')}`;
+        const transactionId = uuidv4();
 
         // Create transaction
-        const transaction = transactionRepo.create({
-            transactionNumber,
-            transactionType,
-            amount,
-            transactionDate: new Date(),
-            description,
-            memberId,
-            tenantId: this.tenantId,
-            referenceId,
-            referenceType,
-            status: TransactionStatus.COMPLETED,
-        });
-
-        await transactionRepo.save(transaction);
+        await execute(
+            `INSERT INTO transactions (id, transactionNumber, transactionType, amount, transactionDate, description, memberId, tenantId, referenceId, referenceType, status, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+            [transactionId, transactionNumber, transactionType, amount, description, memberId || null, this.tenantId, referenceId || null, referenceType || null, TransactionStatus.COMPLETED]
+        );
 
         // Create journal entries and update account balances
         for (const entry of entries) {
-            const journalEntry = journalEntryRepo.create({
-                transactionId: transaction.id,
-                accountId: entry.accountId,
-                entryType: entry.entryType,
-                amount: entry.amount,
-                description: entry.description || description,
-            });
-
-            await journalEntryRepo.save(journalEntry);
+            const journalId = uuidv4();
+            await execute(
+                `INSERT INTO journal_entries (id, transactionId, accountId, entryType, amount, description, createdAt, updatedAt)
+                 VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+                [journalId, transactionId, entry.accountId, entry.entryType, entry.amount, entry.description || description]
+            );
 
             // Update account balance
-            const account = await accountRepo.findOne({ where: { id: entry.accountId } });
+            const account = await queryOne<any>('SELECT id, accountType, balance FROM accounts WHERE id = ?', [entry.accountId]);
             if (account) {
+                let balanceDelta = 0;
                 if (entry.entryType === EntryType.DEBIT) {
-                    if ([AccountType.ASSET, AccountType.EXPENSE].includes(account.accountType!)) {
-                        account.balance = (account.balance || 0) + entry.amount;
+                    if ([AccountType.ASSET, AccountType.EXPENSE].includes(account.accountType)) {
+                        balanceDelta = entry.amount;
                     } else {
-                        account.balance = (account.balance || 0) - entry.amount;
+                        balanceDelta = -entry.amount;
                     }
                 } else {
-                    if ([AccountType.LIABILITY, AccountType.EQUITY, AccountType.REVENUE].includes(account.accountType!)) {
-                        account.balance = (account.balance || 0) + entry.amount;
+                    if ([AccountType.LIABILITY, AccountType.EQUITY, AccountType.REVENUE].includes(account.accountType)) {
+                        balanceDelta = entry.amount;
                     } else {
-                        account.balance = (account.balance || 0) - entry.amount;
+                        balanceDelta = -entry.amount;
                     }
                 }
-                await accountRepo.save(account);
+                await execute(
+                    'UPDATE accounts SET balance = COALESCE(balance, 0) + ?, updatedAt = NOW() WHERE id = ?',
+                    [balanceDelta, entry.accountId]
+                );
             }
         }
 
-        return transaction;
+        return await queryOne<any>('SELECT * FROM transactions WHERE id = ?', [transactionId]);
     }
 
     async getTrialBalance(asOfDate?: Date): Promise<{ accountName: string; debit: number; credit: number }[]> {
-        const db = await getDb();
-        const accountRepo = db.getRepository(Account);
+        const accounts = await query<any>(
+            'SELECT code, name, balance FROM accounts WHERE tenantId = ? ORDER BY code ASC',
+            [this.tenantId]
+        );
 
-        const accounts = await accountRepo.find({
-            where: { tenantId: this.tenantId },
-            order: { code: 'ASC' },
-        });
-
-        return accounts.map((account) => ({
+        return accounts.map((account: any) => ({
             accountName: `${account.code} - ${account.name}`,
             debit: (account.balance || 0) >= 0 ? (account.balance || 0) : 0,
             credit: (account.balance || 0) < 0 ? Math.abs(account.balance || 0) : 0,
@@ -123,32 +111,20 @@ export class GeneralLedger {
         totalLiabilities: number;
         totalEquity: number;
     }> {
-        const db = await getDb();
-        const accountRepo = db.getRepository(Account);
+        const accounts = await query<any>(
+            'SELECT name, accountType, balance FROM accounts WHERE tenantId = ?',
+            [this.tenantId]
+        );
 
-        const accounts = await accountRepo.find({
-            where: { tenantId: this.tenantId },
-        });
-
-        const assets = accounts
-            .filter((a) => a.accountType === AccountType.ASSET)
-            .map((a) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
-
-        const liabilities = accounts
-            .filter((a) => a.accountType === AccountType.LIABILITY)
-            .map((a) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
-
-        const equity = accounts
-            .filter((a) => a.accountType === AccountType.EQUITY)
-            .map((a) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
+        const assets = accounts.filter((a: any) => a.accountType === AccountType.ASSET).map((a: any) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
+        const liabilities = accounts.filter((a: any) => a.accountType === AccountType.LIABILITY).map((a: any) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
+        const equity = accounts.filter((a: any) => a.accountType === AccountType.EQUITY).map((a: any) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
 
         return {
-            assets,
-            liabilities,
-            equity,
-            totalAssets: assets.reduce((sum, a) => sum + a.amount, 0),
-            totalLiabilities: liabilities.reduce((sum, l) => sum + l.amount, 0),
-            totalEquity: equity.reduce((sum, e) => sum + e.amount, 0),
+            assets, liabilities, equity,
+            totalAssets: assets.reduce((sum: number, a: any) => sum + a.amount, 0),
+            totalLiabilities: liabilities.reduce((sum: number, l: any) => sum + l.amount, 0),
+            totalEquity: equity.reduce((sum: number, e: any) => sum + e.amount, 0),
         };
     }
 
@@ -159,30 +135,16 @@ export class GeneralLedger {
         totalExpenses: number;
         netProfit: number;
     }> {
-        const db = await getDb();
-        const accountRepo = db.getRepository(Account);
+        const accounts = await query<any>(
+            'SELECT name, accountType, balance FROM accounts WHERE tenantId = ?',
+            [this.tenantId]
+        );
 
-        const accounts = await accountRepo.find({
-            where: { tenantId: this.tenantId },
-        });
+        const revenue = accounts.filter((a: any) => a.accountType === AccountType.REVENUE).map((a: any) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
+        const expenses = accounts.filter((a: any) => a.accountType === AccountType.EXPENSE).map((a: any) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
+        const totalRevenue = revenue.reduce((sum: number, r: any) => sum + r.amount, 0);
+        const totalExpenses = expenses.reduce((sum: number, e: any) => sum + e.amount, 0);
 
-        const revenue = accounts
-            .filter((a) => a.accountType === AccountType.REVENUE)
-            .map((a) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
-
-        const expenses = accounts
-            .filter((a) => a.accountType === AccountType.EXPENSE)
-            .map((a) => ({ name: a.name || 'Unknown', amount: a.balance || 0 }));
-
-        const totalRevenue = revenue.reduce((sum, r) => sum + r.amount, 0);
-        const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
-
-        return {
-            revenue,
-            expenses,
-            totalRevenue,
-            totalExpenses,
-            netProfit: totalRevenue - totalExpenses,
-        };
+        return { revenue, expenses, totalRevenue, totalExpenses, netProfit: totalRevenue - totalExpenses };
     }
 }

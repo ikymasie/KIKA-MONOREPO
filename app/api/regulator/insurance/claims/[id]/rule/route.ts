@@ -1,48 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { queryOne, execute } from '@/src/db/query';
+import { ClaimStatus } from '@/src/entities/InsuranceClaim';
 
 export const dynamic = 'force-dynamic';
-export async function POST(
-    request: NextRequest,
-    { params }: { params: { id: string } }
-) {
-    try {
-        // Dynamic imports to avoid circular dependencies
-        const { InsuranceClaim, ClaimStatus } = await import("@/src/entities/InsuranceClaim");
-        const { getUserFromRequest } = await import("@/lib/auth-server");
 
+export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+    try {
+        const { getUserFromRequest } = await import('@/lib/auth-server');
 
         const user = await getUserFromRequest(request);
         if (!user || (!user.isRegulator() && !user.isGovernmentOfficer())) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const { id } = params;
         const body = await request.json();
         const { ruling, action, isExGratia } = body;
 
-        const db = await getDb();
-        const claimRepo = db.getRepository(InsuranceClaim);
-        const claim = await claimRepo.findOne({ where: { id } });
+        const claim = await queryOne<any>('SELECT id, status FROM insurance_claims WHERE id = ?', [params.id]);
+        if (!claim) return NextResponse.json({ error: 'Claim not found' }, { status: 404 });
 
-        if (!claim) {
-            return NextResponse.json({ error: 'Claim not found' }, { status: 404 });
-        }
-
+        let newStatus: string;
         if (action === 'OVERTURN') {
-            claim.status = ClaimStatus.APPROVED;
-            claim.regulatorRuling = ruling;
-            claim.isExGratia = isExGratia || false;
+            newStatus = ClaimStatus.APPROVED;
         } else if (action === 'UPHOLD') {
-            claim.status = ClaimStatus.FINAL_REJECTION;
-            claim.regulatorRuling = ruling;
+            newStatus = ClaimStatus.FINAL_REJECTION;
         } else {
             return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
         }
 
-        await claimRepo.save(claim);
+        await execute(
+            'UPDATE insurance_claims SET status = ?, regulatorRuling = ?, isExGratia = ?, updatedAt = NOW() WHERE id = ?',
+            [newStatus, ruling, action === 'OVERTURN' ? (isExGratia || false) : false, params.id]
+        );
 
-        return NextResponse.json(claim);
+        return NextResponse.json(await queryOne<any>('SELECT * FROM insurance_claims WHERE id = ?', [params.id]));
     } catch (error: any) {
         console.error('Error recording regulator ruling:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

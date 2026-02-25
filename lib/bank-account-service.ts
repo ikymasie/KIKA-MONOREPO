@@ -1,6 +1,20 @@
-import { AppDataSource } from './db';
-import { Member } from '../src/entities/Member';
-import { MemberBankAccount } from '../src/entities/MemberBankAccount';
+import { query, queryOne, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
+import { RowDataPacket } from 'mysql2/promise';
+
+interface MemberBankAccount {
+    id: string;
+    memberId: string;
+    bankName: string;
+    branchCode: string;
+    accountNumber: string;
+    accountHolderName: string;
+    accountType: string;
+    isPrimary: boolean;
+    isActive: boolean;
+    notes?: string;
+    createdAt?: Date;
+}
 
 /**
  * Service to manage member bank accounts with business logic
@@ -23,31 +37,41 @@ export class BankAccountService {
             notes?: string;
         }
     ): Promise<MemberBankAccount> {
-        const accountRepo = AppDataSource.getRepository(MemberBankAccount);
-
         // Check if member has any existing accounts
-        const existingAccounts = await accountRepo.find({
-            where: { memberId, isActive: true }
-        });
+        const existingAccounts = await query<RowDataPacket>(
+            'SELECT id FROM member_bank_accounts WHERE memberId = ? AND isActive = true',
+            [memberId]
+        );
 
         // If this is the first account, force it to be primary
         const isPrimary = existingAccounts.length === 0 ? true : (accountData.isPrimary || false);
 
         // If setting this as primary, unset other primary accounts
         if (isPrimary) {
-            await accountRepo.update(
-                { memberId, isPrimary: true },
-                { isPrimary: false }
+            await execute(
+                'UPDATE member_bank_accounts SET isPrimary = false WHERE memberId = ? AND isPrimary = true',
+                [memberId]
             );
         }
 
-        const newAccount = accountRepo.create({
-            memberId,
-            ...accountData,
-            isPrimary,
-        });
+        const id = uuidv4();
+        await execute(
+            `INSERT INTO member_bank_accounts 
+             (id, memberId, bankName, branchCode, accountNumber, accountHolderName, accountType, isPrimary, isActive, notes, createdAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, true, ?, NOW())`,
+            [
+                id, memberId, accountData.bankName, accountData.branchCode,
+                accountData.accountNumber, accountData.accountHolderName,
+                accountData.accountType || 'savings', isPrimary, accountData.notes || null
+            ]
+        );
 
-        return await accountRepo.save(newAccount);
+        const newAccount = await queryOne<RowDataPacket & MemberBankAccount>(
+            'SELECT * FROM member_bank_accounts WHERE id = ?',
+            [id]
+        );
+
+        return newAccount!;
     }
 
     /**
@@ -55,48 +79,45 @@ export class BankAccountService {
      * Automatically unsets other primary accounts for the member
      */
     static async setPrimaryAccount(accountId: string): Promise<MemberBankAccount> {
-        const accountRepo = AppDataSource.getRepository(MemberBankAccount);
-
-        const account = await accountRepo.findOne({
-            where: { id: accountId }
-        });
+        const account = await queryOne<RowDataPacket & MemberBankAccount>(
+            'SELECT * FROM member_bank_accounts WHERE id = ?',
+            [accountId]
+        );
 
         if (!account) {
             throw new Error('Bank account not found');
         }
 
         // Unset other primary accounts for this member
-        await accountRepo.update(
-            { memberId: account.memberId, isPrimary: true },
-            { isPrimary: false }
+        await execute(
+            'UPDATE member_bank_accounts SET isPrimary = false WHERE memberId = ? AND isPrimary = true',
+            [account.memberId]
         );
 
         // Set this account as primary
-        account.isPrimary = true;
-        return await accountRepo.save(account);
+        await execute('UPDATE member_bank_accounts SET isPrimary = true WHERE id = ?', [accountId]);
+
+        return { ...account, isPrimary: true };
     }
 
     /**
      * Get the primary bank account for a member
      */
     static async getPrimaryAccount(memberId: string): Promise<MemberBankAccount | null> {
-        const accountRepo = AppDataSource.getRepository(MemberBankAccount);
-
-        return await accountRepo.findOne({
-            where: { memberId, isPrimary: true, isActive: true }
-        });
+        return queryOne<RowDataPacket & MemberBankAccount>(
+            'SELECT * FROM member_bank_accounts WHERE memberId = ? AND isPrimary = true AND isActive = true',
+            [memberId]
+        );
     }
 
     /**
      * Get all active bank accounts for a member
      */
     static async getMemberAccounts(memberId: string): Promise<MemberBankAccount[]> {
-        const accountRepo = AppDataSource.getRepository(MemberBankAccount);
-
-        return await accountRepo.find({
-            where: { memberId, isActive: true },
-            order: { isPrimary: 'DESC', createdAt: 'ASC' }
-        });
+        return query<RowDataPacket & MemberBankAccount>(
+            'SELECT * FROM member_bank_accounts WHERE memberId = ? AND isActive = true ORDER BY isPrimary DESC, createdAt ASC',
+            [memberId]
+        );
     }
 
     /**
@@ -104,31 +125,33 @@ export class BankAccountService {
      * If deactivating the primary account, automatically set another as primary
      */
     static async deactivateAccount(accountId: string): Promise<void> {
-        const accountRepo = AppDataSource.getRepository(MemberBankAccount);
-
-        const account = await accountRepo.findOne({
-            where: { id: accountId }
-        });
+        const account = await queryOne<RowDataPacket & MemberBankAccount>(
+            'SELECT * FROM member_bank_accounts WHERE id = ?',
+            [accountId]
+        );
 
         if (!account) {
             throw new Error('Bank account not found');
         }
 
         const wasPrimary = account.isPrimary;
-        account.isActive = false;
-        account.isPrimary = false;
-        await accountRepo.save(account);
+        await execute(
+            'UPDATE member_bank_accounts SET isActive = false, isPrimary = false WHERE id = ?',
+            [accountId]
+        );
 
         // If we deactivated the primary account, set another as primary
         if (wasPrimary) {
-            const otherAccounts = await accountRepo.find({
-                where: { memberId: account.memberId, isActive: true },
-                order: { createdAt: 'ASC' }
-            });
+            const otherAccounts = await query<RowDataPacket & { id: string }>(
+                'SELECT id FROM member_bank_accounts WHERE memberId = ? AND isActive = true ORDER BY createdAt ASC LIMIT 1',
+                [account.memberId]
+            );
 
             if (otherAccounts.length > 0) {
-                otherAccounts[0].isPrimary = true;
-                await accountRepo.save(otherAccounts[0]);
+                await execute(
+                    'UPDATE member_bank_accounts SET isPrimary = true WHERE id = ?',
+                    [otherAccounts[0].id]
+                );
             }
         }
     }
@@ -138,12 +161,10 @@ export class BankAccountService {
      * This can be run as a data integrity check
      */
     static async validatePrimaryAccounts(memberId: string): Promise<boolean> {
-        const accountRepo = AppDataSource.getRepository(MemberBankAccount);
-
-        const primaryAccounts = await accountRepo.count({
-            where: { memberId, isPrimary: true, isActive: true }
-        });
-
-        return primaryAccounts === 1;
+        const result = await queryOne<RowDataPacket & { count: number }>(
+            'SELECT COUNT(*) as count FROM member_bank_accounts WHERE memberId = ? AND isPrimary = true AND isActive = true',
+            [memberId]
+        );
+        return (result?.count || 0) === 1;
     }
 }

@@ -1,10 +1,3 @@
-/**
- * Notification Service
- * 
- * Core service that orchestrates notification delivery across SMS and Email channels.
- * Handles template resolution, channel selection, and logging.
- */
-
 import { smsService } from './sms-service';
 import { emailService } from './email-service';
 import {
@@ -14,12 +7,23 @@ import {
     NotificationContext
 } from './notification-types';
 import { UserRole } from '@/src/entities/User';
-import { getDataSource } from '@/src/config/database';
-import { NotificationTemplate } from '@/src/entities/NotificationTemplate';
-import { NotificationLog } from '@/src/entities/NotificationLog';
+import { queryOne, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
+import { RowDataPacket } from 'mysql2/promise';
+
+interface INotificationTemplate {
+    id: string;
+    event: NotificationEvent;
+    targetRole: UserRole;
+    smsTemplate: string | null;
+    emailSubject: string | null;
+    emailTemplate: string | null;
+    channels: NotificationChannel[];
+    isActive: boolean;
+}
 
 class NotificationService {
-    private templateCache: Map<string, NotificationTemplate> = new Map();
+    private templateCache: Map<string, INotificationTemplate> = new Map();
 
     /**
      * Send notification based on event and role
@@ -175,7 +179,7 @@ class NotificationService {
     /**
      * Get template from database or cache
      */
-    private async getTemplate(event: NotificationEvent, role: UserRole): Promise<NotificationTemplate | null> {
+    private async getTemplate(event: NotificationEvent, role: UserRole): Promise<INotificationTemplate | null> {
         const cacheKey = `${event}_${role}`;
 
         // Check cache first
@@ -184,17 +188,21 @@ class NotificationService {
         }
 
         try {
-            const dataSource = await getDataSource();
-            const templateRepo = dataSource.getRepository(NotificationTemplate);
-
-            const template = await templateRepo.findOne({
-                where: {
-                    event,
-                    targetRole: role,
-                },
-            });
+            const template = await queryOne<RowDataPacket & INotificationTemplate>(
+                `SELECT * FROM notification_templates 
+                 WHERE event = ? AND targetRole = ? LIMIT 1`,
+                [event, role]
+            );
 
             if (template) {
+                // Parse channels if it comes back as string/json from DB
+                if (typeof template.channels === 'string') {
+                    try {
+                        template.channels = JSON.parse(template.channels);
+                    } catch {
+                        template.channels = [];
+                    }
+                }
                 this.templateCache.set(cacheKey, template);
             }
 
@@ -209,12 +217,20 @@ class NotificationService {
     /**
      * Log notification to database
      */
-    private async logNotification(log: Partial<NotificationLog>): Promise<void> {
+    private async logNotification(log: any): Promise<void> {
         try {
-            const dataSource = await getDataSource();
-            const logRepo = dataSource.getRepository(NotificationLog);
-
-            await logRepo.save(log);
+            const id = uuidv4();
+            await execute(
+                `INSERT INTO notification_logs (
+                    id, event, channel, recipient, userId, tenantId, 
+                    subject, content, status, externalId, errorMessage, metadata, createdAt
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+                [
+                    id, log.event, log.channel, log.recipient, log.userId || null, log.tenantId || null,
+                    log.subject || null, log.content, log.status, log.externalId || null,
+                    log.errorMessage || null, JSON.stringify(log.metadata || {})
+                ]
+            );
 
         } catch (error: any) {
             console.error('[Notification Service] Error logging notification:', error);

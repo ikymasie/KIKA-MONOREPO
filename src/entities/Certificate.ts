@@ -1,13 +1,3 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    ManyToOne,
-    JoinColumn,
-    Index,
-} from 'typeorm';
 import type { Tenant } from './Tenant';
 import type { User } from './User';
 
@@ -16,44 +6,17 @@ export enum CertificateType {
     RENEWAL = 'renewal',
     AMENDMENT = 'amendment',
 }
-
-@Entity('certificates')
-@Index(['tenantId'])
-@Index(['certificateNumber'], { unique: true })
 export class Certificate {
-    @PrimaryGeneratedColumn('uuid')
     id?: string;
-
-    @Column({ type: 'uuid' })
     tenantId?: string;
-
-    @ManyToOne('Tenant')
-    @JoinColumn({ name: 'tenantId' })
     tenant?: Tenant;
-
-    @Column({ unique: true })
     certificateNumber?: string;
-
-    @Column({ type: 'enum', enum: CertificateType })
     certificateType?: CertificateType;
-
-    @Column({ type: 'date', nullable: true })
     issuedDate?: Date;
-
-    @Column({ type: 'date', nullable: true })
     expiryDate?: Date;
-
-    @Column({ type: 'uuid' })
     issuedBy?: string;
-
-    @ManyToOne('User')
-    @JoinColumn({ name: 'issuedBy' })
     issuer?: User;
-
-    @Column({ nullable: true })
     documentUrl?: string;
-
-    @Column({ type: 'json', nullable: true })
     metadata?: {
         registrationNumber?: string;
         registrationDate?: string;
@@ -61,10 +24,6 @@ export class Certificate {
         address?: string;
         [key: string]: any;
     };
-
-    @CreateDateColumn()
     createdAt?: Date;
-
-    @UpdateDateColumn()
     updatedAt?: Date;
 }

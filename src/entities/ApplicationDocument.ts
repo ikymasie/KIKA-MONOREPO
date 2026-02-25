@@ -1,12 +1,3 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    ManyToOne,
-    JoinColumn,
-    Index,
-} from 'typeorm';
 import type { SocietyApplication } from './SocietyApplication';
 import type { User } from './User';
 
@@ -20,57 +11,21 @@ export enum DocumentType {
     REJECTION_NOTICE = 'rejection_notice',
     APPEAL_LETTER = 'appeal_letter',
 }
-
-@Entity('application_documents')
-@Index(['applicationId'])
-@Index(['documentType'])
 export class ApplicationDocument {
-    @PrimaryGeneratedColumn('uuid')
     id?: string;
-
-    @Column({ type: 'uuid' })
     applicationId?: string;
-
-    @ManyToOne('SocietyApplication')
-    @JoinColumn({ name: 'applicationId' })
     application?: SocietyApplication;
-
-    @Column({ type: 'enum', enum: DocumentType })
     documentType?: DocumentType;
-
-    @Column()
     fileName?: string;
-
-    @Column({ type: 'text' })
     fileUrl?: string;
-
-    @Column({ type: 'bigint', nullable: true })
     fileSizeBytes?: number;
-
-    @Column({ nullable: true })
     mimeType?: string;
-
-    @Column({ type: 'uuid' })
     uploadedBy?: string;
-
-    @ManyToOne('User')
-    @JoinColumn({ name: 'uploadedBy' })
     uploader?: User;
-
-    @Column({ default: false })
     isVerified?: boolean;
-
-    @Column({ type: 'timestamp', nullable: true })
     verifiedAt?: Date;
-
-    @Column({ type: 'uuid', nullable: true })
     verifiedById?: string;
-
-    @ManyToOne('User')
-    @JoinColumn({ name: 'verifiedById' })
     verifiedBy?: User;
-
-    @CreateDateColumn()
     uploadedAt?: Date;
 
     get isRequired(): boolean {

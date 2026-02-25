@@ -1,9 +1,9 @@
-import { getDataSource } from '../src/config/database';
-import { Otp } from '../src/entities/Otp';
+import { queryOne, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
 import { notificationService } from './notification-service';
 import { NotificationEvent } from './notification-types';
 import { UserRole } from '../src/entities/User';
-import { MoreThan } from 'typeorm';
+import { RowDataPacket } from 'mysql2/promise';
 
 export class OtpService {
     /**
@@ -11,9 +11,6 @@ export class OtpService {
      */
     async generateOtp(phone: string): Promise<{ success: boolean; error?: string }> {
         try {
-            const dataSource = await getDataSource();
-            const otpRepository = dataSource.getRepository(Otp);
-
             // 1. Generate 6-digit code
             const code = Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -21,13 +18,13 @@ export class OtpService {
             const expiresAt = new Date();
             expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
-            // 3. Save to database
-            const otp = otpRepository.create({
-                phone,
-                code,
-                expiresAt,
-            });
-            await otpRepository.save(otp);
+            // 3. Save to database using raw SQL
+            const id = uuidv4();
+            await execute(
+                `INSERT INTO otps (id, phone, code, expiresAt, used, createdAt)
+                 VALUES (?, ?, ?, ?, false, NOW())`,
+                [id, phone, code, expiresAt]
+            );
 
             // 4. Send via notification service
             await notificationService.sendNotification({
@@ -53,29 +50,23 @@ export class OtpService {
      */
     async verifyOtp(phone: string, code: string): Promise<{ success: boolean; error?: string }> {
         try {
-            const dataSource = await getDataSource();
-            const otpRepository = dataSource.getRepository(Otp);
-
-            // Find valid, unused OTP for this phone
-            const otp = await otpRepository.findOne({
-                where: {
-                    phone,
-                    code,
-                    used: false,
-                    expiresAt: MoreThan(new Date()),
-                },
-                order: {
-                    createdAt: 'DESC',
-                },
-            });
+            // Find valid, unused OTP for this phone using raw SQL
+            const otp = await queryOne<RowDataPacket & { id: string }>(
+                `SELECT id FROM otps 
+                 WHERE phone = ? AND code = ? AND used = false AND expiresAt > NOW()
+                 ORDER BY createdAt DESC LIMIT 1`,
+                [phone, code]
+            );
 
             if (!otp) {
                 return { success: false, error: 'Invalid or expired OTP' };
             }
 
             // Mark as used
-            otp.used = true;
-            await otpRepository.save(otp);
+            await execute(
+                'UPDATE otps SET used = true WHERE id = ?',
+                [otp.id]
+            );
 
             return { success: true };
 

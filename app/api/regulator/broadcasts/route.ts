@@ -1,187 +1,109 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
-import type { User as UserType } from '@/src/entities/User';
-import {
-    RegulatoryBroadcast,
-    BroadcastType,
-    BroadcastPriority,
-    BroadcastTargetAudience,
-} from '@/src/entities/RegulatoryBroadcast';
+import { query, queryOne, execute } from '@/src/db/query';
+import { v4 as uuidv4 } from 'uuid';
+import { BroadcastType, BroadcastPriority, BroadcastTargetAudience } from '@/src/entities/RegulatoryBroadcast';
+import { UserRole } from '@/src/entities/User';
 
 export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-        const { User, UserRole } = await import("@/src/entities/User");
-        const { Tenant } = await import("@/src/entities/Tenant");
-
+        const { getUserFromRequest } = await import('@/lib/auth-server');
 
         const user = await getUserFromRequest(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        if (!user.isRegulator()) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (!user.isRegulator()) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const { searchParams } = new URL(request.url);
-        const broadcastType = searchParams.get('broadcastType') as BroadcastType | null;
-        const priority = searchParams.get('priority') as BroadcastPriority | null;
+        const broadcastType = searchParams.get('broadcastType');
+        const priority = searchParams.get('priority');
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '20');
+        const offset = (page - 1) * limit;
 
-        const dataSource = await getDb();
-        const broadcastRepo = dataSource.getRepository(RegulatoryBroadcast);
+        let sql = 'SELECT * FROM regulatory_broadcasts WHERE 1=1';
+        const params: any[] = [];
 
-        const queryBuilder = broadcastRepo
-            .createQueryBuilder('broadcast')
-            .leftJoinAndSelect('broadcast.creator', 'creator')
-            .orderBy('broadcast.publishedAt', 'DESC');
+        if (broadcastType) { sql += ' AND broadcastType = ?'; params.push(broadcastType); }
+        if (priority) { sql += ' AND priority = ?'; params.push(priority); }
 
-        if (broadcastType) {
-            queryBuilder.andWhere('broadcast.broadcastType = :broadcastType', {
-                broadcastType,
-            });
-        }
+        const countResult = await queryOne<any>('SELECT COUNT(*) as total FROM regulatory_broadcasts WHERE 1=1' + (broadcastType ? ' AND broadcastType = ?' : '') + (priority ? ' AND priority = ?' : ''), params);
+        const broadcasts = await query<any>(sql + ' ORDER BY publishedAt DESC LIMIT ? OFFSET ?', [...params, limit, offset]);
 
-        if (priority) {
-            queryBuilder.andWhere('broadcast.priority = :priority', { priority });
-        }
-
-        const [broadcasts, total] = await queryBuilder
-            .skip((page - 1) * limit)
-            .take(limit)
-            .getManyAndCount();
-
-        return NextResponse.json({
-            broadcasts,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit),
-            },
-        });
+        return NextResponse.json({ broadcasts, pagination: { page, limit, total: Number(countResult?.total || 0), totalPages: Math.ceil(Number(countResult?.total || 0) / limit) } });
     } catch (error: any) {
-        console.error('Error fetching broadcasts:', error);
-        return NextResponse.json(
-            { error: 'Failed to fetch broadcasts', details: error.message },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to fetch broadcasts', details: error.message }, { status: 500 });
     }
 }
 
 export async function POST(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-        const { User, UserRole } = await import("@/src/entities/User");
-        const { Tenant } = await import("@/src/entities/Tenant");
-        const user = await getUserFromRequest(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        const { getUserFromRequest } = await import('@/lib/auth-server');
 
-        if (user.role !== UserRole.DCD_DIRECTOR) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+        const user = await getUserFromRequest(request);
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (user.role !== UserRole.DCD_DIRECTOR) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const body = await request.json();
-        const {
-            title,
-            content,
-            broadcastType,
-            priority,
-            targetAudience,
-            targetTenantIds,
-            deliveryChannels,
-            expiresAt,
-        } = body;
+        const { title, content, broadcastType, priority, targetAudience, targetTenantIds, deliveryChannels, expiresAt } = body;
 
         if (!title || !content || !broadcastType) {
-            return NextResponse.json(
-                { error: 'Missing required fields: title, content, broadcastType' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Missing required fields: title, content, broadcastType' }, { status: 400 });
         }
 
-        const dataSource = await getDb();
-        const broadcastRepo = dataSource.getRepository(RegulatoryBroadcast);
-        const userRepo = dataSource.getRepository(User);
-        const tenantRepo = dataSource.getRepository(Tenant);
+        const broadcastId = uuidv4();
+        const deliveryStatus = {};
 
-        const broadcast = broadcastRepo.create({
-            title,
-            content,
-            broadcastType: broadcastType as BroadcastType,
-            priority: priority as BroadcastPriority || BroadcastPriority.MEDIUM,
-            targetAudience: targetAudience as BroadcastTargetAudience || BroadcastTargetAudience.ALL_TENANTS,
-            targetTenantIds,
-            createdBy: user.id,
-            publishedAt: new Date(),
-            expiresAt: expiresAt ? new Date(expiresAt) : undefined,
-            deliveryChannels: deliveryChannels || ['in_app'],
-            deliveryStatus: {},
-        });
+        await execute(
+            `INSERT INTO regulatory_broadcasts 
+             (id, title, content, broadcastType, priority, targetAudience, targetTenantIds, createdBy, publishedAt, expiresAt, deliveryChannels, deliveryStatus, createdAt, updatedAt)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?, NOW(), NOW())`,
+            [
+                broadcastId, title, content, broadcastType,
+                priority || BroadcastPriority.MEDIUM,
+                targetAudience || BroadcastTargetAudience.ALL_TENANTS,
+                targetTenantIds ? JSON.stringify(targetTenantIds) : null,
+                user.id, expiresAt ? new Date(expiresAt) : null,
+                JSON.stringify(deliveryChannels || ['in_app']),
+                JSON.stringify(deliveryStatus)
+            ]
+        );
 
-        await broadcastRepo.save(broadcast);
-
-        // Send broadcast to recipients
-        let recipients: UserType[] = [];
-
+        // Determine recipients
+        let recipients: any[] = [];
         if (targetAudience === BroadcastTargetAudience.ALL_TENANTS || !targetAudience) {
-            // Get all SACCOS admins
-            recipients = await userRepo.find({
-                where: { role: UserRole.SACCOS_ADMIN },
-            });
-        } else if (targetAudience === BroadcastTargetAudience.SPECIFIC_TENANTS && targetTenantIds) {
-            // Get admins from specific tenants
-            recipients = await userRepo
-                .createQueryBuilder('user')
-                .where('user.role = :role', { role: UserRole.SACCOS_ADMIN })
-                .andWhere('user.tenantId IN (:...tenantIds)', { tenantIds: targetTenantIds })
-                .getMany();
+            recipients = await query<any>('SELECT * FROM users WHERE role = ?', [UserRole.SACCOS_ADMIN]);
+        } else if (targetAudience === BroadcastTargetAudience.SPECIFIC_TENANTS && targetTenantIds?.length) {
+            const placeholders = targetTenantIds.map(() => '?').join(',');
+            recipients = await query<any>(`SELECT * FROM users WHERE role = ? AND tenantId IN (${placeholders})`, [UserRole.SACCOS_ADMIN, ...targetTenantIds]);
         }
-
-        const { notificationService } = await import("@/lib/notification-service");
-        const { NotificationEvent } = await import("@/lib/notification-types");
 
         if (recipients.length > 0) {
-            const contexts = recipients.map(recipient => ({
+            const { notificationService } = await import('@/lib/notification-service');
+            const { NotificationEvent } = await import('@/lib/notification-types');
+            const contexts = recipients.map((recipient: any) => ({
                 event: NotificationEvent.SACCOS_SYSTEM_ALERT,
-                recipientRole: recipient.role!,
+                recipientRole: recipient.role,
                 recipientEmail: recipient.email,
                 recipientPhone: recipient.phone,
                 recipientName: recipient.fullName,
                 userId: recipient.id,
                 tenantId: recipient.tenantId,
-                data: {
-                    title,
-                    content,
-                    broadcastType,
-                    priority
-                }
+                data: { title, content, broadcastType, priority }
             }));
             await notificationService.sendBulkNotifications(contexts);
+
+            const updatedDeliveryStatus = {
+                email: { sent: recipients.length, failed: 0, total: recipients.length },
+                sms: { sent: recipients.length, failed: 0, total: recipients.length },
+                inApp: { created: recipients.length, total: recipients.length },
+            };
+            await execute('UPDATE regulatory_broadcasts SET deliveryStatus = ? WHERE id = ?', [JSON.stringify(updatedDeliveryStatus), broadcastId]);
         }
 
-        const deliveryStatus = {
-            email: { sent: recipients.length, failed: 0, total: recipients.length },
-            sms: { sent: recipients.length, failed: 0, total: recipients.length },
-            inApp: { created: recipients.length, total: recipients.length },
-        };
-
-        broadcast.deliveryStatus = deliveryStatus;
-        await broadcastRepo.save(broadcast);
-
+        const broadcast = await queryOne<any>('SELECT * FROM regulatory_broadcasts WHERE id = ?', [broadcastId]);
         return NextResponse.json(broadcast, { status: 201 });
     } catch (error: any) {
-        console.error('Error creating broadcast:', error);
-        return NextResponse.json(
-            { error: 'Failed to create broadcast', details: error.message },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to create broadcast', details: error.message }, { status: 500 });
     }
 }

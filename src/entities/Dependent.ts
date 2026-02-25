@@ -1,12 +1,3 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    ManyToOne,
-    JoinColumn,
-} from 'typeorm';
 import type { Member } from './Member';
 
 export enum DependentRelationship {
@@ -16,44 +7,18 @@ export enum DependentRelationship {
     SIBLING = 'sibling',
     EXTENDED_FAMILY = 'extended_family',
 }
-
-@Entity('dependents')
 export class Dependent {
-    @PrimaryGeneratedColumn('uuid')
     id?: string;
-
-    @Column({ type: 'uuid' })
     memberId?: string;
-
-    @ManyToOne('Member', 'dependents')
-    @JoinColumn({ name: 'memberId' })
     member?: Member;
-
-    @Column()
     firstName?: string;
-
-    @Column()
     lastName?: string;
-
-    @Column({ type: 'enum', enum: DependentRelationship })
     relationship?: DependentRelationship;
-
-    @Column({ type: 'date' })
     dateOfBirth?: Date;
-
-    @Column({ nullable: true })
     nationalId?: string;
-
-    @Column()
     gender?: string;
-
-    @Column({ default: true })
     isActive?: boolean;
-
-    @CreateDateColumn()
     createdAt?: Date;
-
-    @UpdateDateColumn()
     updatedAt?: Date;
 
     get age(): number | null {

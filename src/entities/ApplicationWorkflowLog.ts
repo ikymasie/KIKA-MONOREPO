@@ -1,50 +1,16 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    ManyToOne,
-    JoinColumn,
-    Index,
-} from 'typeorm';
 import type { SocietyApplication } from './SocietyApplication';
 import { ApplicationStatus } from './SocietyApplication';
 import type { User } from './User';
-
-@Entity('application_workflow_logs')
-@Index(['applicationId'])
-@Index(['createdAt'])
 export class ApplicationWorkflowLog {
-    @PrimaryGeneratedColumn('uuid')
     id?: string;
-
-    @Column({ type: 'uuid' })
     applicationId?: string;
-
-    @ManyToOne('SocietyApplication')
-    @JoinColumn({ name: 'applicationId' })
     application?: SocietyApplication;
-
-    @Column({ type: 'enum', enum: ApplicationStatus, nullable: true })
     fromStatus?: ApplicationStatus;
-
-    @Column({ type: 'enum', enum: ApplicationStatus })
     toStatus?: ApplicationStatus;
-
-    @Column({ type: 'uuid' })
     performedBy?: string;
-
-    @ManyToOne('User')
-    @JoinColumn({ name: 'performedBy' })
     performer?: User;
-
-    @Column({ type: 'text', nullable: true })
     notes?: string;
-
-    @Column({ type: 'json', nullable: true })
     metadata?: Record<string, any>;
-
-    @CreateDateColumn()
     createdAt?: Date;
 
     get isApproval(): boolean {

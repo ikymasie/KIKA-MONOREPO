@@ -1,13 +1,3 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    ManyToOne,
-    JoinColumn,
-    OneToOne,
-} from 'typeorm';
 import type { FieldReport } from './FieldReport';
 import type { Tenant } from './Tenant';
 import type { User } from './User';
@@ -18,56 +8,21 @@ export enum FieldVisitStatus {
     COMPLETED = 'completed',
     CANCELLED = 'cancelled',
 }
-
-@Entity('field_visits')
 export class FieldVisit {
-    @PrimaryGeneratedColumn('uuid')
     id?: string;
-
-    @Column({ type: 'uuid' })
     tenantId?: string;
-
-    @ManyToOne('Tenant')
-    @JoinColumn({ name: 'tenantId' })
     tenant?: Tenant;
-
-    @Column({ type: 'uuid' })
     officerId?: string;
-
-    @ManyToOne('User')
-    @JoinColumn({ name: 'officerId' })
     officer?: User;
-
-    @Column({ type: 'timestamp' })
     scheduledDate?: Date;
-
-    @Column({ type: 'timestamp', nullable: true })
     actualDate?: Date;
-
-    @Column({ type: 'enum', enum: FieldVisitStatus, default: FieldVisitStatus.SCHEDULED })
     status?: FieldVisitStatus;
-
-    @Column({ type: 'text' })
     purpose?: string;
-
-    @Column({ type: 'text', nullable: true })
     notes?: string;
-
-    @OneToOne('FieldReport', 'visit')
     report?: FieldReport;
-
-    @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
     latitude?: number;
-
-    @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
     longitude?: number;
-
-    @Column({ type: 'timestamp', nullable: true })
     geoLoggedAt?: Date;
-
-    @CreateDateColumn()
     createdAt?: Date;
-
-    @UpdateDateColumn()
     updatedAt?: Date;
 }

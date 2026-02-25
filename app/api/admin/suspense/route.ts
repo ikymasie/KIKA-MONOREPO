@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { query, execute } from '@/src/db/query';
+import { SuspenseStatus } from '@/src/entities/SuspenseAccount';
 
 export const dynamic = 'force-dynamic';
+
 // List all suspense account entries
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-        const { SuspenseAccount, SuspenseStatus } = await import("@/src/entities/SuspenseAccount");
-
+        const { getUserFromRequest } = await import('@/lib/auth-server');
 
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
@@ -16,27 +15,29 @@ export async function GET(request: NextRequest) {
         }
 
         const { searchParams } = new URL(request.url);
-        const status = searchParams.get('status') as any;
+        const status = searchParams.get('status');
 
-        const db = await getDb();
-        const suspenseRepo = db.getRepository(SuspenseAccount);
+        let sql = `
+            SELECT sa.*, m.fullName as allocatedToMemberName 
+            FROM suspense_accounts sa
+            LEFT JOIN members m ON sa.allocatedToMemberId = m.id
+            WHERE sa.tenantId = ?
+        `;
+        const params: any[] = [user.tenantId];
 
-        const where: any = { tenantId: user.tenantId };
         if (status) {
-            where.status = status;
+            sql += ' AND sa.status = ?';
+            params.push(status);
         }
 
-        const entries = await suspenseRepo.find({
-            where,
-            relations: ['allocatedToMember'],
-            order: { createdAt: 'DESC' },
-        });
+        sql += ' ORDER BY sa.createdAt DESC';
 
-        // Calculate days in suspense
+        const entries = await query<any>(sql, params);
+
         const now = new Date();
-        const enrichedEntries = entries.map(entry => ({
+        const enrichedEntries = entries.map((entry: any) => ({
             ...entry,
-            daysInSuspense: Math.floor((now.getTime() - entry.createdAt.getTime()) / (1000 * 60 * 60 * 24)),
+            daysInSuspense: Math.floor((now.getTime() - new Date(entry.createdAt).getTime()) / (1000 * 60 * 60 * 24)),
         }));
 
         return NextResponse.json({ entries: enrichedEntries });
@@ -49,9 +50,9 @@ export async function GET(request: NextRequest) {
 // Allocate suspense entry to a member
 export async function POST(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-        const { SuspenseAccount, SuspenseStatus } = await import("@/src/entities/SuspenseAccount");
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { queryOne } = await import('@/src/db/query');
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'saccos_admin') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -60,39 +61,25 @@ export async function POST(request: NextRequest) {
         const { suspenseId, memberId, notes } = await request.json();
 
         if (!suspenseId || !memberId) {
-            return NextResponse.json(
-                { error: 'Suspense ID and Member ID are required' },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: 'Suspense ID and Member ID are required' }, { status: 400 });
         }
 
-        const db = await getDb();
-        const suspenseRepo = db.getRepository(SuspenseAccount);
+        const entry = await queryOne<any>(
+            'SELECT * FROM suspense_accounts WHERE id = ? AND tenantId = ?',
+            [suspenseId, user.tenantId]
+        );
 
-        const entry = await suspenseRepo.findOne({
-            where: { id: suspenseId, tenantId: user.tenantId },
-        });
-
-        if (!entry) {
-            return NextResponse.json({ error: 'Suspense entry not found' }, { status: 404 });
-        }
-
+        if (!entry) return NextResponse.json({ error: 'Suspense entry not found' }, { status: 404 });
         if (entry.status !== SuspenseStatus.PENDING) {
             return NextResponse.json({ error: 'Suspense entry already processed' }, { status: 400 });
         }
 
-        await suspenseRepo.update(suspenseId, {
-            status: SuspenseStatus.ALLOCATED,
-            allocatedToMemberId: memberId,
-            allocatedBy: user.id,
-            allocatedAt: new Date(),
-            notes,
-        });
+        await execute(
+            'UPDATE suspense_accounts SET status = ?, allocatedToMemberId = ?, allocatedBy = ?, allocatedAt = NOW(), notes = ? WHERE id = ?',
+            [SuspenseStatus.ALLOCATED, memberId, user.id, notes || null, suspenseId]
+        );
 
-        return NextResponse.json({
-            success: true,
-            message: 'Suspense entry allocated successfully',
-        });
+        return NextResponse.json({ success: true, message: 'Suspense entry allocated successfully' });
     } catch (error: any) {
         console.error('Error allocating suspense entry:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });

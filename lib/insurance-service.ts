@@ -1,29 +1,29 @@
-import { getDb } from '@/lib/db';
-import { InsurancePolicy, PolicyStatus } from '@/src/entities/InsurancePolicy';
-import { LessThan, In } from 'typeorm';
+import { query, execute } from '@/src/db/query';
+import { PolicyStatus } from '@/src/entities/InsurancePolicy';
+import { RowDataPacket } from 'mysql2/promise';
 
 export class InsuranceService {
     /**
      * Transitions policies from WAITING_PERIOD to ACTIVE if the waiting period has ended.
      */
     static async processWaitingPeriods() {
-        const db = await getDb();
-        const policyRepo = db.getRepository(InsurancePolicy);
+        try {
+            const policiesToActivate = await query<RowDataPacket & { id: string }>(
+                `SELECT id FROM insurance_policies 
+                 WHERE status = ? AND waitingPeriodEndDate < NOW()`,
+                [PolicyStatus.WAITING_PERIOD]
+            );
 
-        const now = new Date();
-        const policiesToActivate = await policyRepo.find({
-            where: {
-                status: PolicyStatus.WAITING_PERIOD,
-                waitingPeriodEndDate: LessThan(now)
+            if (policiesToActivate.length > 0) {
+                const ids = policiesToActivate.map(p => p.id);
+                await execute(
+                    `UPDATE insurance_policies SET status = ?, updatedAt = NOW() WHERE id IN (?)`,
+                    [PolicyStatus.ACTIVE, ids]
+                );
+                console.log(`Activated ${policiesToActivate.length} insurance policies.`);
             }
-        });
-
-        if (policiesToActivate.length > 0) {
-            for (const policy of policiesToActivate) {
-                policy.status = PolicyStatus.ACTIVE;
-            }
-            await policyRepo.save(policiesToActivate);
-            console.log(`Activated ${policiesToActivate.length} insurance policies.`);
+        } catch (error) {
+            console.error('[Insurance Service] Error processing waiting periods:', error);
         }
     }
 
@@ -33,30 +33,35 @@ export class InsuranceService {
      * This is typically triggered after a deduction cycle.
      */
     static async detectLapsedPolicies() {
-        const db = await getDb();
-        const policyRepo = db.getRepository(InsurancePolicy);
+        try {
+            const activePolicies = await query<RowDataPacket & { id: string, startDate: Date, monthsPaid: number }>(
+                `SELECT id, startDate, monthsPaid FROM insurance_policies 
+                 WHERE status IN (?, ?)`,
+                [PolicyStatus.ACTIVE, PolicyStatus.WAITING_PERIOD]
+            );
 
-        const activePolicies = await policyRepo.find({
-            where: { status: In([PolicyStatus.ACTIVE, PolicyStatus.WAITING_PERIOD]) }
-        });
+            const now = new Date();
+            const lapsedIds: string[] = [];
 
-        const now = new Date();
-        const lapsedPolicies: InsurancePolicy[] = [];
+            for (const policy of activePolicies) {
+                const startDate = new Date(policy.startDate);
+                const monthsSinceStart = (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth());
 
-        for (const policy of activePolicies) {
-            const startDate = new Date(policy.startDate!);
-            const monthsSinceStart = (now.getFullYear() - startDate.getFullYear()) * 12 + (now.getMonth() - startDate.getMonth());
-
-            // Allow 2 months grace period
-            if (monthsSinceStart > (policy.monthsPaid || 0) + 2) {
-                policy.status = PolicyStatus.LAPSED;
-                lapsedPolicies.push(policy);
+                // Allow 2 months grace period
+                if (monthsSinceStart > (policy.monthsPaid || 0) + 2) {
+                    lapsedIds.push(policy.id);
+                }
             }
-        }
 
-        if (lapsedPolicies.length > 0) {
-            await policyRepo.save(lapsedPolicies);
-            console.log(`Marked ${lapsedPolicies.length} policies as LAPSED due to non-payment.`);
+            if (lapsedIds.length > 0) {
+                await execute(
+                    `UPDATE insurance_policies SET status = ?, updatedAt = NOW() WHERE id IN (?)`,
+                    [PolicyStatus.LAPSED, lapsedIds]
+                );
+                console.log(`Marked ${lapsedIds.length} policies as LAPSED due to non-payment.`);
+            }
+        } catch (error) {
+            console.error('[Insurance Service] Error detecting lapsed policies:', error);
         }
     }
 }

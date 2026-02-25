@@ -1,9 +1,6 @@
-import { AppDataSource } from '@/src/config/database';
-import { Member } from '@/src/entities/Member';
-import { Loan } from '@/src/entities/Loan';
-import { LoanProduct } from '@/src/entities/LoanProduct';
-import { MemberSavings } from '@/src/entities/MemberSavings';
+import { query, queryOne } from '@/src/db/query';
 import { LoanStatus } from '@/src/entities/Loan';
+import { RowDataPacket } from 'mysql2/promise';
 
 export interface EligibilityCheckResult {
     passed: boolean;
@@ -40,27 +37,23 @@ export async function checkSavingsRatio(
     loanAmount: number,
     productId: string
 ): Promise<EligibilityCheckResult['checks']['savingsRatio']> {
-    const savingsRepo = AppDataSource.getRepository(MemberSavings);
-    const productRepo = AppDataSource.getRepository(LoanProduct);
-
     // Get product to find savings multiplier
-    const product = await productRepo.findOne({ where: { id: productId } });
-    if (!product) {
-        throw new Error('Loan product not found');
-    }
+    const product = await queryOne<RowDataPacket & { savingsMultiplier: number }>(
+        'SELECT savingsMultiplier FROM loan_products WHERE id = ?',
+        [productId]
+    );
+    if (!product) throw new Error('Loan product not found');
 
     // Get member's total savings across all products
-    const memberSavings = await savingsRepo
-        .createQueryBuilder('savings')
-        .select('SUM(savings.currentBalance)', 'total')
-        .where('savings.memberId = :memberId', { memberId })
-        .getRawOne();
+    const savingsResult = await queryOne<RowDataPacket & { total: number }>(
+        'SELECT COALESCE(SUM(currentBalance), 0) as total FROM member_savings WHERE memberId = ?',
+        [memberId]
+    );
 
-    const totalSavings = Number(memberSavings?.total || 0);
+    const totalSavings = Number(savingsResult?.total || 0);
     const savingsMultiplier = Number(product.savingsMultiplier || 3);
     const maxLoanAmount = totalSavings * savingsMultiplier;
     const requiredSavings = loanAmount / savingsMultiplier;
-
     const passed = loanAmount <= maxLoanAmount;
 
     return {
@@ -81,23 +74,17 @@ export async function checkActiveLoanStatus(
     memberId: string,
     tenantId: string
 ): Promise<EligibilityCheckResult['checks']['activeLoan']> {
-    const loanRepo = AppDataSource.getRepository(Loan);
-
-    const activeLoans = await loanRepo.find({
-        where: [
-            { memberId, tenantId, status: LoanStatus.ACTIVE },
-            { memberId, tenantId, status: LoanStatus.DISBURSED },
-        ],
-        select: ['loanNumber', 'outstandingBalance'],
-    });
+    const activeLoans = await query<RowDataPacket & { loanNumber: string; outstandingBalance: number }>(
+        `SELECT loanNumber, outstandingBalance FROM loans 
+         WHERE memberId = ? AND tenantId = ? AND status IN (?, ?)`,
+        [memberId, tenantId, LoanStatus.ACTIVE, LoanStatus.DISBURSED]
+    );
 
     const passed = activeLoans.length === 0;
 
     return {
         passed,
-        details: passed
-            ? 'No active loans found'
-            : `Member has ${activeLoans.length} active loan(s)`,
+        details: passed ? 'No active loans found' : `Member has ${activeLoans.length} active loan(s)`,
         activeLoansCount: activeLoans.length,
         activeLoans: activeLoans.map(loan => ({
             loanNumber: loan.loanNumber || 'UNKNOWN',
@@ -113,16 +100,12 @@ export async function checkMembershipDuration(
     memberId: string,
     requiredMonths: number = 6
 ): Promise<EligibilityCheckResult['checks']['membershipDuration']> {
-    const memberRepo = AppDataSource.getRepository(Member);
+    const member = await queryOne<RowDataPacket & { joinDate: Date }>(
+        'SELECT joinDate FROM members WHERE id = ?',
+        [memberId]
+    );
 
-    const member = await memberRepo.findOne({
-        where: { id: memberId },
-        select: ['joinDate'],
-    });
-
-    if (!member) {
-        throw new Error('Member not found');
-    }
+    if (!member) throw new Error('Member not found');
 
     const joinDate = new Date(member.joinDate!);
     const today = new Date();
@@ -146,47 +129,28 @@ export async function checkMembershipDuration(
 /**
  * Run full eligibility check for a loan application
  */
-export async function runFullEligibilityCheck(
-    loanId: string
-): Promise<EligibilityCheckResult> {
-    const loanRepo = AppDataSource.getRepository(Loan);
-
-    const loan = await loanRepo.findOne({
-        where: { id: loanId },
-        relations: ['member', 'product'],
-    });
-
-    if (!loan) {
-        throw new Error('Loan not found');
-    }
-
-    // Run all checks
-    const savingsRatioCheck = await checkSavingsRatio(
-        loan.memberId!,
-        Number(loan.principalAmount),
-        loan.productId!
+export async function runFullEligibilityCheck(loanId: string): Promise<EligibilityCheckResult> {
+    const loan = await queryOne<RowDataPacket & {
+        id: string; memberId: string; productId: string;
+        principalAmount: number; tenantId: string;
+    }>(
+        'SELECT id, memberId, productId, principalAmount, tenantId FROM loans WHERE id = ?',
+        [loanId]
     );
 
-    const activeLoanCheck = await checkActiveLoanStatus(
-        loan.memberId!,
-        loan.tenantId!
-    );
+    if (!loan) throw new Error('Loan not found');
 
-    const membershipDurationCheck = await checkMembershipDuration(loan.memberId!);
+    const [savingsRatioCheck, activeLoanCheck, membershipDurationCheck] = await Promise.all([
+        checkSavingsRatio(loan.memberId, Number(loan.principalAmount), loan.productId),
+        checkActiveLoanStatus(loan.memberId, loan.tenantId),
+        checkMembershipDuration(loan.memberId),
+    ]);
 
-    // Determine overall pass/fail
-    const passed =
-        savingsRatioCheck.passed &&
-        activeLoanCheck.passed &&
-        membershipDurationCheck.passed;
+    const passed = savingsRatioCheck.passed && activeLoanCheck.passed && membershipDurationCheck.passed;
 
     return {
         passed,
-        checks: {
-            savingsRatio: savingsRatioCheck,
-            activeLoan: activeLoanCheck,
-            membershipDuration: membershipDurationCheck,
-        },
+        checks: { savingsRatio: savingsRatioCheck, activeLoan: activeLoanCheck, membershipDuration: membershipDurationCheck },
         timestamp: new Date(),
     };
 }

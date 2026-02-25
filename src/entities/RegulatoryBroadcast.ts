@@ -1,13 +1,3 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    ManyToOne,
-    JoinColumn,
-    Index,
-} from 'typeorm';
 import type { User } from './User';
 
 export enum BroadcastType {
@@ -29,59 +19,24 @@ export enum BroadcastTargetAudience {
     SPECIFIC_TENANTS = 'specific_tenants',
     ADMINS_ONLY = 'admins_only',
 }
-
-@Entity('regulatory_broadcasts')
-@Index(['broadcastType'])
-@Index(['priority'])
-@Index(['publishedAt'])
 export class RegulatoryBroadcast {
-    @PrimaryGeneratedColumn('uuid')
     id?: string;
-
-    @Column()
     title?: string;
-
-    @Column({ type: 'text' })
     content?: string;
-
-    @Column({ type: 'enum', enum: BroadcastType })
     broadcastType?: BroadcastType;
-
-    @Column({ type: 'enum', enum: BroadcastPriority, default: BroadcastPriority.MEDIUM })
     priority?: BroadcastPriority;
-
-    @Column({ type: 'enum', enum: BroadcastTargetAudience, default: BroadcastTargetAudience.ALL_TENANTS })
     targetAudience?: BroadcastTargetAudience;
-
-    @Column({ type: 'json', nullable: true })
     targetTenantIds?: string[];
-
-    @Column({ type: 'uuid' })
     createdBy?: string;
-
-    @ManyToOne('User')
-    @JoinColumn({ name: 'createdBy' })
     creator?: User;
-
-    @Column({ type: 'timestamp', nullable: true })
     publishedAt?: Date;
-
-    @Column({ type: 'timestamp', nullable: true })
     expiresAt?: Date;
-
-    @Column({ type: 'json', nullable: true })
     deliveryChannels?: ('email' | 'sms' | 'in_app')[];
-
-    @Column({ type: 'json', nullable: true })
     deliveryStatus?: {
         email?: { sent: number; failed: number; total: number };
         sms?: { sent: number; failed: number; total: number };
         inApp?: { created: number; total: number };
     };
-
-    @CreateDateColumn()
     createdAt?: Date;
-
-    @UpdateDateColumn()
     updatedAt?: Date;
 }

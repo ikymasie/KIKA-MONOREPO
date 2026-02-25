@@ -1,13 +1,3 @@
-import {
-    Entity,
-    PrimaryGeneratedColumn,
-    Column,
-    CreateDateColumn,
-    UpdateDateColumn,
-    ManyToOne,
-    JoinColumn,
-    Index,
-} from 'typeorm';
 import type { Tenant } from './Tenant';
 
 export enum UserRole {
@@ -59,76 +49,29 @@ export enum UserStatus {
     INACTIVE = 'inactive',
     SUSPENDED = 'suspended',
 }
-
-@Entity('users')
-@Index(['email'], { unique: true })
-@Index(['firebaseUid'], { unique: true })
-@Index(['phone'])
 export class User {
-
-    @PrimaryGeneratedColumn('uuid')
     id?: string;
-
-    @Column()
     email?: string;
-
-    @Column({ nullable: true, unique: true })
     firebaseUid?: string;
-
-    @Column({ nullable: true })
     passwordHash?: string;
-
-    @Column()
     firstName?: string;
-
-    @Column()
     lastName?: string;
-
-    @Column({ type: 'enum', enum: UserRole })
     role?: UserRole;
-
-    @Column({ type: 'enum', enum: UserStatus, default: UserStatus.ACTIVE })
     status?: UserStatus;
-
-    @Column({ nullable: true })
     phone?: string;
-
-    @Column({ default: false })
     mfaEnabled?: boolean;
-
-    @Column({ nullable: true })
     mfaSecret?: string;
-
-    @Column({ type: 'uuid', nullable: true, length: 36, collation: 'utf8mb4_0900_ai_ci' })
     tenantId?: string;
-
-    @ManyToOne('Tenant', 'users', { nullable: true })
-    @JoinColumn({ name: 'tenantId' })
     tenant?: Tenant;
-
-    @Column({ type: 'timestamp', nullable: true })
     lastLoginAt?: Date;
-
-    @Column({ type: 'json', nullable: true })
     permissions?: Record<string, boolean>;
-
-    @Column({ type: 'json', nullable: true })
     notificationPreferences?: Record<string, any>;
 
     // Password Management
-    @Column({ nullable: true })
     temporaryPassword?: string;
-
-    @Column({ default: false })
     mustChangePassword?: boolean;
-
-    @Column({ type: 'timestamp', nullable: true })
     passwordChangedAt?: Date;
-
-    @CreateDateColumn()
     createdAt?: Date;
-
-    @UpdateDateColumn()
     updatedAt?: Date;
 
     get fullName(): string {

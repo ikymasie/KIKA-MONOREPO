@@ -1,37 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { query, queryOne, execute } from '@/src/db/query';
+import { GuarantorStatus } from '@/src/entities/LoanGuarantor';
 
 export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { LoanGuarantor, GuarantorStatus } = await import("@/src/entities/LoanGuarantor");
-        const { Member } = await import("@/src/entities/Member");
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-
+        const { getUserFromRequest } = await import('@/lib/auth-server');
 
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        const db = await getDb();
-        const memberRepo = db.getRepository(Member);
-        const guarantorRepo = db.getRepository(LoanGuarantor);
-
-        const member = await memberRepo.findOne({
-            where: { userId: user.id }
-        });
-
+        const member = await queryOne<any>('SELECT id FROM members WHERE userId = ?', [user.id]);
         if (!member) {
             return NextResponse.json({ error: 'Member profile not found' }, { status: 404 });
         }
 
-        const requests = await guarantorRepo.find({
-            where: { guarantorMemberId: member.id, status: GuarantorStatus.PENDING },
-            relations: ['loan', 'loan.member', 'loan.product'],
-            order: { createdAt: 'DESC' }
-        });
+        const requests = await query<any>(
+            `SELECT g.*,
+                    l.loanNumber, l.principalAmount, l.termMonths, l.interestRate, l.status as loanStatus,
+                    p.name as productName,
+                    m.fullName as borrowerName, m.memberNumber as borrowerMemberNumber
+             FROM loan_guarantors g
+             JOIN loans l ON g.loanId = l.id
+             LEFT JOIN loan_products p ON l.productId = p.id
+             LEFT JOIN members m ON l.memberId = m.id
+             WHERE g.guarantorMemberId = ? AND g.status = ?
+             ORDER BY g.createdAt DESC`,
+            [member.id, GuarantorStatus.PENDING]
+        );
 
         return NextResponse.json(requests);
     } catch (error: any) {
@@ -42,10 +41,8 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-        const { Member } = await import("@/src/entities/Member");
-        const { LoanGuarantor, GuarantorStatus } = await import("@/src/entities/LoanGuarantor");
+        const { getUserFromRequest } = await import('@/lib/auth-server');
+
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -58,39 +55,33 @@ export async function PUT(request: NextRequest) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const db = await getDb();
-        const memberRepo = db.getRepository(Member);
-        const guarantorRepo = db.getRepository(LoanGuarantor);
-
-        const member = await memberRepo.findOne({
-            where: { userId: user.id }
-        });
-
+        const member = await queryOne<any>('SELECT id FROM members WHERE userId = ?', [user.id]);
         if (!member) {
             return NextResponse.json({ error: 'Member profile not found' }, { status: 404 });
         }
 
-        const request_ = await guarantorRepo.findOne({
-            where: { id: requestId, guarantorMemberId: member.id },
-            relations: ['loan']
-        });
+        const guarantorRequest = await queryOne<any>(
+            'SELECT id, status FROM loan_guarantors WHERE id = ? AND guarantorMemberId = ?',
+            [requestId, member.id]
+        );
 
-        if (!request_) {
+        if (!guarantorRequest) {
             return NextResponse.json({ error: 'Guarantor request not found' }, { status: 404 });
         }
 
         if (status === 'accepted') {
-            request_.status = GuarantorStatus.ACCEPTED;
-            request_.acceptedAt = new Date();
+            await execute(
+                'UPDATE loan_guarantors SET status = ?, acceptedAt = NOW() WHERE id = ?',
+                [GuarantorStatus.ACCEPTED, requestId]
+            );
         } else if (status === 'rejected') {
-            request_.status = GuarantorStatus.REJECTED;
-            request_.rejectedAt = new Date();
-            request_.rejectionReason = rejectionReason;
+            await execute(
+                'UPDATE loan_guarantors SET status = ?, rejectedAt = NOW(), rejectionReason = ? WHERE id = ?',
+                [GuarantorStatus.REJECTED, rejectionReason || null, requestId]
+            );
         } else {
             return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
         }
-
-        await guarantorRepo.save(request_);
 
         return NextResponse.json({ message: `Request ${status} successfully` });
     } catch (error: any) {

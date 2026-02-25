@@ -1,77 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { queryOne, execute } from '@/src/db/query';
+import { BylawStatus } from '@/src/entities/Bylaw';
+import { UserRole } from '@/src/entities/User';
 
 export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
-        // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("@/lib/auth-server");
-        const { Bylaw, BylawStatus } = await import("@/src/entities/Bylaw");
-        const { UserRole } = await import("@/src/entities/User");
-
-
+        const { getUserFromRequest } = await import('@/lib/auth-server');
         const user = await getUserFromRequest(request);
-        if (!user) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        if (user.role !== UserRole.DCD_DIRECTOR) {
-            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-        }
+        if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        if (user.role !== UserRole.DCD_DIRECTOR) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
         const body = await request.json();
         const { effectiveDate, notes } = body;
 
-        const dataSource = await getDb();
-        const bylawRepo = dataSource.getRepository(Bylaw);
+        const bylaw = await queryOne<any>('SELECT * FROM bylaws WHERE id = ?', [params.id]);
+        if (!bylaw) return NextResponse.json({ error: 'Bylaw not found' }, { status: 404 });
+        if (bylaw.status !== BylawStatus.PENDING) return NextResponse.json({ error: 'Bylaw has already been processed' }, { status: 400 });
 
-        const bylaw = await bylawRepo.findOne({
-            where: { id: params.id },
-            relations: ['tenant'],
-        });
+        const effectiveDateValue = effectiveDate ? new Date(effectiveDate) : new Date();
 
-        if (!bylaw) {
-            return NextResponse.json({ error: 'Bylaw not found' }, { status: 404 });
-        }
+        await execute(
+            'UPDATE bylaws SET status = ?, approvedBy = ?, approvedDate = NOW(), effectiveDate = ?, notes = ?, updatedAt = NOW() WHERE id = ?',
+            [BylawStatus.APPROVED, user.id, effectiveDateValue, notes || null, params.id]
+        );
 
-        if (bylaw.status !== BylawStatus.PENDING) {
-            return NextResponse.json(
-                { error: 'Bylaw has already been processed' },
-                { status: 400 }
-            );
-        }
-
-        bylaw.status = BylawStatus.APPROVED;
-        bylaw.approvedBy = user.id;
-        bylaw.approvedDate = new Date();
-        bylaw.effectiveDate = effectiveDate ? new Date(effectiveDate) : new Date();
-        bylaw.notes = notes;
-
-        await bylawRepo.save(bylaw);
-
-        const { notificationService } = await import("@/lib/notification-service");
-        const { NotificationEvent } = await import("@/lib/notification-types");
-
-        // Send notification to tenant admins via notification system
+        const { notificationService } = await import('@/lib/notification-service');
+        const { NotificationEvent } = await import('@/lib/notification-types');
         await notificationService.sendNotification({
             event: NotificationEvent.SACCOS_SYSTEM_ALERT,
             recipientRole: UserRole.SACCOS_ADMIN,
             tenantId: bylaw.tenantId,
-            data: {
-                bylawId: bylaw.id,
-                bylawVersion: bylaw.version,
-                status: 'APPROVED',
-                effectiveDate: bylaw.effectiveDate,
-                notes: notes
-            }
+            data: { bylawId: bylaw.id, bylawVersion: bylaw.version, status: 'APPROVED', effectiveDate: effectiveDateValue, notes }
         });
 
-        return NextResponse.json(bylaw);
+        return NextResponse.json(await queryOne<any>('SELECT * FROM bylaws WHERE id = ?', [params.id]));
     } catch (error: any) {
-        console.error('Error approving bylaw:', error);
-        return NextResponse.json(
-            { error: 'Failed to approve bylaw', details: error.message },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: 'Failed to approve bylaw', details: error.message }, { status: 500 });
     }
 }
