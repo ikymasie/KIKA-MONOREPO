@@ -21,6 +21,7 @@ export class AuditorService {
             ]
         );
 
+        
         const request = await queryOne<RowDataPacket & IAuditorAccessRequest>('SELECT * FROM auditor_access_requests WHERE id = ?', [id]);
         if (!request) throw new Error('Failed to create access request');
         return request;
