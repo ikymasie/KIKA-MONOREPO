@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { query as dbQuery, queryOne, execute } from '@/src/db/query';
 import { TenantStatus } from '@/src/entities/Tenant';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
