@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         const { code, name, type, description } = await request.json();
         if (!code || !name || !type) return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
 
-        const { queryOne } = await import('@/src/db/query');
+        const { queryOne } = await import("../../../../../src/db/query");
         const existing = await queryOne('SELECT id FROM accounts WHERE tenantId = ? AND code = ? LIMIT 1', [user.tenantId, code]);
         if (existing) return NextResponse.json({ error: 'Account code already exists' }, { status: 400 });
 

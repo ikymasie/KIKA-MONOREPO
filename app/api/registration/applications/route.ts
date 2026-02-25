@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
-        const { ApplicationStatus, ApplicationType } = await import('@/src/entities/SocietyApplication');
+        const { getUserFromRequest } = await import("../../../../lib/auth-server");
+        const { SocietyApplicationService } = await import("../../../../src/services/SocietyApplicationService");
+        const { ApplicationStatus, ApplicationType } = await import("../../../../src/entities/SocietyApplication");
 
 
         const user = await getUserFromRequest(request);

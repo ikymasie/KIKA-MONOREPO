@@ -9,10 +9,10 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { UserRole } = await import('@/src/entities/User');
-        const { RiskLevel } = await import('@/src/entities/SecurityScreening');
+        const { SocietyApplicationService } = await import("../../../../../src/services/SocietyApplicationService");
+        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
+        const { UserRole } = await import("../../../../../src/entities/User");
+        const { RiskLevel } = await import("../../../../../src/entities/SecurityScreening");
 
 
         const user = await getUserFromRequest(request);

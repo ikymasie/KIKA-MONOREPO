@@ -16,8 +16,8 @@ export async function GET(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { query } = await import('@/src/db/query');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { query } = await import("../../../../../src/db/query");
+        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
         const currentUser = await getUserFromRequest(request);
         if (!currentUser || !currentUser.isRegulator()) {
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -47,7 +47,7 @@ export async function PUT(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
         const currentUser = await getUserFromRequest(request);
         if (!currentUser || !currentUser.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -59,7 +59,7 @@ export async function PUT(
             return NextResponse.json({ error: 'First name and last name are required' }, { status: 400 });
         }
 
-        const { query, execute } = await import('@/src/db/query');
+        const { query, execute } = await import("../../../../../src/db/query");
 
         const REGULATOR_ROLES = [
             'dcd_director',

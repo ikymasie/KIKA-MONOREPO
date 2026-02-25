@@ -9,10 +9,10 @@ export async function PUT(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { Tenant, TenantStatus } = await import('@/src/entities/Tenant');
-        const { TenantStatusLog } = await import('@/src/entities/TenantStatusLog');
-        const { UserRole } = await import('@/src/entities/User');
+        const { getUserFromRequest } = await import("../../../../../../lib/auth-server");
+        const { Tenant, TenantStatus } = await import("../../../../../../src/entities/Tenant");
+        const { TenantStatusLog } = await import("../../../../../../src/entities/TenantStatusLog");
+        const { UserRole } = await import("../../../../../../src/entities/User");
 
 
         const user = await getUserFromRequest(request);
@@ -63,8 +63,8 @@ export async function PUT(
         tenant.status = status as TenantStatusType;
         await tenantRepo.save(tenant);
 
-        const { notificationService } = await import('@/lib/notification-service');
-        const { NotificationEvent } = await import('@/lib/notification-types');
+        const { notificationService } = await import("../../../../../../lib/notification-service");
+        const { NotificationEvent } = await import("../../../../../../lib/notification-types");
 
         // Send notification to tenant admins via notification system
         await notificationService.sendNotification({
@@ -95,9 +95,9 @@ export async function GET(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { UserRole } = await import('@/src/entities/User');
-        const { TenantStatusLog } = await import('@/src/entities/TenantStatusLog');
+        const { getUserFromRequest } = await import("../../../../../../lib/auth-server");
+        const { UserRole } = await import("../../../../../../src/entities/User");
+        const { TenantStatusLog } = await import("../../../../../../src/entities/TenantStatusLog");
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

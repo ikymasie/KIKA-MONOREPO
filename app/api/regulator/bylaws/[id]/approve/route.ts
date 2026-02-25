@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { Bylaw, BylawStatus } = await import('@/src/entities/Bylaw');
-        const { UserRole } = await import('@/src/entities/User');
+        const { getUserFromRequest } = await import("../../../../../../lib/auth-server");
+        const { Bylaw, BylawStatus } = await import("../../../../../../src/entities/Bylaw");
+        const { UserRole } = await import("../../../../../../src/entities/User");
 
 
         const user = await getUserFromRequest(request);
@@ -49,8 +49,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
         await bylawRepo.save(bylaw);
 
-        const { notificationService } = await import('@/lib/notification-service');
-        const { NotificationEvent } = await import('@/lib/notification-types');
+        const { notificationService } = await import("../../../../../../lib/notification-service");
+        const { NotificationEvent } = await import("../../../../../../lib/notification-types");
 
         // Send notification to tenant admins via notification system
         await notificationService.sendNotification({

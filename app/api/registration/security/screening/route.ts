@@ -10,10 +10,10 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { UserRole } = await import('@/src/entities/User');
-        const { RiskFlagType } = await import('@/src/entities/RiskFlag');
+        const { SocietyApplicationService } = await import("../../../../../src/services/SocietyApplicationService");
+        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
+        const { UserRole } = await import("../../../../../src/entities/User");
+        const { RiskFlagType } = await import("../../../../../src/entities/RiskFlag");
 
 
         const user = await getUserFromRequest(request);
@@ -39,10 +39,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { UserRole } = await import('@/src/entities/User');
-        const { SocietyApplicationService } = await import('@/src/services/SocietyApplicationService');
-        const { RiskFlagType } = await import('@/src/entities/RiskFlag');
+        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
+        const { UserRole } = await import("../../../../../src/entities/User");
+        const { SocietyApplicationService } = await import("../../../../../src/services/SocietyApplicationService");
+        const { RiskFlagType } = await import("../../../../../src/entities/RiskFlag");
         const user = await getUserFromRequest(request);
         if (!user || user.role !== UserRole.INTELLIGENCE_LIAISON) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

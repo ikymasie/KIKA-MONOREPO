@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-const { Certificate } = await import('@/src/entities/Certificate');
-        const { UserRole } = await import('@/src/entities/User');
+        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
+const { Certificate } = await import("../../../../../src/entities/Certificate");
+        const { UserRole } = await import("../../../../../src/entities/User");
 
     
         const user = await getUserFromRequest(request);

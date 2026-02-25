@@ -6,9 +6,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { Bylaw, BylawStatus } = await import('@/src/entities/Bylaw');
-        const { UserRole } = await import('@/src/entities/User');
+        const { getUserFromRequest } = await import("../../../../lib/auth-server");
+        const { Bylaw, BylawStatus } = await import("../../../../src/entities/Bylaw");
+        const { UserRole } = await import("../../../../src/entities/User");
 
 
         const user = await getUserFromRequest(request);
@@ -70,9 +70,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { UserRole } = await import('@/src/entities/User');
-        const { Bylaw, BylawStatus } = await import('@/src/entities/Bylaw');
+        const { getUserFromRequest } = await import("../../../../lib/auth-server");
+        const { UserRole } = await import("../../../../src/entities/User");
+        const { Bylaw, BylawStatus } = await import("../../../../src/entities/Bylaw");
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

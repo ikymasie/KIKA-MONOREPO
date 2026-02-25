@@ -6,9 +6,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { Certificate, CertificateType } = await import('@/src/entities/Certificate');
-        const { UserRole } = await import('@/src/entities/User');
+        const { getUserFromRequest } = await import("../../../../lib/auth-server");
+        const { Certificate, CertificateType } = await import("../../../../src/entities/Certificate");
+        const { UserRole } = await import("../../../../src/entities/User");
 
 
         const user = await getUserFromRequest(request);
@@ -71,9 +71,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { UserRole } = await import('@/src/entities/User');
-        const { Certificate } = await import('@/src/entities/Certificate');
+        const { getUserFromRequest } = await import("../../../../lib/auth-server");
+        const { UserRole } = await import("../../../../src/entities/User");
+        const { Certificate } = await import("../../../../src/entities/Certificate");
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
 
         // Mock PDF generation by creating a simple text certificate for now
         // TODO: Replace with actual PDF generation (e.g. using pdfkit or pdf-lib)
-        const { uploadFile } = await import('@/lib/firebase-storage');
+        const { uploadFile } = await import("../../../../lib/firebase-storage");
 
         const certificateContent = `CERTIFICATE OF ${certificateType}\n\nTenant ID: ${tenantId}\nCertificate Number: ${certificateNumber}\nIssued: ${new Date().toISOString()}`;
         const blob = new Blob([certificateContent], { type: 'text/plain' });

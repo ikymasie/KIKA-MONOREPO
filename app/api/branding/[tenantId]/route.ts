@@ -5,7 +5,7 @@ export async function GET(
     { params }: { params: { tenantId: string } }
 ) {
     try {
-        const { query } = await import('@/src/db/query');
+        const { query } = await import("../../../../src/db/query");
         const { tenantId } = params;
 
         const [[tenant]] = await query(

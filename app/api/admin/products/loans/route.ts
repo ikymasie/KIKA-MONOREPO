@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
             ]
         );
 
-        const { queryOne } = await import('@/src/db/query');
+        const { queryOne } = await import("../../../../../src/db/query");
         const created = await queryOne('SELECT * FROM loan_products WHERE id = ? LIMIT 1', [id]);
         return NextResponse.json(created);
     } catch (error: any) {

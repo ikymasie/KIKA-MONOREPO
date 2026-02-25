@@ -5,9 +5,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { LoanGuarantor, GuarantorStatus } = await import('@/src/entities/LoanGuarantor');
-        const { Member } = await import('@/src/entities/Member');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { LoanGuarantor, GuarantorStatus } = await import("../../../../src/entities/LoanGuarantor");
+        const { Member } = await import("../../../../src/entities/Member");
+        const { getUserFromRequest } = await import("../../../../lib/auth-server");
 
 
         const user = await getUserFromRequest(request);
@@ -43,9 +43,9 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { Member } = await import('@/src/entities/Member');
-        const { LoanGuarantor, GuarantorStatus } = await import('@/src/entities/LoanGuarantor');
+        const { getUserFromRequest } = await import("../../../../lib/auth-server");
+        const { Member } = await import("../../../../src/entities/Member");
+        const { LoanGuarantor, GuarantorStatus } = await import("../../../../src/entities/LoanGuarantor");
         const user = await getUserFromRequest(request);
         if (!user || user.role !== 'member') {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

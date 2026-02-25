@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { getUserFromRequest } = await import("../../../../../../lib/auth-server");
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -43,9 +43,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
             ipAddress: request.headers.get('x-forwarded-for') || 'unknown'
         });
 
-        const { notificationService } = await import('@/lib/notification-service');
-        const { NotificationEvent } = await import('@/lib/notification-types');
-        const { UserRole } = await import('@/src/entities/User');
+        const { notificationService } = await import("../../../../../../lib/notification-service");
+        const { NotificationEvent } = await import("../../../../../../lib/notification-types");
+        const { UserRole } = await import("../../../../../../src/entities/User");
 
         // Send notification to SACCO administrators
         await notificationService.sendNotification({

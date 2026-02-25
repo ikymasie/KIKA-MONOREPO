@@ -24,7 +24,7 @@ const REGULATOR_ROLES = [
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { getUserFromRequest } = await import("../../../../lib/auth-server");
         const user = await getUserFromRequest(request);
         // Only super regulators can manage users
         if (!user || !user.isRegulator()) {
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { getUserFromRequest } = await import("../../../../lib/auth-server");
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -4,8 +4,8 @@ export const dynamic = 'force-dynamic';
 export async function PATCH(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { query, execute } = await import('@/src/db/query');
-        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { query, execute } = await import("../../../../../src/db/query");
+        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
 
 
         const user = await getUserFromRequest(request);

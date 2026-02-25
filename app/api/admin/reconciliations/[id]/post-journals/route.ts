@@ -7,8 +7,8 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
-        const { ReconciliationBatch } = await import('@/src/entities/ReconciliationBatch');
+        const { getUserFromRequest } = await import("../../../../../../lib/auth-server");
+        const { ReconciliationBatch } = await import("../../../../../../src/entities/ReconciliationBatch");
 
 
         const user = await getUserFromRequest(request);

@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import('@/lib/auth-server');
+        const { getUserFromRequest } = await import("../../../../../../lib/auth-server");
         const currentUser = await getUserFromRequest(request);
         if (!currentUser || !currentUser.isRegulator()) {
             // return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
