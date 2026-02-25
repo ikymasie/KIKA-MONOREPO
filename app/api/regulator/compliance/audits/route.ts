@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { ComplianceService } = await import("../../../../../src/services/ComplianceService");
-        const { query } = await import("../../../../../src/db/query");
+        const { ComplianceService } = await import("@/src/services/ComplianceService");
+        const { query } = await import("@/src/db/query");
 
         const results = await query(`
             SELECT a.*, 
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { ComplianceService } = await import("../../../../../src/services/ComplianceService");
+        const { ComplianceService } = await import("@/src/services/ComplianceService");
         const body = await req.json();
         const { tenantId, auditorId, scheduledDate } = body;
 

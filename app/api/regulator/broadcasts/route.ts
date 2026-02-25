@@ -12,9 +12,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
-        const { User, UserRole } = await import("../../../../src/entities/User");
-        const { Tenant } = await import("../../../../src/entities/Tenant");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { User, UserRole } = await import("@/src/entities/User");
+        const { Tenant } = await import("@/src/entities/Tenant");
 
 
         const user = await getUserFromRequest(request);
@@ -76,9 +76,9 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
-        const { User, UserRole } = await import("../../../../src/entities/User");
-        const { Tenant } = await import("../../../../src/entities/Tenant");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { User, UserRole } = await import("@/src/entities/User");
+        const { Tenant } = await import("@/src/entities/Tenant");
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -145,8 +145,8 @@ export async function POST(request: NextRequest) {
                 .getMany();
         }
 
-        const { notificationService } = await import("../../../../lib/notification-service");
-        const { NotificationEvent } = await import("../../../../lib/notification-types");
+        const { notificationService } = await import("@/lib/notification-service");
+        const { NotificationEvent } = await import("@/lib/notification-types");
 
         if (recipients.length > 0) {
             const contexts = recipients.map(recipient => ({

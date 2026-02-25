@@ -7,8 +7,8 @@ export async function PATCH(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
-        const { FieldOfficerService } = await import("../../../../../src/services/FieldOfficerService");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { FieldOfficerService } = await import("@/src/services/FieldOfficerService");
 
 
         const user = await getUserFromRequest(request);

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { query } = await import("../../../../../src/db/query");
+        const { query } = await import("@/src/db/query");
 
         const settings = await query('SELECT * FROM regulator_settings ORDER BY updatedAt DESC LIMIT 1') as any[];
         const currentSettings = settings.length > 0 ? settings[0] : null;
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { query, execute } = await import("../../../../../src/db/query");
+        const { query, execute } = await import("@/src/db/query");
         const { v4: uuidv4 } = await import('uuid');
 
         const body = await request.json();

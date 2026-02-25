@@ -4,8 +4,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
-        const { query } = await import("../../../../../src/db/query");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { query } = await import("@/src/db/query");
 
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {

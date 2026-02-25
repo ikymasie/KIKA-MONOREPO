@@ -4,8 +4,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { query } = await import("../../../../src/db/query");
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
+        const { query } = await import("@/src/db/query");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
 
         const user = await getUserFromRequest(request);
         if (!user || !user.tenantId) {
@@ -27,8 +27,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { execute, query } = await import("../../../../src/db/query");
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
+        const { execute, query } = await import("@/src/db/query");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
         const { v4: uuidv4 } = await import('uuid');
 
         const user = await getUserFromRequest(request);

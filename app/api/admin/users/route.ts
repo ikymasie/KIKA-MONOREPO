@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
     try {
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
 
         const user = await getUserFromRequest(request);
         if (!user || user.role !== ('saccos_admin' as UserRole)) {
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
     try {
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
 
         const currentUser = await getUserFromRequest(request);
         if (!currentUser || currentUser.role !== ('saccos_admin' as UserRole)) {

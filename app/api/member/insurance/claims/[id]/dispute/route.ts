@@ -14,7 +14,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
         const claim = await getClaim(id, user.tenantId);
         // Verify claim exists and belongs to member's policy
-        const { queryOne } = await import("../../../../../../../src/db/query");
+        const { queryOne } = await import("@/../src/db/query");
         const policyCheck = await queryOne('SELECT id FROM insurance_policies WHERE id = ? AND memberId = ? LIMIT 1', [claim?.policyId, user.id]);
 
         if (!claim || !policyCheck) return NextResponse.json({ error: 'Claim not found or access denied' }, { status: 404 });

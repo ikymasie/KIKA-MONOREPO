@@ -7,8 +7,8 @@ export async function GET(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../../../lib/auth-server");
-        const { KYCVerificationService } = await import("../../../../../../src/services/KYCVerificationService");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { KYCVerificationService } = await import("@/src/services/KYCVerificationService");
 
 
         const user = await getUserFromRequest(request);
@@ -35,8 +35,8 @@ export async function POST(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../../../lib/auth-server");
-        const { KYCVerificationService } = await import("../../../../../../src/services/KYCVerificationService");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { KYCVerificationService } = await import("@/src/services/KYCVerificationService");
         const user = await getUserFromRequest(request);
         if (!user || !user.isRegulator()) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -4,8 +4,8 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
-        const { SocietyApplicationService } = await import("../../../../src/services/SocietyApplicationService");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { SocietyApplicationService } = await import("@/src/services/SocietyApplicationService");
 
 
         const user = await getUserFromRequest(request);
@@ -39,8 +39,8 @@ export async function PATCH(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
-        const { SocietyApplicationService } = await import("../../../../src/services/SocietyApplicationService");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { SocietyApplicationService } = await import("@/src/services/SocietyApplicationService");
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

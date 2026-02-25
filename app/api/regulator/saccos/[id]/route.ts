@@ -7,8 +7,8 @@ export async function GET(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { query } = await import("../../../../../src/db/query");
-        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
+        const { query } = await import("@/src/db/query");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
 
 
         const user = await getUserFromRequest(request);

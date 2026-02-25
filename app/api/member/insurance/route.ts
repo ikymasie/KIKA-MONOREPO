@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
 
-        const { queryOne } = await import("../../../../src/db/query");
+        const { queryOne } = await import("@/src/db/query");
         const countRes = await queryOne('SELECT COUNT(*) as c FROM insurance_claims WHERE tenantId = ?', [user.tenantId]) as any;
         const claimCount = countRes?.c || 0;
         const claimNumber = `CLM-${new Date().getFullYear()}-${String(claimCount + 1).padStart(5, '0')}`;

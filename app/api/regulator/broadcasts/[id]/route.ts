@@ -8,9 +8,9 @@ export async function GET(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
-        const { RegulatoryBroadcast } = await import("../../../../../src/entities/RegulatoryBroadcast");
-        const { UserRole } = await import("../../../../../src/entities/User");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { RegulatoryBroadcast } = await import("@/src/entities/RegulatoryBroadcast");
+        const { UserRole } = await import("@/src/entities/User");
 
 
         const user = await getUserFromRequest(request);
@@ -50,9 +50,9 @@ export async function PUT(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
-        const { UserRole } = await import("../../../../../src/entities/User");
-        const { RegulatoryBroadcast } = await import("../../../../../src/entities/RegulatoryBroadcast");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { UserRole } = await import("@/src/entities/User");
+        const { RegulatoryBroadcast } = await import("@/src/entities/RegulatoryBroadcast");
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -99,9 +99,9 @@ export async function DELETE(
 ) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../../lib/auth-server");
-        const { UserRole } = await import("../../../../../src/entities/User");
-        const { RegulatoryBroadcast } = await import("../../../../../src/entities/RegulatoryBroadcast");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { UserRole } = await import("@/src/entities/User");
+        const { RegulatoryBroadcast } = await import("@/src/entities/RegulatoryBroadcast");
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

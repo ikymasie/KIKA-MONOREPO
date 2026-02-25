@@ -26,7 +26,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
         maturityDate.setMonth(maturityDate.getMonth() + loan.termMonths);
 
         // Disburse + create transaction + log — all in one SQL transaction
-        const { withTransaction } = await import("../../../../../../src/db/query");
+        const { withTransaction } = await import("@/src/db/query");
         const updated = await withTransaction(async (conn) => {
             // Update loan
             await conn.execute(

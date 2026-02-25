@@ -29,9 +29,9 @@ export async function GET(request: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
-        const { RegistrationService } = await import("../../../../src/services/RegistrationService");
-        const { UserRole } = await import("../../../../src/entities/User");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { RegistrationService } = await import("@/src/services/RegistrationService");
+        const { UserRole } = await import("@/src/entities/User");
         const user = await getUserFromRequest(req);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

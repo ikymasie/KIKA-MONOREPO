@@ -4,9 +4,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
-        const { FieldOfficerService } = await import("../../../../src/services/FieldOfficerService");
-        const { query } = await import("../../../../src/db/query");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { FieldOfficerService } = await import("@/src/services/FieldOfficerService");
+        const { query } = await import("@/src/db/query");
 
         const user = await getUserFromRequest(request);
         if (!user) {
@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
     try {
         // Dynamic imports to avoid circular dependencies
-        const { getUserFromRequest } = await import("../../../../lib/auth-server");
-        const { FieldOfficerService } = await import("../../../../src/services/FieldOfficerService");
+        const { getUserFromRequest } = await import("@/lib/auth-server");
+        const { FieldOfficerService } = await import("@/src/services/FieldOfficerService");
         const user = await getUserFromRequest(request);
         if (!user) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
