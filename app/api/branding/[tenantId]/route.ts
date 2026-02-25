@@ -8,7 +8,7 @@ export async function GET(
         const { query } = await import("../../../../src/db/query");
         const { tenantId } = params;
 
-        const [[tenant]] = await query(
+        const [tenant] = await query(
             'SELECT id, name, logoUrl, primaryColor, secondaryColor, brandingSettings FROM tenants WHERE id = ? LIMIT 1',
             [tenantId]
         ) as any;
